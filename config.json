@@ -1,0 +1,38 @@
+{
+  "city": "Seattle",
+  "state": "WA",
+  "country": "USA",
+  "phone_number": "YOUR_PHONE_NUMBER",
+  "aqi_categories": [
+    {
+      "lower": 0,
+      "upper": 50,
+      "classification": "Good"
+    },
+    {
+      "lower": 51,
+      "upper": 100,
+      "classification": "Moderate"
+    },
+    {
+      "lower": 101,
+      "upper": 150,
+      "classification": "Unhealthy for Sensitive Groups"
+    },
+    {
+      "lower": 151,
+      "upper": 200,
+      "classification": "Unhealthy"
+    },
+    {
+      "lower": 201,
+      "upper": 300,
+      "classification": "Very Unhealthy"
+    },
+    {
+      "lower": 301,
+      "upper": 500,
+      "classification": "Hazardous"
+    }
+  ]
+}
