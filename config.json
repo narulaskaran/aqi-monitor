@@ -2,7 +2,7 @@
   "city": "Seattle",
   "state": "Washington",
   "country": "USA",
-  "phone_number": "YOUR_PHONE_NUMBER",
+  "email": "YOUR_EMAIL_ADDRESS",
   "aqi_categories": [
     {
       "lower": 0,
