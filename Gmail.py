@@ -1,6 +1,5 @@
 from __future__ import print_function
-import pickle
-import os.path
+import pickle, os.path, base64
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -10,9 +9,8 @@ from email.mime.text import MIMEText
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
 class Gmail:
-  def __init__(self, email):
+  def __init__(self):
     self.SENDER_ADDRESS = 'aqialert@narula.xyz'
-    self.RECIPIENT_ADDRESS = email
 
     # authenticate
     creds = None
@@ -36,18 +34,17 @@ class Gmail:
 
     self.SERVICE = build('gmail', 'v1', credentials=creds)
 
-  def create_message(self, subject, body):
-    messaqe = {
-      'sender': self.SENDER_ADDRESS,
-      'to': self.RECIPIENT_ADDRESS,
-      'subject': subject,
-      'message_text': body
-    }
-    return messaqe
+  def create_message(self, email, subject, body):
+    message = MIMEText(body)
+    message['to'] = email
+    message['from'] = self.SENDER_ADDRESS
+    message['subject'] = subject
+    raw_message = base64.urlsafe_b64encode(message.as_string().encode('utf-8'))
+    return {'raw': raw_message.decode('utf-8')}
 
-  def send_message(self, subject, body):
+  def send_message(self, email, subject, body):
     try:
-      encoded_message = self.create_message(subject, body)
+      encoded_message = self.create_message(email, subject, body)
       message = (self.SERVICE.users().messages().send(userId='me', body=encoded_message)
                 .execute())
       print('Message Id: {}'.format(message['id']))

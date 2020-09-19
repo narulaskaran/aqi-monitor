@@ -2,7 +2,9 @@
   "city": "Seattle",
   "state": "Washington",
   "country": "USA",
-  "email": "YOUR_EMAIL_ADDRESS",
+  "emails": [
+    "YOUR EMAIL RECIPIENTS"
+  ],
   "aqi_categories": [
     {
       "lower": 0,
