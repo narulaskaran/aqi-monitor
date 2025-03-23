@@ -1,22 +1,97 @@
 # AQI Monitor
-Monitors local air quality via the [IQAir API](https://www.iqair.com/us/dashboard) and sends email alerts when AQI falls or rises into a new quality zone.
 
-I live in WA state. During the major West Coast wildfires of September 2020, I wanted to keep track of major changes in my town's air quality without having to continuously refresh the AirNow website. Waiting anxiously until I can go back out and run again.
+A real-time Air Quality Index (AQI) monitoring application that provides air quality data for any US ZIP code. Built with React, TypeScript, and tRPC.
 
-# Setup
-## Gmail
-You will need to configure your Google account with credentials for the Gmail API.
-Follow steps 1 and 2 [here](https://developers.google.com/gmail/api/quickstart/python). 
+You can also click through the [archived implementation](https://github.com/shadcn/aqi-monitor/tree/impl_archive) written in Python.
 
-Rename `credentials.json` from step 1 to `gmail_credentials.json`.
+## Features
 
-## API config
-You will need an IQAir API key. You can sign up for a free community edition [here](https://www.iqair.com/us/dashboard/api). 
+- Look up air quality data by US ZIP code
+- Display EPA Air Quality Index (AQI)
+- Show dominant pollutant information
+- Color-coded indicators for air quality levels
+- US location validation
+- Responsive design
 
-Update `iq_air_credentials.json` with your API key.
+## Project Structure
 
-## Alert recipients 
-Lastly, update `config.json` with all the email addresses you'd like to send email alerts to and update the location information if necessary. Right now the app is configured for Seattle, WA by default. 
+```
+src/
+├── components/         # React components
+│   ├── AQICard.tsx    # Displays AQI information
+│   ├── AQIHeader.tsx  # Application header
+│   ├── AQIIcon.tsx    # Air quality icon
+│   └── ui/            # Shadcn UI components
+├── lib/               # Utility functions and configurations
+│   └── trpc.ts       # tRPC client setup
+└── App.tsx           # Main application component
 
-# Run
-Run `python3 ./runner.py` from the repo directory. The first time you run the script, you will be prompted to log into your google account via a browser popup and authenticate. You should not be asked to authenticate for subsequent runs. 
+server/
+└── src/
+    └── index.ts      # tRPC server and API endpoints
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm or yarn
+- Google Air Quality API key
+
+### Environment Setup
+
+1. Create a `.env` file in the `server` directory:
+
+```env
+GOOGLE_AIR_QUALITY_API_KEY=your_api_key_here
+```
+
+### Running the Application
+
+1. Install dependencies:
+
+```bash
+npm install
+cd server && npm install
+```
+
+2. Start the backend server:
+
+```bash
+cd server
+npm run dev
+```
+
+3. Start the frontend development server:
+
+```bash
+# In the root directory
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`
+
+## API Integration
+
+This project uses:
+
+- Google Air Quality API for AQI data
+- OpenStreetMap Nominatim API for geocoding
+- tRPC for type-safe API communication
+
+## Contributing
+
+Feel free to submit issues and enhancement requests!
+
+## Upcoming Features
+
+- [ ] SMS Notifications
+  - [ ] User signup for AQI alerts by zip code
+  - [ ] Support for multiple zip code subscriptions
+  - [ ] Configurable subscription expiration dates
+- [ ] Trip Planning Features
+  - [ ] AQI predictions for travel dates
+  - [ ] Travel AQI subscriptions (with date range support)
+
+These features are in development. Feel free to open issues with suggestions or contribute to their implementation!

@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "builds": [
+    {
+      "src": "server/src/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server/src/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "dist/$1"
+    }
+  ]
+}
