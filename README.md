@@ -1,22 +1,54 @@
-# AQI Monitor
-Monitors local air quality via the [IQAir API](https://www.iqair.com/us/dashboard) and sends email alerts when AQI falls or rises into a new quality zone.
+# React + TypeScript + Vite
 
-I live in WA state. During the major West Coast wildfires of September 2020, I wanted to keep track of major changes in my town's air quality without having to continuously refresh the AirNow website. Waiting anxiously until I can go back out and run again.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-# Setup
-## Gmail
-You will need to configure your Google account with credentials for the Gmail API.
-Follow steps 1 and 2 [here](https://developers.google.com/gmail/api/quickstart/python). 
+Currently, two official plugins are available:
 
-Rename `credentials.json` from step 1 to `gmail_credentials.json`.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## API config
-You will need an IQAir API key. You can sign up for a free community edition [here](https://www.iqair.com/us/dashboard/api). 
+## Expanding the ESLint configuration
 
-Update `iq_air_credentials.json` with your API key.
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## Alert recipients 
-Lastly, update `config.json` with all the email addresses you'd like to send email alerts to and update the location information if necessary. Right now the app is configured for Seattle, WA by default. 
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
+```
 
-# Run
-Run `python3 ./runner.py` from the repo directory. The first time you run the script, you will be prompted to log into your google account via a browser popup and authenticate. You should not be asked to authenticate for subsequent runs. 
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default tseslint.config({
+  plugins: {
+    // Add the react-x and react-dom plugins
+    'react-x': reactX,
+    'react-dom': reactDom,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended typescript rules
+    ...reactX.configs['recommended-typescript'].rules,
+    ...reactDom.configs.recommended.rules,
+  },
+})
+```
