@@ -1,54 +1,95 @@
-# React + TypeScript + Vite
+# AQI Monitor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A real-time Air Quality Index (AQI) monitoring application that provides air quality data for any US ZIP code. Built with React, TypeScript, and tRPC.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Look up air quality data by US ZIP code
+- Display EPA Air Quality Index (AQI)
+- Show dominant pollutant information
+- Color-coded indicators for air quality levels
+- US location validation
+- Responsive design
 
-## Expanding the ESLint configuration
+## Project Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+```
+src/
+├── components/         # React components
+│   ├── AQICard.tsx    # Displays AQI information
+│   ├── AQIHeader.tsx  # Application header
+│   ├── AQIIcon.tsx    # Air quality icon
+│   └── ui/            # Shadcn UI components
+├── lib/               # Utility functions and configurations
+│   └── trpc.ts       # tRPC client setup
+└── App.tsx           # Main application component
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+server/
+└── src/
+    └── index.ts      # tRPC server and API endpoints
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Prerequisites
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+- Node.js (v18 or higher)
+- npm or yarn
+- Google Air Quality API key
+
+### Environment Setup
+
+1. Create a `.env` file in the `server` directory:
+
+```env
+GOOGLE_AIR_QUALITY_API_KEY=your_api_key_here
 ```
+
+### Running the Application
+
+1. Install dependencies:
+
+```bash
+npm install
+cd server && npm install
+```
+
+2. Start the backend server:
+
+```bash
+cd server
+npm run dev
+```
+
+3. Start the frontend development server:
+
+```bash
+# In the root directory
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`
+
+## API Integration
+
+This project uses:
+
+- Google Air Quality API for AQI data
+- OpenStreetMap Nominatim API for geocoding
+- tRPC for type-safe API communication
+
+## Contributing
+
+Feel free to submit issues and enhancement requests!
+
+## Upcoming Features
+
+- [ ] SMS Notifications
+  - [ ] User signup for AQI alerts by zip code
+  - [ ] Support for multiple zip code subscriptions
+  - [ ] Configurable subscription expiration dates
+- [ ] Trip Planning Features
+  - [ ] AQI predictions for travel dates
+  - [ ] Travel AQI subscriptions (with date range support)
+
+These features are in development. Feel free to open issues with suggestions or contribute to their implementation!
