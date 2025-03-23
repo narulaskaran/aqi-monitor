@@ -1,17 +1,13 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
   "builds": [
     {
       "src": "server/src/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "typescript": true
-      }
-    },
-    {
-      "src": "client/vite.config.ts",
-      "use": "@vercel/vite",
-      "dest": ".vercel/output/static"
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -21,20 +17,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": ".vercel/output/static/$1"
+      "dest": "dist/$1"
     }
-  ],
-  "installCommand": "npm install && cd server && npm install",
-  "buildCommand": "npm run build && cd client && npm run build",
-  "headers": {
-    "/(.*)": {
-      "Access-Control-Allow-Origin": "*"
-    }
-  },
-  "functions": {
-    "api/[[route]].ts": {
-      "memory": 128,
-      "maxDuration": 5
-    }
-  }
+  ]
 }
