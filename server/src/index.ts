@@ -91,7 +91,7 @@ const appRouter = t.router({
 export type AppRouter = typeof appRouter;
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // CORS configuration
 app.use(cors({
@@ -126,7 +126,13 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-  console.log('tRPC endpoint available at http://localhost:3000/trpc');
-}); 
+// Only start the server if we're explicitly in development mode
+if (process.env.NODE_ENV === 'development') {
+  app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+    console.log('tRPC endpoint available at http://localhost:3000/trpc');
+  });
+}
+
+// Export the app for Vercel
+export default app; 

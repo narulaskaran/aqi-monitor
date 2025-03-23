@@ -1,7 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "npm run build:frontend",
   "installCommand": "npm install",
+  "buildCommand": "npm run build:frontend",
+  "outputDirectory": "dist",
   "builds": [
     {
       "src": "server/src/index.ts",
@@ -11,11 +12,8 @@
       }
     },
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "src": "dist/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -29,7 +27,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/dist/index.html"
     }
   ]
 }
