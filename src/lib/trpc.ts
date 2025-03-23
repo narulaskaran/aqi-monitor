@@ -1,10 +1,20 @@
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '../../server/src/index';
 
-// In development, we want to use the full URL
+// Get the base URL based on the environment
 const getBaseUrl = () => {
-  // Always use the full URL in development
-  return 'http://localhost:3000';
+  // In development, use localhost
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:3000';
+  }
+  
+  // In production, use the current origin (same domain)
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  
+  // Fallback for SSR
+  return '';
 };
 
 export const trpc = createTRPCProxyClient<AppRouter>({
