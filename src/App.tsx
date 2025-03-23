@@ -2,7 +2,6 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { AQICard } from "./components/AQICard";
 import { AQIHeader } from "./components/AQIHeader";
-import { AQIIcon } from "./components/AQIIcon";
 import { KofiButton } from "./components/KofiButton";
 import {
   Tooltip,
@@ -31,18 +30,6 @@ function App() {
     if (index <= 200) return "bg-red-100";
     if (index <= 300) return "bg-purple-100";
     return "bg-maroon-100";
-  };
-
-  const formatPollutant = (pollutant: string): string => {
-    const pollutantMap: { [key: string]: string } = {
-      o3: "Ozone (O₃)",
-      pm25: "Fine Particulate Matter (PM2.5)",
-      pm10: "Coarse Particulate Matter (PM10)",
-      no2: "Nitrogen Dioxide (NO₂)",
-      so2: "Sulfur Dioxide (SO₂)",
-      co: "Carbon Monoxide (CO)",
-    };
-    return pollutantMap[pollutant] || pollutant;
   };
 
   const handleClick = async () => {
