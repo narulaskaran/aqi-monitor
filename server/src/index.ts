@@ -95,7 +95,12 @@ const port = 3000;
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'], // Allow both common Vite ports
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://aqi-monitor.vercel.app',  // Default Vercel domain
+    'https://narula.xyz'  // Personal domain
+  ],
   credentials: true
 }));
 
