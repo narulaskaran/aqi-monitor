@@ -4,8 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "npm run build:frontend && npm run build:backend",
+    "dev": "cd server && npm install && npm run dev",
+    "dev:frontend": "cd client && npm run dev",
+    "dev:backend": "cd server && npm run dev",
+    "build": "cd server && npm install && npm run build",
     "build:frontend": "tsc && vite build",
     "build:backend": "cd server && npm run build",
     "start": "cd server && npm start",
@@ -41,6 +43,7 @@
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
-    "vite": "^5.1.4"
+    "vite": "^5.1.4",
+    "concurrently": "^8.0.0"
   }
 }
