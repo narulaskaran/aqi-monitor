@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
   "builds": [
     {
       "src": "server/src/index.ts",
@@ -14,11 +12,11 @@
   "routes": [
     {
       "src": "/health",
-      "dest": "server/src/index.ts"
+      "dest": "/api/health"
     },
     {
       "src": "/trpc/(.*)",
-      "dest": "server/src/index.ts"
+      "dest": "/api/trpc/$1"
     },
     {
       "handle": "filesystem"
