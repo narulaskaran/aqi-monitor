@@ -4,9 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "cd server && npm install && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:frontend": "cd client && npm install && npm run build",
+    "build:backend": "cd server && npm install && npm run build",
     "start": "cd server && npm start",
-    "dev": "cd server && npm run dev"
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd client && npm run dev",
+    "dev:backend": "cd server && npm run dev"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",

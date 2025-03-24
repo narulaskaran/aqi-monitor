@@ -8,6 +8,13 @@
         "includeFiles": ["server/prisma/**/*"],
         "buildCommand": "cd server && npx prisma generate"
       }
+    },
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
@@ -20,8 +27,16 @@
       "dest": "server/src/index.ts"
     },
     {
+      "src": "/assets/(.*)",
+      "dest": "/client/dist/assets/$1"
+    },
+    {
+      "src": "/(.*)\\.(?:js|css|ico|png|jpg|jpeg|svg|gif)",
+      "dest": "/client/dist/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "server/src/index.ts"
+      "dest": "/client/dist/index.html"
     }
   ]
 }
