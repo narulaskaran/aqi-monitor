@@ -22,7 +22,6 @@ const appRouter = t.router({
     }))
     .query(async ({ input }) => {
       try {
-        console.log("key", process.env.GOOGLE_AIR_QUALITY_API_KEY)
         if (!process.env.GOOGLE_AIR_QUALITY_API_KEY) {
           throw new Error('GOOGLE_AIR_QUALITY_API_KEY is not set');
         }
