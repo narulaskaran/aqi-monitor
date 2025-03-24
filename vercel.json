@@ -1,23 +1,26 @@
 {
   "version": 2,
-  "installCommand": "cd server && npm install",
-  "buildCommand": "cd server && npm install && npm run build",
-  "outputDirectory": "server/dist",
-  "devCommand": "npm run dev",
   "builds": [
     {
-      "src": "server/dist/index.js",
-      "use": "@vercel/node"
+      "src": "server/src/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["server/prisma/**/*"]
+      }
     }
   ],
   "routes": [
     {
+      "src": "/health",
+      "dest": "server/src/index.ts"
+    },
+    {
       "src": "/trpc/(.*)",
-      "dest": "server/dist/index.js"
+      "dest": "server/src/index.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "server/dist/index.js"
+      "dest": "server/src/index.ts"
     }
   ]
 }
