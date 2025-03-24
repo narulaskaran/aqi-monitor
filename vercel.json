@@ -1,20 +1,13 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "builds": [
     {
       "src": "server/src/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/prisma/**/*"],
-        "buildCommand": "cd server && npx prisma generate"
-      }
-    },
-    {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "buildCommand": "cd client && npm install && npm run build",
-        "outputDirectory": "client/dist"
+        "includeFiles": ["server/prisma/**/*"]
       }
     }
   ],
@@ -28,19 +21,11 @@
       "dest": "server/src/index.ts"
     },
     {
-      "src": "^/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "^/(?:index.html)?$",
-      "dest": "/index.html"
-    },
-    {
-      "src": "^/(.*)\\.(?:js|css|ico|png|jpg|jpeg|svg|gif)$",
-      "dest": "/$1"
-    },
-    {
       "handle": "filesystem"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
     },
     {
       "src": "/(.*)",
