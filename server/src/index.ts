@@ -1,91 +1,130 @@
-import { initTRPC } from '@trpc/server';
-import express from 'express';
-import cors from 'cors';
-import * as trpcExpress from '@trpc/server/adapters/express';
-import { z } from 'zod';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { initTRPC } from "@trpc/server";
+import express from "express";
+import cors from "cors";
+import * as trpcExpress from "@trpc/server/adapters/express";
+import { z } from "zod";
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { addSubscription, getAllSubscriptions } from "./db.js";
+import { PrismaClient } from '@prisma/client';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-dotenv.config({ path: join(__dirname, '../.env') });
+dotenv.config({ path: join(__dirname, "../.env") });
+
+// Initialize Prisma client
+const prisma = new PrismaClient();
+
+// Test database connection
+prisma.$connect()
+  .then(() => {
+    console.log('✅ Database connected successfully');
+  })
+  .catch((err) => {
+    console.error('❌ Failed to connect to database:', err);
+  });
 
 const t = initTRPC.create();
 
 const appRouter = t.router({
   fetchAirQuality: t.procedure
-    .input(z.object({
-      latitude: z.number(),
-      longitude: z.number(),
-    }))
+    .input(
+      z.object({
+        latitude: z.number(),
+        longitude: z.number(),
+      })
+    )
     .query(async ({ input }) => {
       try {
         if (!process.env.GOOGLE_AIR_QUALITY_API_KEY) {
-          throw new Error('GOOGLE_AIR_QUALITY_API_KEY is not set');
+          throw new Error("GOOGLE_AIR_QUALITY_API_KEY is not set");
         }
 
-        console.log('Making request to Google API with:', {
+        console.log("Making request to Google API with:", {
           latitude: input.latitude,
           longitude: input.longitude,
-          apiKey: process.env.GOOGLE_AIR_QUALITY_API_KEY ? 'Present' : 'Missing'
+          apiKey: process.env.GOOGLE_AIR_QUALITY_API_KEY
+            ? "Present"
+            : "Missing",
         });
 
         const response = await fetch(
           `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${process.env.GOOGLE_AIR_QUALITY_API_KEY}`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
-            body: JSON.stringify( {
+            body: JSON.stringify({
               location: {
                 latitude: input.latitude,
-                longitude: input.longitude
+                longitude: input.longitude,
               },
               universalAqi: true,
-              extraComputations: [
-                'LOCAL_AQI'
-              ]
+              extraComputations: ["LOCAL_AQI"],
             }),
           }
         );
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Google API error response:', errorText);
-          throw new Error(`Failed to fetch air quality data: ${response.status} ${errorText}`);
+          console.error("Google API error response:", errorText);
+          throw new Error(
+            `Failed to fetch air quality data: ${response.status} ${errorText}`
+          );
         }
 
         const data = await response.json();
-        console.log('Successfully fetched air quality data:', JSON.stringify(data, null, 2));
-        
+        console.log(
+          "Successfully fetched air quality data:",
+          JSON.stringify(data, null, 2)
+        );
+
         // Log available indexes
         if (data.indexes) {
-          console.log('Available indexes:', data.indexes.map((index: any) => index.code));
+          console.log(
+            "Available indexes:",
+            data.indexes.map((index: any) => index.code)
+          );
         } else {
-          console.log('No indexes found in response');
+          console.log("No indexes found in response");
         }
 
         // Extract relevant data from the response
         // The API returns an array of indexes, we want the USA EPA AQI
-        const epaIndex = data.indexes?.find((index: any) => index.code === 'usa_epa');
-        
+        const epaIndex = data.indexes?.find(
+          (index: any) => index.code === "usa_epa"
+        );
+
         if (!epaIndex) {
-          throw new Error('US EPA AQI data not available for this location');
+          throw new Error("US EPA AQI data not available for this location");
         }
 
         return {
           index: epaIndex.aqi,
           category: epaIndex.category,
-          dominantPollutant: epaIndex.dominantPollutant || 'Unknown',
+          dominantPollutant: epaIndex.dominantPollutant || "Unknown",
         };
       } catch (error) {
-        console.error('Detailed error:', error);
-        throw new Error(error instanceof Error ? error.message : 'Failed to fetch air quality data');
+        console.error("Detailed error:", error);
+        throw new Error(
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch air quality data"
+        );
       }
     }),
+  subscribe: t.procedure
+    .input(z.object({ phone: z.string(), zipCode: z.string() }))
+    .mutation(async ({ input }) => {
+      return await addSubscription(input.phone, input.zipCode);
+    }),
+
+  getSubscriptions: t.procedure.query(async () => {
+    return await getAllSubscriptions();
+  }),
 });
 
 export type AppRouter = typeof appRouter;
@@ -94,45 +133,54 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // CORS configuration
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://aqi-monitor.vercel.app',  // Default Vercel domain
-    'https://narula.xyz'  // Personal domain
-  ],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://aqi-monitor.vercel.app", // Default Vercel domain
+      "https://narula.xyz", // Personal domain
+    ],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
 // Add error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({ error: err.message || 'Internal server error' });
-});
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error("Error:", err);
+    res.status(500).json({ error: err.message || "Internal server error" });
+  }
+);
 
 // tRPC middleware
 app.use(
-  '/trpc',
+  "/trpc",
   trpcExpress.createExpressMiddleware({
     router: appRouter,
-    createContext: () => ({})
+    createContext: () => ({}),
   })
 );
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
 // Only start the server if we're explicitly in development mode
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
-    console.log('tRPC endpoint available at http://localhost:3000/trpc');
+    console.log("tRPC endpoint available at http://localhost:3000/trpc");
   });
 }
 
 // Export the app for Vercel
-export default app; 
+export default app;
