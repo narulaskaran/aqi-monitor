@@ -1,6 +1,6 @@
 # AQI Monitor
 
-A real-time Air Quality Index (AQI) monitoring application that provides air quality data for any US ZIP code. Built with React, TypeScript, and tRPC.
+A real-time [Air Quality Index (AQI) monitoring application](https://aqi-monitor.vercel.app/) that provides air quality data for any US ZIP code. Built with React, TypeScript, and tRPC.
 
 You can also click through the [archived implementation](https://github.com/shadcn/aqi-monitor/tree/impl_archive) written in Python.
 
