@@ -4,15 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "cd server && npm install && npm run dev",
-    "dev:frontend": "cd client && npm run dev",
-    "dev:backend": "cd server && npm run dev",
     "build": "cd server && npm install && npm run build",
-    "build:frontend": "tsc && vite build",
-    "build:backend": "cd server && npm run build",
     "start": "cd server && npm start",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "dev": "cd server && npm run dev"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",
