@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build:frontend",
+  "outputDirectory": "dist",
   "builds": [
     {
       "src": "server/src/index.ts",
@@ -7,16 +10,23 @@
       "config": {
         "includeFiles": ["server/prisma/**/*"]
       }
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
     {
       "src": "/health",
-      "dest": "/api/health"
+      "dest": "server/src/index.ts"
     },
     {
       "src": "/trpc/(.*)",
-      "dest": "/api/trpc/$1"
+      "dest": "server/src/index.ts"
     },
     {
       "handle": "filesystem"
@@ -27,7 +37,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/dist/index.html"
     }
   ]
 }
