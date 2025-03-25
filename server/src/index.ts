@@ -18,15 +18,27 @@ dotenv.config({ path: join(__dirname, "../.env") });
 // Initialize Prisma client
 const prisma = new PrismaClient();
 
-// Test database connection
-prisma
-  .$connect()
-  .then(() => {
+// Initialize services
+async function initializeServices() {
+  try {
+    // Test database connection
+    await prisma.$connect();
     console.log("✅ Database connected successfully");
-  })
-  .catch((err: Error) => {
-    console.error("❌ Failed to connect to database:", err);
-  });
+
+    // Initialize Twilio Verification Service
+    const verificationServiceSid = await initializeVerificationService();
+    console.log("✅ Twilio Verification Service initialized with SID:", verificationServiceSid);
+  } catch (err) {
+    console.error("❌ Service initialization failed:", err);
+    throw err;
+  }
+}
+
+// Initialize all services
+initializeServices().catch((err) => {
+  console.error("Failed to initialize services:", err);
+  process.exit(1);
+});
 
 const t = initTRPC.create();
 
@@ -129,16 +141,35 @@ const appRouter = t.router({
   }),
 
   startVerification: t.procedure
-    .input(z.object({ 
-      phone: z.string(),
-      zipCode: z.string()
-    }))
+    .input(
+      z.object({
+        phone: z.string().min(1, "Phone number is required"),
+        zipCode: z.string().min(1, "ZIP code is required")
+      })
+    )
     .mutation(async ({ input }) => {
-      const result = await sendVerificationCode(input.phone);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to send verification code');
+      console.log("Received verification request:", input);
+
+      try {
+        // Ensure verification service is initialized
+        await initializeVerificationService();
+
+        if (!input || !input.phone || !input.zipCode) {
+          console.error("Invalid input received:", input);
+          throw new Error("Invalid input: phone and zipCode are required");
+        }
+
+        const result = await sendVerificationCode(input.phone);
+        console.log("Verification result:", result);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to send verification code');
+        }
+        return result;
+      } catch (error) {
+        console.error("Error in startVerification:", error);
+        throw error;
       }
-      return result;
     }),
 
   verifyCode: t.procedure
@@ -148,17 +179,25 @@ const appRouter = t.router({
       code: z.string()
     }))
     .mutation(async ({ input }) => {
-      const result = await checkVerificationCode(input.phone, input.code);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to verify code');
+      try {
+        // Ensure verification service is initialized
+        await initializeVerificationService();
+
+        const result = await checkVerificationCode(input.phone, input.code);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to verify code');
+        }
+        
+        if (result.valid) {
+          // Create subscription if verification successful
+          await addSubscription(input.phone, input.zipCode);
+        }
+        
+        return result;
+      } catch (error) {
+        console.error("Error in verifyCode:", error);
+        throw error;
       }
-      
-      if (result.valid) {
-        // Create subscription if verification successful
-        await addSubscription(input.phone, input.zipCode);
-      }
-      
-      return result;
     }),
 });
 

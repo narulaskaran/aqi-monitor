@@ -52,16 +52,25 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
         return;
       }
 
+      if (!zipCode) {
+        setError("ZIP code is required");
+        return;
+      }
+
       setError(null);
       setIsLoading(true);
 
       const formattedPhone = formatPhoneNumber(phone);
-      console.log("Sending verification to:", formattedPhone); // Debug log
-
-      const result = await trpc.startVerification.mutate({
+      const requestData = {
         phone: formattedPhone,
-        zipCode,
-      });
+        zipCode: zipCode,
+      };
+
+      console.log("Sending verification request:", requestData);
+
+      const result = await trpc.startVerification.mutate(requestData);
+
+      console.log("Verification response:", result);
 
       if (result.success) {
         setIsVerifying(true);
@@ -72,7 +81,17 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
         );
       }
     } catch (err) {
-      console.error("Verification error:", err); // Debug log
+      console.error("Verification error:", err);
+      // Log more details about the error
+      if (err instanceof Error) {
+        console.error("Error details:", {
+          message: err.message,
+          name: err.name,
+          stack: err.stack,
+        });
+      } else {
+        console.error("Unknown error type:", err);
+      }
       setError(
         err instanceof Error
           ? err.message

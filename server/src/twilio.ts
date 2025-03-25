@@ -8,26 +8,46 @@ if (!accountSid || !authToken) {
 }
 
 const client = twilio(accountSid, authToken);
-const verificationServiceSid = process.env.TWILIO_VERIFICATION_SERVICE_SID;
+let verificationServiceSid = process.env.TWILIO_VERIFICATION_SERVICE_SID;
 
 // Initialize verification service if not already created
 export async function initializeVerificationService(friendlyName: string = "AQI Monitor Verify Service") {
   try {
-    if (!verificationServiceSid) {
-      // Create a new verification service
-      const service = await client.verify.v2.services.create({
-        friendlyName: friendlyName,
-        codeLength: 6, // Standard length for SMS codes
-      });
-      
-      console.log('Created new verification service with SID:', service.sid);
-      return service.sid;
+    // If we already have a service SID, verify it's valid
+    if (verificationServiceSid) {
+      try {
+        const service = await client.verify.v2.services(verificationServiceSid).fetch();
+        console.log('Using existing verification service:', service.friendlyName);
+        return verificationServiceSid;
+      } catch (error) {
+        console.warn('Existing verification service not found or invalid:', error);
+        verificationServiceSid = undefined;
+      }
     }
-    return verificationServiceSid;
+
+    // Create a new verification service
+    const service = await client.verify.v2.services.create({
+      friendlyName: friendlyName,
+      codeLength: 6,
+    });
+    
+    verificationServiceSid = service.sid;
+    console.log('Created new verification service with SID:', service.sid);
+    
+    // Return the service SID so it can be saved in environment variables
+    return service.sid;
   } catch (error) {
-    console.error('Error creating verification service:', error);
+    console.error('Error initializing verification service:', error);
     throw error;
   }
+}
+
+// Helper function to ensure service is initialized
+async function ensureServiceInitialized() {
+  if (!verificationServiceSid) {
+    verificationServiceSid = await initializeVerificationService();
+  }
+  return verificationServiceSid;
 }
 
 export async function sendVerificationCode(phoneNumber: string): Promise<{
@@ -36,17 +56,17 @@ export async function sendVerificationCode(phoneNumber: string): Promise<{
   error?: string;
 }> {
   try {
-    if (!verificationServiceSid) {
-      throw new Error('Verification service not initialized');
-    }
-
+    const serviceSid = await ensureServiceInitialized();
+    
+    console.log('Sending verification code to:', phoneNumber);
     const verification = await client.verify.v2
-      .services(verificationServiceSid)
+      .services(serviceSid)
       .verifications.create({
         to: phoneNumber,
         channel: 'sms'
       });
     
+    console.log('Verification status:', verification.status);
     return {
       success: verification.status === 'pending',
       status: verification.status
@@ -67,17 +87,17 @@ export async function checkVerificationCode(phoneNumber: string, code: string): 
   error?: string;
 }> {
   try {
-    if (!verificationServiceSid) {
-      throw new Error('Verification service not initialized');
-    }
-
+    const serviceSid = await ensureServiceInitialized();
+    
+    console.log('Checking verification code for:', phoneNumber);
     const verificationCheck = await client.verify.v2
-      .services(verificationServiceSid)
+      .services(serviceSid)
       .verificationChecks.create({
         to: phoneNumber,
         code: code
       });
 
+    console.log('Verification check status:', verificationCheck.status);
     return {
       success: true,
       valid: verificationCheck.valid,
