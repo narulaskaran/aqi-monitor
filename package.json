@@ -4,14 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:frontend": "cd client && npm install && vite build",
+    "build": "vite build && npm run build:backend",
     "build:backend": "cd server && npm install && npm run build",
     "start": "cd server && npm start",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "cd client && npm run dev",
+    "dev:frontend": "vite",
     "dev:backend": "cd server && npm run dev",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",

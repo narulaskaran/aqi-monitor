@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { addSubscription, getAllSubscriptions } from "./db.js";
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,12 +18,13 @@ dotenv.config({ path: join(__dirname, "../.env") });
 const prisma = new PrismaClient();
 
 // Test database connection
-prisma.$connect()
+prisma
+  .$connect()
   .then(() => {
-    console.log('✅ Database connected successfully');
+    console.log("✅ Database connected successfully");
   })
   .catch((err: Error) => {
-    console.error('❌ Failed to connect to database:', err);
+    console.error("❌ Failed to connect to database:", err);
   });
 
 const t = initTRPC.create();
@@ -139,6 +140,7 @@ app.use(
       "http://localhost:5173",
       "http://localhost:5174",
       "https://aqi-monitor.vercel.app", // Default Vercel domain
+      /\.vercel\.app$/, // Allow all vercel.app subdomains
       "https://narula.xyz", // Personal domain
     ],
     credentials: true,

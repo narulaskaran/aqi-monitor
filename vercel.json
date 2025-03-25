@@ -1,8 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "buildCommand": "npm run build:frontend",
-  "outputDirectory": "dist",
   "builds": [
     {
       "src": "server/src/index.ts",
@@ -21,23 +20,19 @@
   ],
   "routes": [
     {
-      "src": "/health",
-      "dest": "server/src/index.ts"
-    },
-    {
       "src": "/trpc/(.*)",
       "dest": "server/src/index.ts"
-    },
-    {
-      "handle": "filesystem"
     },
     {
       "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/dist/index.html"
+      "dest": "/index.html"
     }
   ]
 }
