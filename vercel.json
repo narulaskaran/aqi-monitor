@@ -1,14 +1,13 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "buildCommand": "npm run build:frontend",
-  "outputDirectory": "dist",
   "builds": [
     {
       "src": "server/src/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/.env"]
+        "includeFiles": ["server/prisma/**/*"]
       }
     },
     {
@@ -29,8 +28,11 @@
       "dest": "/assets/$1"
     },
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/dist/index.html"
+      "dest": "/index.html"
     }
   ]
 }
