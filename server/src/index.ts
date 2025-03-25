@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { addSubscription, getAllSubscriptions } from "./db.js";
 import { PrismaClient } from "@prisma/client";
+import { sendVerificationCode, checkVerificationCode, initializeVerificationService } from "./twilio.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,6 +127,39 @@ const appRouter = t.router({
   getSubscriptions: t.procedure.query(async () => {
     return await getAllSubscriptions();
   }),
+
+  startVerification: t.procedure
+    .input(z.object({ 
+      phone: z.string(),
+      zipCode: z.string()
+    }))
+    .mutation(async ({ input }) => {
+      const result = await sendVerificationCode(input.phone);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send verification code');
+      }
+      return result;
+    }),
+
+  verifyCode: t.procedure
+    .input(z.object({ 
+      phone: z.string(),
+      zipCode: z.string(),
+      code: z.string()
+    }))
+    .mutation(async ({ input }) => {
+      const result = await checkVerificationCode(input.phone, input.code);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to verify code');
+      }
+      
+      if (result.valid) {
+        // Create subscription if verification successful
+        await addSubscription(input.phone, input.zipCode);
+      }
+      
+      return result;
+    }),
 });
 
 export type AppRouter = typeof appRouter;

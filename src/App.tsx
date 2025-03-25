@@ -12,6 +12,7 @@ import {
 import "./App.css";
 import { trpc } from "./lib/trpc";
 import { useState, ChangeEvent, KeyboardEvent } from "react";
+import { SubscriptionForm } from "./components/SubscriptionForm";
 
 function App() {
   const [zipCode, setZipCode] = useState("");
@@ -122,11 +123,14 @@ function App() {
         {error && <div className="text-red-500 mb-4">{error}</div>}
 
         {airQuality && (
-          <AQICard
-            index={airQuality.index}
-            category={airQuality.category}
-            dominantPollutant={airQuality.dominantPollutant}
-          />
+          <>
+            <AQICard
+              index={airQuality.index}
+              category={airQuality.category}
+              dominantPollutant={airQuality.dominantPollutant}
+            />
+            <SubscriptionForm zipCode={zipCode} />
+          </>
         )}
       </div>
 
