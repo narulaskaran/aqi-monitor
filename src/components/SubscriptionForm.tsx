@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, KeyboardEvent } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { startVerification, verifyCode } from "../lib/api";
@@ -177,6 +177,11 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             onChange={(e) =>
               setVerificationCode(e.target.value.replace(/\D/g, ""))
             }
+            onKeyUp={(e: KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === "Enter") {
+                handleVerify();
+              }
+            }}
             maxLength={6}
             disabled={isLoading}
           />
