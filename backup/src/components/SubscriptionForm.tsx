@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { startVerification, verifyCode } from "../lib/api";
+import { trpc } from "../lib/trpc";
 
 interface SubscriptionFormProps {
   zipCode: string;
@@ -61,17 +61,46 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setIsLoading(true);
 
       const formattedPhone = formatPhoneNumber(phone);
+      const requestData = {
+        phone: formattedPhone,
+        zipCode: zipCode,
+      };
+
+      console.log("Sending verification request:", requestData);
+      console.log("JSON stringified:", JSON.stringify(requestData));
+
+      // Ensure we're passing a properly formed object
+      if (!requestData.phone || !requestData.zipCode) {
+        throw new Error("Invalid request data - missing required fields");
+      }
+
+      console.log("Starting verification with:", { phone: formattedPhone, zipCode });
       
-      console.log("Starting verification for:", { phone: formattedPhone, zipCode });
+      // Use the simple direct API for development
+      console.log("Using simple API for verification...");
       
-      const result = await startVerification(formattedPhone, zipCode);
-      console.log("Verification response:", result);
+      // Make a direct fetch call to the simple API endpoint
+      const response = await fetch(`http://localhost:3000/api/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: String(formattedPhone),
+          zipCode: String(zipCode)
+        })
+      });
       
-      if (result.success) {
+      console.log("Response status:", response.status);
+      const jsonData = await response.json();
+      console.log("Response data:", jsonData);
+      
+      // Simple success handling
+      if (jsonData.success) {
         setIsVerifying(true);
-        setVerificationStatus(result.status || "pending");
+        setVerificationStatus(jsonData.status || "pending");
       } else {
-        throw new Error(result.error || "Failed to send verification code");
+        setError("Failed to send verification code. Please try again.");
       }
     } catch (err) {
       console.error("Verification error:", err);
@@ -96,7 +125,6 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   };
 
   const handleVerify = async () => {
-    // Validate code format
     if (!verificationCode || verificationCode.length !== 6) {
       setError("Please enter a valid 6-digit verification code");
       return;
@@ -107,18 +135,22 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setIsLoading(true);
 
       const formattedPhone = formatPhoneNumber(phone);
-      
-      const result = await verifyCode(formattedPhone, zipCode, verificationCode);
-      console.log("Code verification response:", result);
-      
+      const result = await trpc.verifyCode.mutate({
+        phone: formattedPhone,
+        zipCode,
+        code: verificationCode,
+      });
+
       if (result.success && result.valid) {
         setSuccess(true);
         setVerificationStatus("approved");
       } else {
-        throw new Error(result.error || "Invalid verification code");
+        setError(
+          result.error || "Invalid verification code. Please try again."
+        );
       }
     } catch (err) {
-      console.error("Code verification error:", err);
+      console.error("Code verification error:", err); // Debug log
       setError(
         err instanceof Error
           ? err.message

@@ -10,9 +10,9 @@ import {
   TooltipTrigger,
 } from "./components/ui/tooltip";
 import "./App.css";
+import { trpc } from "./lib/trpc";
 import { useState, ChangeEvent, KeyboardEvent } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
-import { getAirQuality } from "./lib/api";
 
 function App() {
   const [zipCode, setZipCode] = useState("");
@@ -62,10 +62,10 @@ function App() {
       const { lat, lon } = usLocation;
 
       // Then get air quality data
-      const data = await getAirQuality(
-        parseFloat(lat),
-        parseFloat(lon)
-      );
+      const data = await trpc.fetchAirQuality.query({
+        latitude: parseFloat(lat),
+        longitude: parseFloat(lon),
+      });
 
       setAirQuality({
         index: data.index,

@@ -1,97 +1,130 @@
 # AQI Monitor
 
-A real-time [Air Quality Index (AQI) monitoring application](https://aqi-monitor.vercel.app/) that provides air quality data for any US ZIP code. Built with React, TypeScript, and tRPC.
-
-You can also click through the [archived implementation](https://github.com/shadcn/aqi-monitor/tree/impl_archive) written in Python.
+A real-time Air Quality Index (AQI) monitoring application that allows users to check air quality in their area and subscribe to SMS alerts for air quality changes.
 
 ## Features
 
-- Look up air quality data by US ZIP code
-- Display EPA Air Quality Index (AQI)
-- Show dominant pollutant information
-- Color-coded indicators for air quality levels
-- US location validation
-- Responsive design
+- Real-time air quality data using Google Air Quality API
+- Color-coded AQI display with category and recommendations
+- SMS alerts for air quality changes using Twilio
+- Phone number verification for subscriptions
+- Responsive design for desktop and mobile
 
-## Project Structure
+## Tech Stack
 
-```
-src/
-├── components/         # React components
-│   ├── AQICard.tsx    # Displays AQI information
-│   ├── AQIHeader.tsx  # Application header
-│   ├── AQIIcon.tsx    # Air quality icon
-│   └── ui/            # Shadcn UI components
-├── lib/               # Utility functions and configurations
-│   └── trpc.ts       # tRPC client setup
-└── App.tsx           # Main application component
+- **Frontend:**
+  - React + TypeScript
+  - Vite for build tooling
+  - Tailwind CSS for styling
+  - shadcn/ui for UI components
 
-server/
-└── src/
-    └── index.ts      # tRPC server and API endpoints
-```
+- **Backend:**
+  - Node.js + Express
+  - tRPC for type-safe API
+  - Prisma ORM for database access
+  - PostgreSQL database (Vercel Postgres)
+  - Twilio for SMS verification and alerts
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v16+)
 - npm or yarn
-- Google Air Quality API key
+- PostgreSQL database or Vercel Postgres
+- Twilio account
+- Google Maps Platform API key
 
-### Environment Setup
+### Environment Variables
 
-1. Create a `.env` file in the `server` directory:
+Create a `.env` file in the server directory with the following:
 
-```env
-GOOGLE_AIR_QUALITY_API_KEY=your_api_key_here
+```
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/aqi_monitor"
+DATABASE_URL_UNPOOLED="postgresql://user:password@localhost:5432/aqi_monitor"
+
+# Twilio (for SMS verification)
+TWILIO_ACCOUNT_SID="your_twilio_account_sid"
+TWILIO_AUTH_TOKEN="your_twilio_auth_token"
+TWILIO_VERIFICATION_SERVICE_SID="optional_existing_service_sid"
+
+# Google Air Quality API
+GOOGLE_AIR_QUALITY_API_KEY="your_google_api_key"
+
+# Environment
+NODE_ENV="development"
 ```
 
-### Running the Application
-
-1. Install dependencies:
+### Installation and Local Development
 
 ```bash
+# Install dependencies
 npm install
-cd server && npm install
-```
 
-2. Start the backend server:
+# Install server dependencies
+cd server && npm install && cd ..
 
-```bash
-cd server
+# Generate Prisma client
+cd server && npx prisma generate && cd ..
+
+# Run development servers (frontend + backend)
 npm run dev
 ```
 
-3. Start the frontend development server:
+The application will be available at:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3000
+
+### Production Build
 
 ```bash
-# In the root directory
-npm run dev
+# Build for production
+npm run build
+
+# Start the production server
+npm start
 ```
 
-The application will be available at `http://localhost:5173`
+## Deployment
 
-## API Integration
+This project is set up for easy deployment to Vercel:
 
-This project uses:
+```bash
+# Deploy to Vercel
+vercel deploy
+```
 
-- Google Air Quality API for AQI data
-- OpenStreetMap Nominatim API for geocoding
-- tRPC for type-safe API communication
+## API Endpoints
 
-## Contributing
+### tRPC Endpoints
 
-Feel free to submit issues and enhancement requests!
+- `fetchAirQuality` - Get air quality data for a location
+- `startVerification` - Start phone verification process
+- `verifyCode` - Verify SMS code
+- `getSubscriptions` - Get all subscriptions
 
-## Upcoming Features
+### REST Endpoints
 
-- [ ] SMS Notifications
-  - [ ] User signup for AQI alerts by zip code
-  - [ ] Support for multiple zip code subscriptions
-  - [ ] Configurable subscription expiration dates
-- [ ] Trip Planning Features
-  - [ ] AQI predictions for travel dates
-  - [ ] Travel AQI subscriptions (with date range support)
+- `GET /api/air-quality` - Alternative API for air quality data
+- `GET /health` - Health check endpoint
 
-These features are in development. Feel free to open issues with suggestions or contribute to their implementation!
+## Project Structure
+
+```
+/
+├── src/                  # Frontend source code
+│   ├── components/       # React components
+│   ├── lib/              # Utilities and API clients
+│   └── types/            # TypeScript type definitions
+├── server/               # Backend source code
+│   ├── src/              # Server code
+│   │   ├── services/     # Service modules
+│   │   └── trpc/         # tRPC routers and procedures
+│   └── prisma/           # Prisma schema and migrations
+└── public/               # Static assets
+```
+
+## License
+
+MIT

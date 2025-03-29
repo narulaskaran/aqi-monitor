@@ -1,0 +1,75 @@
+# AQI Monitor Codebase Guidelines
+
+## Commands
+- Build: `npm run build` - builds frontend (Vite) and backend
+- Dev: `npm run dev` - runs frontend and backend concurrently
+- Clean: `npm run clean` - removes dist directories
+- Lint: `npm run lint` - runs ESLint
+- Typecheck: `npm run typecheck` - runs TypeScript type checking
+- Vercel Deploy: `vercel deploy` - deploys to Vercel
+
+## Server Commands
+- Build: `cd server && npm run build` - runs Prisma generation and TS compilation
+- Dev: `cd server && npm run dev` - runs backend in dev mode
+- Start: `cd server && npm start` - runs the production build
+
+## Local Development
+- Frontend runs on: http://localhost:5173
+- Backend runs on: http://localhost:3000
+- Backend health check: http://localhost:3000/health
+- API endpoints: 
+  - GET `/api/air-quality` - Get air quality data
+  - POST `/api/verify` - Start phone verification
+  - POST `/api/verify-code` - Verify SMS code
+
+## Troubleshooting
+- **Database Connection**: Make sure the DATABASE_URL and DATABASE_URL_UNPOOLED environment variables are set correctly
+- **API Keys**: Ensure GOOGLE_AIR_QUALITY_API_KEY is set to use real data (otherwise mock data is used)
+- **Twilio Setup**: 
+  - TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN are required for SMS functionality
+  - In development mode without real Twilio credentials, mock verification is used:
+    - Any phone number will work for verification
+    - All verification codes accept "123456" as the valid code
+    - Set TWILIO_VERIFICATION_SERVICE_SID to use real verification service
+- **Module Resolution**: In development, some imports may need special handling for ESM compatibility
+- **API Request Format**:
+  ```js
+  // Air quality data
+  fetch("http://localhost:3000/api/air-quality?latitude=37.7749&longitude=-122.4194")
+  
+  // Verification
+  fetch("http://localhost:3000/api/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone: "+11234567890", zipCode: "94107" })
+  })
+  
+  // Verification code
+  fetch("http://localhost:3000/api/verify-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone: "+11234567890", zipCode: "94107", code: "123456" })
+  })
+  ```
+
+## Code Style
+- **Formatting**: 2-space indentation, Tailwind CSS with shadcn/ui components
+- **Imports**: React/hooks first, UI components next, utilities/types third, local components last
+- **Naming**: PascalCase for components, camelCase for variables/functions, interfaces end with "Props"
+- **Types**: Explicit TypeScript interfaces for props, separate files in `/src/types/`, Zod for validation
+- **Error Handling**: Try/catch blocks for async operations, consistent error state management
+- **Components**: Functional components with explicit prop interfaces, reusable design pattern
+- **Documentation**: JSDoc comments for public functions and components
+
+## Project Structure
+- **Frontend**: React/TypeScript app with Vite in the `/src` directory
+- **Backend**: Node/Express with Prisma ORM in the `/server` directory
+- **API**: RESTful endpoints for communication between frontend and backend
+- **Database**: PostgreSQL accessed through Prisma ORM
+- **SMS**: Twilio for phone verification and notifications
+
+## Environment Setup
+For local development, you need a `.env` file in the server directory with:
+- DATABASE_URL and DATABASE_URL_UNPOOLED for PostgreSQL connection
+- GOOGLE_AIR_QUALITY_API_KEY for air quality data
+- TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN for SMS functionality
