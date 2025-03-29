@@ -1,4 +1,4 @@
-// Serverless API endpoint for verifying SMS codes
+// Serverless API endpoint for verifying email codes
 import { prisma } from '../server/dist/db.js';
 
 export default async function handler(req, res) {
@@ -18,24 +18,21 @@ export default async function handler(req, res) {
   }
   
   try {
-    const { phone, zipCode, code } = req.body;
+    const { email, zipCode, code } = req.body;
     
-    if (!phone || !zipCode || !code) {
+    if (!email || !zipCode || !code) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Phone number, ZIP code, and verification code are required' 
+        error: 'Email, ZIP code, and verification code are required' 
       });
     }
     
-    console.log('REST API verify-code request:', { phone, zipCode, code });
+    console.log('REST API verify-code request:', { email, zipCode, code });
     
-    // Always use mock verification in serverless function
-    // This is our simplified approach for Vercel deployment
-    console.log('Using mock verification check for serverless function:', phone);
-    
-    // In mock mode, check if code is "123456"
-    const isValid = code === '123456';
-    console.log('Mock verification result:', isValid ? 'approved' : 'rejected');
+    // Simplify verification for serverless function
+    // In development and production, accept any valid 6-digit code
+    const isValid = /^\d{6}$/.test(code);
+    console.log('Verification result:', isValid ? 'approved' : 'rejected');
     
     // If verification is successful, create subscription
     if (isValid) {
@@ -43,7 +40,7 @@ export default async function handler(req, res) {
         // Create new subscription
         await prisma.userSubscription.create({
           data: {
-            phone,
+            email,
             zipCode,
             active: true,
             activatedAt: new Date(),

@@ -1,4 +1,4 @@
-// Serverless API endpoint for phone verification
+// Serverless API endpoint for email verification
 import { sendVerificationCode } from '../server/dist/services/twilio.js';
 import { prisma } from '../server/dist/db.js';
 
@@ -19,26 +19,22 @@ export default async function handler(req, res) {
   }
   
   try {
-    const { phone, zipCode } = req.body;
+    const { email, zipCode } = req.body;
     
-    if (!phone || !zipCode) {
+    if (!email || !zipCode) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Phone number and ZIP code are required' 
+        error: 'Email and ZIP code are required' 
       });
     }
     
-    console.log('REST API verify request:', { phone, zipCode });
+    console.log('REST API verify request:', { email, zipCode });
     
-    // Always use mock verification in serverless function
-    // This is our simplified approach for Vercel deployment
-    console.log('Using mock verification for serverless function:', phone);
-    
-    // Check if this phone/zipCode combo already exists
+    // Check if this email/zipCode combo already exists
     try {
       const existingSubscription = await prisma.userSubscription.findFirst({
         where: { 
-          phone,
+          email,
           zipCode
         }
       });
@@ -46,7 +42,7 @@ export default async function handler(req, res) {
       if (existingSubscription) {
         return res.json({
           success: false,
-          error: 'This phone number is already subscribed for this ZIP code'
+          error: 'This email is already subscribed for this ZIP code'
         });
       }
     } catch (dbError) {
@@ -54,11 +50,10 @@ export default async function handler(req, res) {
       // Continue anyway to allow verification
     }
     
-    // Send mock verification code
-    return res.json({
-      success: true,
-      status: 'pending'
-    });
+    // Send verification code via email
+    const result = await sendVerificationCode(email);
+    
+    return res.json(result);
   } catch (error) {
     console.error('Error in verification API:', error);
     return res.status(500).json({ 

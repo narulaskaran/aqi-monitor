@@ -57,9 +57,9 @@ export async function getAirQuality(
 }
 
 /**
- * Sends verification code to phone number
+ * Sends verification code to email
  */
-export async function startVerification(phone: string, zipCode: string) {
+export async function startVerification(email: string, zipCode: string) {
   try {
     const baseUrl = getBaseUrl();
     console.log(`Starting verification: ${baseUrl}/api/verify`);
@@ -70,7 +70,7 @@ export async function startVerification(phone: string, zipCode: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        phone,
+        email,
         zipCode
       })
     });
@@ -89,9 +89,9 @@ export async function startVerification(phone: string, zipCode: string) {
 }
 
 /**
- * Verifies code sent to phone number
+ * Verifies code sent to email
  */
-export async function verifyCode(phone: string, zipCode: string, code: string) {
+export async function verifyCode(email: string, zipCode: string, code: string) {
   try {
     const baseUrl = getBaseUrl();
     console.log(`Verifying code: ${baseUrl}/api/verify-code`);
@@ -102,7 +102,7 @@ export async function verifyCode(phone: string, zipCode: string, code: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        phone,
+        email,
         zipCode,
         code
       })

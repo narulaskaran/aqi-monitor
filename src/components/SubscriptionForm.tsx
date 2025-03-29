@@ -7,33 +7,15 @@ interface SubscriptionFormProps {
   zipCode: string;
 }
 
-// Function to format phone number to E.164 format
-const formatPhoneNumber = (phone: string): string => {
-  // Remove all non-digit characters
-  const digits = phone.replace(/\D/g, "");
-
-  // For US numbers, ensure it starts with +1
-  if (digits.length === 10) {
-    return `+1${digits}`;
-  }
-  // If it already includes country code
-  if (digits.length === 11 && digits.startsWith("1")) {
-    return `+${digits}`;
-  }
-  return phone;
-};
-
-// Function to validate phone number
-const isValidPhoneNumber = (phone: string): boolean => {
-  // Basic US phone number validation (10 digits or 11 digits starting with 1)
-  const digits = phone.replace(/\D/g, "");
-  return (
-    digits.length === 10 || (digits.length === 11 && digits.startsWith("1"))
-  );
+// Function to validate email
+const isValidEmail = (email: string): boolean => {
+  // Basic email validation using regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 };
 
 export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,9 +27,9 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
   const handleSubscribe = async () => {
     try {
-      if (!isValidPhoneNumber(phone)) {
+      if (!isValidEmail(email)) {
         setError(
-          "Please enter a valid US phone number (e.g., 1234567890 or +11234567890)"
+          "Please enter a valid email address (e.g., example@domain.com)"
         );
         return;
       }
@@ -59,12 +41,10 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
       setError(null);
       setIsLoading(true);
-
-      const formattedPhone = formatPhoneNumber(phone);
       
-      console.log("Starting verification for:", { phone: formattedPhone, zipCode });
+      console.log("Starting verification for:", { email, zipCode });
       
-      const result = await startVerification(formattedPhone, zipCode);
+      const result = await startVerification(email, zipCode);
       console.log("Verification response:", result);
       
       if (result.success) {
@@ -105,10 +85,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
     try {
       setError(null);
       setIsLoading(true);
-
-      const formattedPhone = formatPhoneNumber(phone);
       
-      const result = await verifyCode(formattedPhone, zipCode, verificationCode);
+      const result = await verifyCode(email, zipCode, verificationCode);
       console.log("Code verification response:", result);
       
       if (result.success && result.valid) {
@@ -134,7 +112,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       <div className="mt-4 p-4 bg-green-100 rounded-lg text-green-800">
         <p className="font-semibold">Verification successful! 🎉</p>
         <p className="mt-2">
-          You will now receive text alerts about air quality changes for your
+          You will now receive email alerts about air quality changes for your
           area.
         </p>
       </div>
@@ -144,15 +122,15 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   return (
     <div className="mt-4 p-4 border rounded-lg">
       <h3 className="text-lg font-semibold mb-4">
-        Get Air Quality Alerts via Text
+        Get Air Quality Alerts via Email
       </h3>
       {!isVerifying ? (
         <div className="space-y-4">
           <Input
-            type="tel"
-            placeholder="Enter your phone number (e.g., 1234567890)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            type="email"
+            placeholder="Enter your email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
           />
           <Button
