@@ -20,7 +20,7 @@ A real-time Air Quality Index (AQI) monitoring application that allows users to 
 
 - **Backend:**
   - Node.js + Express
-  - tRPC for type-safe API
+  - RESTful API endpoints
   - Prisma ORM for database access
   - PostgreSQL database (Vercel Postgres)
   - Twilio for SMS verification and alerts
@@ -97,17 +97,43 @@ vercel deploy
 
 ## API Endpoints
 
-### tRPC Endpoints
-
-- `fetchAirQuality` - Get air quality data for a location
-- `startVerification` - Start phone verification process
-- `verifyCode` - Verify SMS code
-- `getSubscriptions` - Get all subscriptions
-
 ### REST Endpoints
 
-- `GET /api/air-quality` - Alternative API for air quality data
+- `GET /api/air-quality` - Get air quality data for a location
+- `POST /api/verify` - Start phone verification process
+- `POST /api/verify-code` - Verify SMS code
 - `GET /health` - Health check endpoint
+
+### API Usage Examples
+
+```javascript
+// Get air quality data
+fetch("/api/air-quality?latitude=37.7749&longitude=-122.4194")
+  .then(response => response.json())
+  .then(data => console.log(data));
+
+// Start verification
+fetch("/api/verify", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ phone: "+11234567890", zipCode: "94107" })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+
+// Verify code
+fetch("/api/verify-code", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ 
+    phone: "+11234567890", 
+    zipCode: "94107", 
+    code: "123456" 
+  })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
 
 ## Project Structure
 
@@ -119,11 +145,24 @@ vercel deploy
 │   └── types/            # TypeScript type definitions
 ├── server/               # Backend source code
 │   ├── src/              # Server code
-│   │   ├── services/     # Service modules
-│   │   └── trpc/         # tRPC routers and procedures
+│   │   └── services/     # Service modules
 │   └── prisma/           # Prisma schema and migrations
+├── api/                  # Serverless API endpoints for Vercel
 └── public/               # Static assets
 ```
+
+## Development vs Production
+
+### Development Mode
+- Frontend and backend run as separate servers
+- Backend provides REST API endpoints
+- Mock Twilio verification is used by default (code: 123456)
+
+### Production Mode (Vercel)
+- Frontend is served as static assets
+- API endpoints run as serverless functions
+- Mock verification is used for demo purposes
+- The application can be easily configured to use real Twilio verification
 
 ## License
 

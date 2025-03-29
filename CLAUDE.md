@@ -22,6 +22,14 @@
   - POST `/api/verify` - Start phone verification
   - POST `/api/verify-code` - Verify SMS code
 
+## Deployment
+- **Preview**: `vercel deploy` - creates a preview deployment
+- **Production**: `vercel --prod` - deploys to production
+- **Vercel Structure**:
+  - Uses serverless API handlers in `/api` directory
+  - Frontend is served as static files
+  - Configuration defined in `vercel.json`
+
 ## Troubleshooting
 - **Database Connection**: Make sure the DATABASE_URL and DATABASE_URL_UNPOOLED environment variables are set correctly
 - **API Keys**: Ensure GOOGLE_AIR_QUALITY_API_KEY is set to use real data (otherwise mock data is used)
@@ -65,8 +73,9 @@
 - **Frontend**: React/TypeScript app with Vite in the `/src` directory
 - **Backend**: Node/Express with Prisma ORM in the `/server` directory
 - **API**: RESTful endpoints for communication between frontend and backend
+- **Serverless**: API handlers in `/api` directory for Vercel deployment
 - **Database**: PostgreSQL accessed through Prisma ORM
-- **SMS**: Twilio for phone verification and notifications
+- **SMS**: Twilio for phone verification and notifications (with mock implementation)
 
 ## Environment Setup
 For local development, you need a `.env` file in the server directory with:
