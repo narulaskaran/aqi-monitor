@@ -10,12 +10,12 @@ datasource db {
 
 model UserSubscription {
   id          String    @id @default(uuid())
-  phone       String    // Must be a valid US phone number
+  email       String    // User's email address
   zipCode     String    // Must be a valid US zip code
   createdAt   DateTime  @default(now())
   active      Boolean   @default(true) // Indicates whether the subscription is active
   activatedAt DateTime? // Indicates when the subscription was activated
   updatedAt   DateTime  @updatedAt
 
-  @@index([phone, zipCode]) // Add index for common query pattern
+  @@index([email, zipCode]) // Add index for common query pattern
 }

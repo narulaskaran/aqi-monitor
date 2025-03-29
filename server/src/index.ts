@@ -7,8 +7,7 @@ import dotenv from 'dotenv';
 import { connectToDatabase, disconnectFromDatabase, prisma } from './db.js';
 import { 
   sendVerificationCode, 
-  checkVerificationCode, 
-  initializeVerificationService 
+  checkVerificationCode
 } from './services/twilio.js';
 import { fetchAirQuality, getMockAirQualityData } from './services/airQuality.js';
 
@@ -97,24 +96,21 @@ app.get('/api/air-quality', async (req, res) => {
 // Start verification endpoint
 app.post('/api/verify', async (req, res) => {
   try {
-    const { phone, zipCode } = req.body;
+    const { email, zipCode } = req.body;
     
-    if (!phone || !zipCode) {
+    if (!email || !zipCode) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Phone number and ZIP code are required' 
+        error: 'Email and ZIP code are required' 
       });
     }
     
-    console.log('REST API verify request:', { phone, zipCode });
+    console.log('REST API verify request:', { email, zipCode });
     
-    // Initialize verification service if needed
-    await initializeVerificationService();
-    
-    // Check if this phone/zipCode combo already exists
+    // Check if this email/zipCode combo already exists
     const existingSubscription = await prisma.userSubscription.findFirst({
       where: { 
-        phone,
+        email,
         zipCode
       }
     });
@@ -122,12 +118,12 @@ app.post('/api/verify', async (req, res) => {
     if (existingSubscription) {
       return res.json({
         success: false,
-        error: 'This phone number is already subscribed for this ZIP code'
+        error: 'This email is already subscribed for this ZIP code'
       });
     }
     
     // Send verification code
-    const result = await sendVerificationCode(phone);
+    const result = await sendVerificationCode(email);
     return res.json(result);
   } catch (error) {
     console.error('Error in verification API:', error);
@@ -141,19 +137,19 @@ app.post('/api/verify', async (req, res) => {
 // Verify code endpoint
 app.post('/api/verify-code', async (req, res) => {
   try {
-    const { phone, zipCode, code } = req.body;
+    const { email, zipCode, code } = req.body;
     
-    if (!phone || !zipCode || !code) {
+    if (!email || !zipCode || !code) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Phone number, ZIP code, and verification code are required' 
+        error: 'Email, ZIP code, and verification code are required' 
       });
     }
     
-    console.log('REST API verify-code request:', { phone, zipCode, code });
+    console.log('REST API verify-code request:', { email, zipCode, code });
     
     // Verify the code
-    const result = await checkVerificationCode(phone, code);
+    const result = await checkVerificationCode(email, code);
     
     // If verification is successful, create subscription
     if (result.success && result.valid) {
@@ -161,7 +157,7 @@ app.post('/api/verify-code', async (req, res) => {
         // Create new subscription
         await prisma.userSubscription.create({
           data: {
-            phone,
+            email,
             zipCode,
             active: true,
             activatedAt: new Date(),

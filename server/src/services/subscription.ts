@@ -6,7 +6,7 @@ import { prisma } from '../db.js';
 // Subscription types
 export interface Subscription {
   id: string;
-  phone: string;
+  email: string;
   zipCode: string;
   createdAt: Date;
   active: boolean;
@@ -15,12 +15,12 @@ export interface Subscription {
 }
 
 /**
- * Creates a new subscription for the given phone number and ZIP code
+ * Creates a new subscription for the given email and ZIP code
  */
-export async function createSubscription(phone: string, zipCode: string): Promise<Subscription> {
+export async function createSubscription(email: string, zipCode: string): Promise<Subscription> {
   return await prisma.userSubscription.create({
     data: {
-      phone,
+      email,
       zipCode,
       active: true,
       activatedAt: new Date(),
@@ -42,10 +42,10 @@ export async function getAllSubscriptions(): Promise<Subscription[]> {
 /**
  * Activates a subscription after verification
  */
-export async function activateSubscription(phone: string, zipCode: string): Promise<Subscription | null> {
+export async function activateSubscription(email: string, zipCode: string): Promise<Subscription | null> {
   return await prisma.userSubscription.updateMany({
     where: {
-      phone,
+      email,
       zipCode,
     },
     data: {
@@ -55,7 +55,7 @@ export async function activateSubscription(phone: string, zipCode: string): Prom
   }).then(() => {
     return prisma.userSubscription.findFirst({
       where: {
-        phone,
+        email,
         zipCode,
       },
     });
@@ -79,12 +79,12 @@ export async function deactivateSubscription(id: string): Promise<boolean> {
 }
 
 /**
- * Finds a subscription by phone number
+ * Finds a subscription by email
  */
-export async function findSubscriptionByPhone(phone: string): Promise<Subscription | null> {
+export async function findSubscriptionByEmail(email: string): Promise<Subscription | null> {
   return await prisma.userSubscription.findFirst({
     where: {
-      phone,
+      email,
     },
   });
 }
@@ -92,10 +92,10 @@ export async function findSubscriptionByPhone(phone: string): Promise<Subscripti
 /**
  * Checks if a subscription already exists
  */
-export async function subscriptionExists(phone: string, zipCode: string): Promise<boolean> {
+export async function subscriptionExists(email: string, zipCode: string): Promise<boolean> {
   const count = await prisma.userSubscription.count({
     where: {
-      phone,
+      email,
       zipCode,
     },
   });
