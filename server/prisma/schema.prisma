@@ -19,3 +19,15 @@ model UserSubscription {
 
   @@index([email, zipCode]) // Add index for common query pattern
 }
+
+model VerificationCode {
+  id        String   @id @default(uuid())
+  email     String   // Email address the code was sent to
+  code      String   // The verification code
+  expires   DateTime // When the code expires
+  createdAt DateTime @default(now())
+  usedAt    DateTime? // When the code was used (null if not used)
+
+  @@index([email]) // For quick lookup by email
+  @@index([code]) // For quick lookup by code
+}

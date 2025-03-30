@@ -42,13 +42,70 @@ function generateVerificationCode(): string {
 }
 
 /**
+ * Cleans up expired verification codes
+ */
+async function cleanupExpiredCodes(): Promise<void> {
+  try {
+    // Delete codes that have expired
+    await prisma.verificationCode.deleteMany({
+      where: {
+        expires: {
+          lt: new Date() // Codes that expired before now
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error cleaning up expired verification codes:', error);
+  }
+}
+
+/**
+ * Invalidates any existing verification codes for an email
+ */
+async function invalidateExistingCodes(email: string): Promise<void> {
+  try {
+    // Mark existing codes as used
+    await prisma.verificationCode.updateMany({
+      where: {
+        email,
+        usedAt: null
+      },
+      data: {
+        usedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Error invalidating existing verification codes:', error);
+  }
+}
+
+/**
  * Sends a verification code to the provided email
  */
 export async function sendVerificationCode(email: string): Promise<VerificationResult> {
-  // Generate a verification code
-  const code = generateVerificationCode();
-  
   try {
+    // Clean up expired codes first
+    await cleanupExpiredCodes();
+    
+    // Invalidate any existing codes for this email
+    await invalidateExistingCodes(email);
+    
+    // Generate a verification code
+    const code = generateVerificationCode();
+    
+    // Calculate expiration time (10 minutes from now)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+    
+    // Store the verification code in the database
+    await prisma.verificationCode.create({
+      data: {
+        email,
+        code,
+        expires: expiresAt
+      }
+    });
+    
     console.log('Sending verification code to:', email);
     console.log('Code is:', code);
     
@@ -87,9 +144,30 @@ export async function sendVerificationCode(email: string): Promise<VerificationR
   } catch (error) {
     console.error('Error sending verification code:', error);
     
-    // In development mode, return success even on error
+    // In development mode, return success even on error and use a fixed code
     if (process.env.NODE_ENV === 'development') {
       console.log('Returning mock success response in development mode');
+      
+      // Ensure a mock code exists in the database for testing
+      try {
+        // Calculate expiration time (10 minutes from now)
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+        
+        // Create a mock verification code
+        await prisma.verificationCode.create({
+          data: {
+            email,
+            code: '123456',
+            expires: expiresAt
+          }
+        });
+        
+        console.log('Created mock verification code 123456 for:', email);
+      } catch (dbError) {
+        console.error('Error creating mock verification code:', dbError);
+      }
+      
       return {
         success: true,
         status: 'pending'
@@ -114,42 +192,84 @@ export async function checkVerificationCode(
   console.log('Received code:', code);
   
   try {
-    // In development mode, accept any code
-    if (process.env.NODE_ENV === 'development') {
-      console.log('In development mode - accepting any 6-digit code');
+    // Clean up expired codes first
+    await cleanupExpiredCodes();
+    
+    // In development mode with no Resend API key, accept a known test code
+    if (process.env.NODE_ENV === 'development' && !process.env.RESEND_API_KEY) {
+      console.log('In development mode with no API key - accepting code 123456');
       
-      const isValid = /^\d{6}$/.test(code);
-      console.log('Verification result:', isValid ? 'approved' : 'rejected');
-      
+      if (code === '123456') {
+        return {
+          success: true,
+          valid: true,
+          status: 'approved'
+        };
+      }
+    }
+    
+    // Find the most recent unexpired and unused verification code for the email
+    const verificationCode = await prisma.verificationCode.findFirst({
+      where: {
+        email,
+        code,
+        expires: {
+          gt: new Date() // Not expired
+        },
+        usedAt: null // Not used yet
+      },
+      orderBy: {
+        createdAt: 'desc' // Get the most recent one
+      }
+    });
+    
+    if (!verificationCode) {
+      console.log('No valid verification code found for:', email);
       return {
-        success: true,
-        valid: isValid,
-        status: isValid ? 'approved' : 'pending'
+        success: false,
+        valid: false,
+        error: 'Invalid or expired verification code'
       };
     }
     
-    // In production, we would typically validate against a stored code
-    // For now, just check if the code is 6 digits as a fallback
-    const isValid = /^\d{6}$/.test(code);
+    // Mark the code as used
+    await prisma.verificationCode.update({
+      where: { id: verificationCode.id },
+      data: { usedAt: new Date() }
+    });
+    
+    console.log('Verification successful for:', email);
     
     return {
       success: true,
-      valid: isValid,
-      status: isValid ? 'approved' : 'pending'
+      valid: true,
+      status: 'approved'
     };
   } catch (error) {
     console.error('Error checking verification code:', error);
     
-    // In development mode, return success for any 6-digit code
+    // In development mode, provide more flexibility
     if (process.env.NODE_ENV === 'development') {
-      const isValid = /^\d{6}$/.test(code);
-      console.log('Returning mock verification check in development mode:', isValid ? 'approved' : 'rejected');
-      
-      return {
-        success: true,
-        valid: isValid,
-        status: isValid ? 'approved' : 'pending'
-      };
+      // Check if the code exists in the database regardless of expiration
+      try {
+        const anyCode = await prisma.verificationCode.findFirst({
+          where: {
+            email,
+            code
+          }
+        });
+        
+        if (anyCode) {
+          console.log('Found matching code in development mode, accepting it');
+          return {
+            success: true,
+            valid: true,
+            status: 'approved'
+          };
+        }
+      } catch (dbError) {
+        console.error('Error checking for any matching code:', dbError);
+      }
     }
     
     return {
