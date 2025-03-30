@@ -38,39 +38,16 @@ function App() {
     try {
       setError(null);
       
+      // Basic ZIP code validation
+      if (!zipCode.match(/^\d{5}$/)) {
+        throw new Error("Please enter a valid 5-digit US ZIP code");
+      }
+      
       // Update current ZIP code to trigger reset in SubscriptionForm
       setCurrentZipCode(zipCode);
       
-      // First, get coordinates from zip code
-      const geocodeResponse = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${zipCode}`
-      );
-
-      if (!geocodeResponse.ok) {
-        throw new Error("Failed to geocode zip code");
-      }
-
-      const geocodeData = await geocodeResponse.json();
-      if (!geocodeData.length) {
-        throw new Error("Invalid zip code");
-      }
-
-      // Filter for US results
-      const usLocation = geocodeData.find((location: any) =>
-        location.display_name.endsWith(", United States")
-      );
-
-      if (!usLocation) {
-        throw new Error("ZIP code not found in United States");
-      }
-
-      const { lat, lon } = usLocation;
-
-      // Then get air quality data
-      const data = await getAirQuality(
-        parseFloat(lat),
-        parseFloat(lon)
-      );
+      // Get air quality data directly using the ZIP code
+      const data = await getAirQuality(zipCode);
 
       setAirQuality({
         index: data.index,

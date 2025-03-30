@@ -1,5 +1,5 @@
 /**
- * Email service for sending verification codes via Resend
+ * Email service for sending verification codes and notifications via Resend
  */
 import { Resend } from 'resend';
 import { z } from 'zod';
@@ -276,6 +276,38 @@ export async function checkVerificationCode(
       success: false,
       valid: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Send a generic email using Resend
+ */
+export async function sendEmail(
+  to: string, 
+  subject: string, 
+  html: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'AQI Monitor <notifications@narula.xyz>',
+      to: [to],
+      subject,
+      html
+    });
+    
+    if (error) {
+      console.error('Error sending email:', error);
+      return { success: false, error: error.message };
+    }
+    
+    console.log('Email sent with ID:', data?.id);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error sending email' 
     };
   }
 }

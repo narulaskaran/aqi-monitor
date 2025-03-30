@@ -1,5 +1,11 @@
 // Serverless API endpoint for air quality data
-import { fetchAirQuality, getMockAirQualityData } from '../server/dist/services/airQuality.js';
+import { 
+  getCoordinatesForZipCode, 
+  fetchAirQuality, 
+  getMockAirQualityData,
+  getLatestAirQualityForZip,
+  fetchAndStoreAirQualityForZip
+} from '../server/dist/services/airQuality.js';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -18,17 +24,23 @@ export default async function handler(req, res) {
   }
   
   try {
-    const { latitude, longitude } = req.query;
+    const { zipCode } = req.query;
     
-    if (!latitude || !longitude) {
-      return res.status(400).json({ error: 'Latitude and longitude are required' });
+    // We now require zipCode for all requests
+    if (!zipCode) {
+      return res.status(400).json({ error: 'ZIP code is required' });
     }
     
-    console.log('REST API air-quality request:', { latitude, longitude });
+    console.log(`Air quality request for ZIP code: ${zipCode}`);
     
-    // Parse the coordinates
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
+    // Check if we have recent data in the database
+    console.log(`Checking for cached air quality data for ZIP code: ${zipCode}`);
+    const storedData = await getLatestAirQualityForZip(zipCode);
+    
+    if (storedData) {
+      console.log(`Found cached air quality data for ZIP code: ${zipCode}`);
+      return res.json(storedData);
+    }
     
     // Use mock data if no API key is available
     if (!process.env.GOOGLE_AIR_QUALITY_API_KEY) {
@@ -36,9 +48,45 @@ export default async function handler(req, res) {
       return res.json(getMockAirQualityData());
     }
     
-    // Call the air quality service directly
-    const result = await fetchAirQuality(lat, lng);
-    return res.json(result);
+    try {
+      // Get coordinates from ZIP code
+      const coordinates = await getCoordinatesForZipCode(zipCode);
+      console.log(`Resolved coordinates for ZIP ${zipCode}:`, coordinates);
+      
+      // Call the air quality service with the coordinates
+      const result = await fetchAirQuality(coordinates.latitude, coordinates.longitude);
+      
+      // Also store this data in the database for future use
+      try {
+        await fetchAndStoreAirQualityForZip(zipCode);
+        console.log(`Stored air quality data for future use for ZIP code: ${zipCode}`);
+      } catch (storageError) {
+        // Just log the error, don't fail the request
+        console.error(`Failed to store air quality data for ZIP code ${zipCode}:`, storageError);
+      }
+      
+      return res.json(result);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error(`Error processing air quality request for ZIP code ${zipCode}:`, error);
+      
+      if (error.message?.includes('No coordinates found') || 
+          error.message?.includes('Invalid ZIP code')) {
+        return res.status(400).json({ 
+          error: `Invalid or unsupported ZIP code: ${zipCode}. Please try a different ZIP code.` 
+        });
+      }
+      
+      if (error.message?.includes('API responded with status')) {
+        return res.status(503).json({ 
+          error: 'Geocoding service temporarily unavailable. Please try again later.' 
+        });
+      }
+      
+      return res.status(500).json({ 
+        error: 'An error occurred while retrieving air quality data. Please try again later.' 
+      });
+    }
   } catch (error) {
     console.error('Error in air quality API:', error);
     return res.status(500).json({ error: 'Failed to fetch air quality data' });

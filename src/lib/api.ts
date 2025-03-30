@@ -22,18 +22,15 @@ const getBaseUrl = () => {
 };
 
 /**
- * Fetches air quality data from REST API
+ * Fetches air quality data from REST API using ZIP code
  */
-export async function getAirQuality(
-  latitude: number, 
-  longitude: number
-): Promise<AirQualityData> {
+export async function getAirQuality(zipCode: string): Promise<AirQualityData> {
   try {
     const baseUrl = getBaseUrl();
-    console.log(`Fetching air quality data from API: ${baseUrl}/api/air-quality?latitude=${latitude}&longitude=${longitude}`);
+    console.log(`Fetching air quality data from API: ${baseUrl}/api/air-quality?zipCode=${zipCode}`);
     
     const response = await fetch(
-      `${baseUrl}/api/air-quality?latitude=${latitude}&longitude=${longitude}`
+      `${baseUrl}/api/air-quality?zipCode=${zipCode}`
     );
 
     if (!response.ok) {
