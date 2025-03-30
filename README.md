@@ -15,6 +15,7 @@ A real-time Air Quality Index (AQI) monitoring application that allows users to 
 ## Tech Stack
 
 - **Frontend:**
+
   - React + TypeScript
   - Vite for build tooling
   - Tailwind CSS for styling
@@ -79,6 +80,7 @@ npm run dev
 ```
 
 The application will be available at:
+
 - Frontend: http://localhost:5173
 - Backend: http://localhost:3000
 
@@ -116,39 +118,39 @@ vercel deploy
 ```javascript
 // Get air quality data by ZIP code
 fetch("/api/air-quality?zipCode=94107")
-  .then(response => response.json())
-  .then(data => console.log(data));
+  .then((response) => response.json())
+  .then((data) => console.log(data));
 
 // Start email verification
 fetch("/api/verify", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email: "user@example.com", zipCode: "94107" })
+  body: JSON.stringify({ email: "user@example.com", zipCode: "94107" }),
 })
-  .then(response => response.json())
-  .then(data => console.log(data));
+  .then((response) => response.json())
+  .then((data) => console.log(data));
 
 // Verify email code
 fetch("/api/verify-code", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ 
-    email: "user@example.com", 
-    zipCode: "94107", 
-    code: "123456" 
-  })
+  body: JSON.stringify({
+    email: "user@example.com",
+    zipCode: "94107",
+    code: "123456",
+  }),
 })
-  .then(response => response.json())
-  .then(data => console.log(data));
+  .then((response) => response.json())
+  .then((data) => console.log(data));
 
 // Trigger the cron job manually (admin only)
 fetch("/api/cron/update-air-quality", {
-  headers: { 
-    "Authorization": "Bearer your_cron_secret"
-  }
+  headers: {
+    Authorization: "Bearer your_cron_secret",
+  },
 })
-  .then(response => response.json())
-  .then(data => console.log(data));
+  .then((response) => response.json())
+  .then((data) => console.log(data));
 ```
 
 ## Project Structure
@@ -181,12 +183,14 @@ The application uses the following database models:
 ## Development vs Production
 
 ### Development Mode
+
 - Frontend and backend run as separate servers
 - Backend provides REST API endpoints
 - Environment variables for dev stored in .env file
 - Mock verification code is used by default (code: 123456)
 
 ### Production Mode (Vercel)
+
 - Frontend is served as static assets
 - API endpoints run as serverless functions
 - Cron jobs run on scheduled intervals
