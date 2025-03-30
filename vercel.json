@@ -34,6 +34,10 @@
       "dest": "/api/verify-code.js"
     },
     {
+      "src": "/api/cron/update-air-quality",
+      "dest": "/api/cron-update-air-quality.js"
+    },
+    {
       "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },
@@ -43,6 +47,12 @@
     {
       "src": "/(.*)",
       "dest": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/update-air-quality",
+      "schedule": "0 * * * *"
     }
   ]
 }

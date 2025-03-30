@@ -2,6 +2,7 @@
  * Subscription service for managing user subscriptions
  */
 import { prisma } from '../db.js';
+import { sendEmail } from './twilio.js'; // Using the existing email service
 
 // Subscription types
 export interface Subscription {
@@ -12,6 +13,15 @@ export interface Subscription {
   active: boolean;
   activatedAt: Date | null;
   updatedAt: Date;
+}
+
+// Air quality alert thresholds
+export enum AirQualityThreshold {
+  MODERATE = 51,   // AQI > 50: Moderate
+  UNHEALTHY_SENSITIVE = 101,  // AQI > 100: Unhealthy for Sensitive Groups
+  UNHEALTHY = 151, // AQI > 150: Unhealthy
+  VERY_UNHEALTHY = 201, // AQI > 200: Very Unhealthy
+  HAZARDOUS = 301  // AQI > 300: Hazardous
 }
 
 /**
@@ -101,4 +111,107 @@ export async function subscriptionExists(email: string, zipCode: string): Promis
   });
   
   return count > 0;
+}
+
+/**
+ * Send air quality alert emails to users when AQI exceeds thresholds
+ */
+export async function sendAirQualityAlerts(zipCode: string, aqi: number, category: string): Promise<number> {
+  try {
+    // Determine if this AQI value exceeds any of our alert thresholds
+    let alertLevel = '';
+    let alertColor = '';
+    let healthGuidance = '';
+    
+    if (aqi >= AirQualityThreshold.HAZARDOUS) {
+      alertLevel = 'HAZARDOUS';
+      alertColor = '#7E0023'; // Maroon
+      healthGuidance = 'Everyone should avoid all outdoor physical activity and stay indoors with windows closed.';
+    } else if (aqi >= AirQualityThreshold.VERY_UNHEALTHY) {
+      alertLevel = 'VERY UNHEALTHY';
+      alertColor = '#8F3F97'; // Purple
+      healthGuidance = 'Everyone should avoid outdoor physical activity and sensitive groups should remain indoors with windows closed.';
+    } else if (aqi >= AirQualityThreshold.UNHEALTHY) {
+      alertLevel = 'UNHEALTHY';
+      alertColor = '#FF0000'; // Red
+      healthGuidance = 'Everyone should reduce prolonged or heavy exertion outdoors. Sensitive groups should avoid outdoor activities.';
+    } else if (aqi >= AirQualityThreshold.UNHEALTHY_SENSITIVE) {
+      alertLevel = 'UNHEALTHY FOR SENSITIVE GROUPS';
+      alertColor = '#FF7E00'; // Orange
+      healthGuidance = 'People with respiratory or heart disease, the elderly, and children should limit prolonged outdoor exertion.';
+    } else if (aqi >= AirQualityThreshold.MODERATE) {
+      alertLevel = 'MODERATE';
+      alertColor = '#FFFF00'; // Yellow
+      healthGuidance = 'People who are unusually sensitive to air pollution should consider reducing prolonged or heavy outdoor exertion.';
+    } else {
+      // No alert needed for Good air quality
+      return 0;
+    }
+    
+    // Get all active subscriptions for this ZIP code
+    const subscriptions = await prisma.userSubscription.findMany({
+      where: {
+        zipCode,
+        active: true
+      }
+    });
+    
+    if (subscriptions.length === 0) {
+      console.log(`No active subscriptions for ZIP code ${zipCode} to send alerts to`);
+      return 0;
+    }
+    
+    console.log(`Sending air quality alerts to ${subscriptions.length} subscribers for ZIP code ${zipCode}`);
+    
+    // Send email to each subscriber
+    const emailPromises = subscriptions.map(subscription => {
+      // Create the email HTML
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4a5568;">AQI Monitor Alert</h2>
+          <p>The air quality in your area (ZIP: ${zipCode}) has reached a level of concern:</p>
+          
+          <div style="background-color: ${alertColor}20; border: 1px solid ${alertColor}; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <h3 style="color: ${alertColor}; margin-top: 0;">Air Quality Index: ${aqi} - ${alertLevel}</h3>
+            <p>${category}</p>
+            <p><strong>Health Guidance:</strong> ${healthGuidance}</p>
+          </div>
+          
+          <div style="margin-top: 20px; padding: 15px; background-color: #f7fafc; border-radius: 6px;">
+            <h4 style="margin-top: 0;">What should you do?</h4>
+            <ul>
+              <li>Monitor local air quality reports</li>
+              <li>Adjust your outdoor activities based on the AQI level</li>
+              <li>If you have respiratory issues, keep medications on hand</li>
+              <li>Consider using air purifiers indoors</li>
+            </ul>
+          </div>
+          
+          <p style="color: #718096; font-size: 14px; margin-top: 20px;">
+            You're receiving this email because you subscribed to air quality alerts for ZIP code ${zipCode}. 
+            To unsubscribe, reply to this email with "UNSUBSCRIBE" in the subject line.
+          </p>
+        </div>
+      `;
+      
+      // Send the email
+      return sendEmail(
+        subscription.email,
+        `AQI Alert: ${alertLevel} Air Quality in Your Area`,
+        html
+      );
+    });
+    
+    // Wait for all emails to be sent
+    const results = await Promise.all(emailPromises);
+    
+    // Count successful sends
+    const successCount = results.filter(result => result.success).length;
+    console.log(`Successfully sent ${successCount} of ${subscriptions.length} air quality alerts`);
+    
+    return successCount;
+  } catch (error) {
+    console.error('Error sending air quality alerts:', error);
+    return 0;
+  }
 }

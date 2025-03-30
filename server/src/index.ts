@@ -9,7 +9,14 @@ import {
   sendVerificationCode, 
   checkVerificationCode
 } from './services/twilio.js';
-import { fetchAirQuality, getMockAirQualityData } from './services/airQuality.js';
+import { 
+  fetchAirQuality, 
+  getMockAirQualityData,
+  getLatestAirQualityForZip,
+  updateAirQualityForAllSubscriptions,
+  getCoordinatesForZipCode,
+  fetchAndStoreAirQualityForZip
+} from './services/airQuality.js';
 
 // Load environment variables
 dotenv.config();
@@ -66,17 +73,23 @@ app.get('/health', (req, res) => {
 // Air quality data endpoint
 app.get('/api/air-quality', async (req, res) => {
   try {
-    const { latitude, longitude } = req.query;
+    const { zipCode } = req.query;
     
-    if (!latitude || !longitude) {
-      return res.status(400).json({ error: 'Latitude and longitude are required' });
+    // We now require zipCode for all requests
+    if (!zipCode) {
+      return res.status(400).json({ error: 'ZIP code is required' });
     }
     
-    console.log('REST API air-quality request:', { latitude, longitude });
+    console.log(`Air quality request for ZIP code: ${zipCode}`);
     
-    // Parse the coordinates
-    const lat = parseFloat(latitude as string);
-    const lng = parseFloat(longitude as string);
+    // Check if we have recent data in the database
+    console.log(`Checking for cached air quality data for ZIP code: ${zipCode}`);
+    const storedData = await getLatestAirQualityForZip(zipCode as string);
+    
+    if (storedData) {
+      console.log(`Found cached air quality data for ZIP code: ${zipCode}`);
+      return res.json(storedData);
+    }
     
     // Use mock data in development mode if no API key is available
     if (process.env.NODE_ENV === 'development' && !process.env.GOOGLE_AIR_QUALITY_API_KEY) {
@@ -84,9 +97,45 @@ app.get('/api/air-quality', async (req, res) => {
       return res.json(getMockAirQualityData());
     }
     
-    // Call the air quality service directly
-    const result = await fetchAirQuality(lat, lng);
-    return res.json(result);
+    try {
+      // Get coordinates from ZIP code
+      const coordinates = await getCoordinatesForZipCode(zipCode as string);
+      console.log(`Resolved coordinates for ZIP ${zipCode}:`, coordinates);
+      
+      // Call the air quality service with the coordinates
+      const result = await fetchAirQuality(coordinates.latitude, coordinates.longitude);
+      
+      // Also store this data in the database for future use
+      try {
+        await fetchAndStoreAirQualityForZip(zipCode as string);
+        console.log(`Stored air quality data for future use for ZIP code: ${zipCode}`);
+      } catch (storageError) {
+        // Just log the error, don't fail the request
+        console.error(`Failed to store air quality data for ZIP code ${zipCode}:`, storageError);
+      }
+      
+      return res.json(result);
+    } catch (err) {
+      const error = err as Error;
+      console.error(`Error processing air quality request for ZIP code ${zipCode}:`, error);
+      
+      if (error.message?.includes('No coordinates found') || 
+          error.message?.includes('Invalid ZIP code')) {
+        return res.status(400).json({ 
+          error: `Invalid or unsupported ZIP code: ${zipCode}. Please try a different ZIP code.` 
+        });
+      }
+      
+      if (error.message?.includes('API responded with status')) {
+        return res.status(503).json({ 
+          error: 'Geocoding service temporarily unavailable. Please try again later.' 
+        });
+      }
+      
+      return res.status(500).json({ 
+        error: 'An error occurred while retrieving air quality data. Please try again later.' 
+      });
+    }
   } catch (error) {
     console.error('Error in air quality API:', error);
     return res.status(500).json({ error: 'Failed to fetch air quality data' });
@@ -182,6 +231,41 @@ app.post('/api/verify-code', async (req, res) => {
   }
 });
 
+// Cron job endpoint to update air quality data
+app.get('/api/cron/update-air-quality', async (req, res) => {
+  try {
+    // This endpoint should only be called by the Vercel cron job system
+    // In production, this is automatically secured by Vercel cron
+    
+    // For extra security, you could add a verification token
+    // For example, check the Authorization header against an env var
+    const authHeader = req.headers.authorization || '';
+    const cronSecret = process.env.CRON_SECRET;
+    
+    // If we're in production and a CRON_SECRET is set, validate it
+    if (process.env.NODE_ENV === 'production' && cronSecret) {
+      if (!authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== cronSecret) {
+        console.warn('Unauthorized cron job attempt detected');
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+      }
+    }
+    
+    console.log('Running scheduled air quality update...');
+    
+    // Update air quality data for all active subscriptions
+    await updateAirQualityForAllSubscriptions();
+    
+    console.log('Air quality update completed successfully');
+    return res.json({ success: true, message: 'Air quality data updated successfully' });
+  } catch (error) {
+    console.error('Error in cron job:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update air quality data' 
+    });
+  }
+});
+
 // Start the server
 const server = app.listen(port, () => {
   console.log(`✅ Server is running at http://localhost:${port}`);
@@ -189,6 +273,7 @@ const server = app.listen(port, () => {
   console.log(`  - GET  http://localhost:${port}/api/air-quality`);
   console.log(`  - POST http://localhost:${port}/api/verify`);
   console.log(`  - POST http://localhost:${port}/api/verify-code`);
+  console.log(`  - GET  http://localhost:${port}/api/cron/update-air-quality`);
 });
 
 // Handle graceful shutdown

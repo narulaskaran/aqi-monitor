@@ -23,6 +23,7 @@
   - POST `/api/verify` - Start email verification
   - POST `/api/verify-code` - Verify email code
   - GET `/api/test-email?email=your@email.com` - Send a test email (simple server only)
+  - GET `/api/cron/update-air-quality` - Hourly cron job to update air quality data
 
 ## Deployment
 - **Preview**: `vercel deploy` - creates a preview deployment
@@ -31,6 +32,7 @@
   - Uses serverless API handlers in `/api` directory
   - Frontend is served as static files
   - Configuration defined in `vercel.json`
+  - Cron jobs configured in `vercel.json` under the `crons` section
 
 ## Troubleshooting
 - **Database Connection**: Make sure the DATABASE_URL and DATABASE_URL_UNPOOLED environment variables are set correctly
@@ -43,8 +45,8 @@
 - **Module Resolution**: In development, some imports may need special handling for ESM compatibility
 - **API Request Format**:
   ```js
-  // Air quality data
-  fetch("http://localhost:3000/api/air-quality?latitude=37.7749&longitude=-122.4194")
+  // Air quality data (now uses ZIP code instead of coordinates)
+  fetch("http://localhost:3000/api/air-quality?zipCode=94107")
   
   // Verification
   fetch("http://localhost:3000/api/verify", {
@@ -59,6 +61,9 @@
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: "user@example.com", zipCode: "94107", code: "123456" })
   })
+  
+  // Cron job (hourly air quality update)
+  fetch("http://localhost:3000/api/cron/update-air-quality")
   ```
 
 ## Code Style
@@ -81,9 +86,11 @@
 ## Database Models
 - **UserSubscription**: Stores subscriptions for email alerts
 - **VerificationCode**: Stores email verification codes with expiration
+- **AirQualityRecord**: Stores hourly air quality data for each ZIP code
 
 ## Environment Setup
 For local development, you need a `.env` file in the server directory with:
 - DATABASE_URL and DATABASE_URL_UNPOOLED for PostgreSQL connection
 - GOOGLE_AIR_QUALITY_API_KEY for air quality data
 - RESEND_API_KEY for email functionality
+- CRON_SECRET (optional) for securing cron job endpoints

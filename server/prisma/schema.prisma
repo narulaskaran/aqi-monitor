@@ -31,3 +31,34 @@ model VerificationCode {
   @@index([email]) // For quick lookup by email
   @@index([code]) // For quick lookup by code
 }
+
+model AirQualityRecord {
+  id                String   @id @default(uuid())
+  zipCode           String   // The ZIP code for this air quality record
+  aqi               Int      // Air Quality Index value
+  category          String   // Category description (Good, Moderate, etc.)
+  dominantPollutant String   // The dominant pollutant
+  timestamp         DateTime @default(now()) // When this record was created
+  
+  // Optional pollutant data stored as JSON
+  pollutantData     Json?    // Store pollutant concentrations as JSON
+  
+  // Create a compound index for zipCode and timestamp
+  @@index([zipCode, timestamp])
+  
+  // Add a unique constraint for zipCode and hour
+  // This ensures we only have one record per zipCode per hour
+  @@unique([zipCode, timestamp])
+}
+
+// Cache for ZIP code to coordinates mapping
+model ZipCoordinates {
+  zipCode      String    @id // ZIP code (primary key)
+  latitude     Float     // Latitude coordinate
+  longitude    Float     // Longitude coordinate
+  createdAt    DateTime  @default(now()) // When this record was created
+  updatedAt    DateTime  @updatedAt // When this record was last updated
+  
+  // We'll use this to determine if we should refresh the coordinates
+  refreshAfter DateTime  // Date after which we should refresh these coordinates
+}
