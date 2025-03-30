@@ -2,17 +2,13 @@
   "version": 2,
   "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "functions": {
-    "api/*.js": {
-      "runtime": "vercel-node@1.15.0"
-    }
-  },
   "builds": [
     {
       "src": "api/*.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/dist/**/*", "server/prisma/**/*"]
+        "includeFiles": ["server/dist/**/*", "server/prisma/**/*"],
+        "runtime": "nodejs16"
       }
     },
     {
