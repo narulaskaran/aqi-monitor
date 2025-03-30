@@ -1,68 +1,91 @@
-import { useState } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { ExclamationTriangleIcon, ReloadIcon, CheckCircledIcon } from '@radix-ui/react-icons';
+import { useState } from "react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import {
+  ExclamationTriangleIcon,
+  ReloadIcon,
+  CheckCircledIcon,
+} from "@radix-ui/react-icons";
 
 const getBaseUrl = () => {
   // Check if we're running on Vercel
-  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname.includes("vercel.app")
+  ) {
     return window.location.origin;
   }
-  
+
   // In development (localhost)
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3000';
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname === "localhost"
+  ) {
+    return "http://localhost:3000";
   }
-  
+
   // Fallback to current origin
-  return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  return typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:3000";
 };
 
 /**
  * Admin panel for managing cron jobs and other administrative tasks
  */
 export default function AdminControls() {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const handleTriggerCronJob = async () => {
     setIsLoading(true);
     setResult(null);
-    
+
     try {
       const baseUrl = getBaseUrl();
       const headers: HeadersInit = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
-      
+
       // Add authorization header if API key is provided
       if (apiKey.trim()) {
-        headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+        headers["Authorization"] = `Bearer ${apiKey.trim()}`;
       }
-      
+
       const response = await fetch(`${baseUrl}/api/cron/update-air-quality`, {
-        method: 'GET',
-        headers
+        method: "GET",
+        headers,
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to trigger cron job');
+        throw new Error(data.error || "Failed to trigger cron job");
       }
-      
+
       setResult({
         success: true,
-        message: data.message || 'Cron job triggered successfully'
+        message: data.message || "Cron job triggered successfully",
       });
     } catch (error) {
-      console.error('Error triggering cron job:', error);
+      console.error("Error triggering cron job:", error);
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to trigger cron job'
+        message:
+          error instanceof Error ? error.message : "Failed to trigger cron job",
       });
     } finally {
       setIsLoading(false);
@@ -77,24 +100,21 @@ export default function AdminControls() {
           Manually trigger cron jobs and other administrative tasks
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="apiKey" className="text-sm font-medium">
-            API Key (Optional)
+            API Key
           </label>
           <Input
             id="apiKey"
             type="password"
-            placeholder="Enter CRON_SECRET if required"
+            placeholder="Enter CRON_SECRET"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
-            If the cron job is protected with a secret, enter it here.
-          </p>
         </div>
-        
+
         {result && (
           <Alert variant={result.success ? "default" : "destructive"}>
             {result.success ? (
@@ -102,15 +122,15 @@ export default function AdminControls() {
             ) : (
               <ExclamationTriangleIcon className="h-4 w-4" />
             )}
-            <AlertTitle>{result.success ? 'Success' : 'Error'}</AlertTitle>
+            <AlertTitle>{result.success ? "Success" : "Error"}</AlertTitle>
             <AlertDescription>{result.message}</AlertDescription>
           </Alert>
         )}
       </CardContent>
-      
+
       <CardFooter>
-        <Button 
-          onClick={handleTriggerCronJob} 
+        <Button
+          onClick={handleTriggerCronJob}
           disabled={isLoading}
           className="w-full"
         >

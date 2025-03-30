@@ -7,28 +7,53 @@ import AdminControls from "../components/AdminControls";
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  // Simplified admin authentication
-  // In a real app, this should be a proper authentication flow
-  const handleAdminAuthentication = () => {
-    // Check against a simple password (this is NOT secure, just for demo)
-    // A real system would use proper auth
-    if (password === process.env.CRON_SECRET) {
-      setIsAuthenticated(true);
-      // Store in session storage so it persists during the session
-      sessionStorage.setItem("aqi-admin-auth", "true");
-    } else {
-      alert("Invalid password");
+  // Check admin authentication status
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  // Check if user is authenticated
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch("/api/admin/check-auth", {
+        credentials: "include", // Important for cookies
+      });
+      if (response.ok) {
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error("Error checking auth status:", error);
     }
   };
 
-  // Check for existing authentication
-  useEffect(() => {
-    const existingAuth = sessionStorage.getItem("aqi-admin-auth");
-    if (existingAuth === "true") {
-      setIsAuthenticated(true);
+  // Handle admin authentication
+  const handleAdminAuthentication = async () => {
+    try {
+      setError("");
+      const response = await fetch("/api/admin-auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+        credentials: "include", // Important for cookies
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsAuthenticated(true);
+        setPassword(""); // Clear password field
+      } else {
+        setError(data.error || "Authentication failed");
+      }
+    } catch (error) {
+      setError("An error occurred during authentication");
+      console.error("Auth error:", error);
     }
-  }, []);
+  };
 
   // Handle keypress for password field
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -61,24 +86,6 @@ export default function AdminPage() {
               updates air quality data for all active subscriptions and sends
               alerts if air quality thresholds are exceeded.
             </p>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-medium text-blue-800">
-                Troubleshooting Tips
-              </h3>
-              <ul className="list-disc pl-5 mt-2 text-blue-700 text-sm">
-                <li>
-                  If the cron job fails, check the server logs for error details
-                </li>
-                <li>
-                  Make sure CRON_SECRET is properly set in the environment
-                  variables
-                </li>
-                <li>
-                  Verify that the API key entered matches the CRON_SECRET value
-                </li>
-                <li>Confirm database connection is working properly</li>
-              </ul>
-            </div>
           </section>
         </div>
       ) : (
@@ -101,6 +108,7 @@ export default function AdminPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 placeholder="Enter password"
               />
+              {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
             </div>
             <button
               onClick={handleAdminAuthentication}

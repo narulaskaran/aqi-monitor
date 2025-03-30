@@ -56,3 +56,23 @@ export function validateCronSecret(req, res, next) {
   }
   next();
 }
+
+/**
+ * Validate admin authentication
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ * @param {Function} next - Next middleware function
+ */
+export function validateAdminAuth(req, res, next) {
+  const adminSession = req.cookies?.admin_session;
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!adminSession || adminSession !== cronSecret) {
+    return res.status(401).json({
+      success: false,
+      error: "Admin authentication required",
+    });
+  }
+
+  next();
+}
