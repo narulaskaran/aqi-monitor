@@ -23,6 +23,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [lastZipCode, setLastZipCode] = useState(zipCode);
   
   // Create refs for each input digit
   const inputRefs = [
@@ -33,6 +34,19 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
   ];
+
+  // Reset form when ZIP code changes
+  useEffect(() => {
+    if (zipCode !== lastZipCode) {
+      // Reset the form state when ZIP code changes
+      setLastZipCode(zipCode);
+      setSuccess(false);
+      setIsVerifying(false);
+      setError(null);
+      setVerificationCode(["", "", "", "", "", ""]);
+      setRetryCount(0);
+    }
+  }, [zipCode, lastZipCode]);
 
   // Function to focus on the next input box
   const focusNextInput = (index: number) => {

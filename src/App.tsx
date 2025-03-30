@@ -10,12 +10,13 @@ import {
   TooltipTrigger,
 } from "./components/ui/tooltip";
 import "./App.css";
-import { useState, ChangeEvent, KeyboardEvent } from "react";
+import { useState, ChangeEvent, KeyboardEvent, useEffect } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
 import { getAirQuality } from "./lib/api";
 
 function App() {
   const [zipCode, setZipCode] = useState("");
+  const [currentZipCode, setCurrentZipCode] = useState("");
   const [airQuality, setAirQuality] = useState<{
     index: number;
     category: string;
@@ -36,6 +37,10 @@ function App() {
   const handleClick = async () => {
     try {
       setError(null);
+      
+      // Update current ZIP code to trigger reset in SubscriptionForm
+      setCurrentZipCode(zipCode);
+      
       // First, get coordinates from zip code
       const geocodeResponse = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${zipCode}`
@@ -89,6 +94,13 @@ function App() {
     }
   };
 
+  // Update currentZipCode when zipCode changes in the input
+  useEffect(() => {
+    if (!currentZipCode && zipCode) {
+      setCurrentZipCode(zipCode);
+    }
+  }, [zipCode, currentZipCode]);
+
   return (
     <div
       className={`min-h-screen p-4 transition-colors duration-300 rounded-lg shadow ${
@@ -129,7 +141,7 @@ function App() {
               category={airQuality.category}
               dominantPollutant={airQuality.dominantPollutant}
             />
-            <SubscriptionForm zipCode={zipCode} />
+            <SubscriptionForm zipCode={currentZipCode} />
           </>
         )}
       </div>
