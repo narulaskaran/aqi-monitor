@@ -23,7 +23,7 @@
   - POST `/api/verify` - Start email verification
   - POST `/api/verify-code` - Verify email code
   - GET `/api/test-email?email=your@email.com` - Send a test email (simple server only)
-  - GET `/api/cron/update-air-quality` - Hourly cron job to update air quality data
+  - GET `/api/cron/update-air-quality` - Daily cron job to update air quality data (runs at midnight UTC)
 
 ## Deployment
 - **Preview**: `vercel deploy` - creates a preview deployment

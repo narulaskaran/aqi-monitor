@@ -52,7 +52,7 @@
   "crons": [
     {
       "path": "/api/cron/update-air-quality",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
