@@ -3,6 +3,7 @@
  */
 import { prisma } from '../db.js';
 import { sendEmail } from './twilio.js'; // Using the existing email service
+import { airQualityAlertEmail } from '../templates/email/index.js';
 
 // Subscription types
 export interface Subscription {
@@ -165,34 +166,15 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
     
     // Send email to each subscriber
     const emailPromises = subscriptions.map(subscription => {
-      // Create the email HTML
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4a5568;">AQI Monitor Alert</h2>
-          <p>The air quality in your area (ZIP: ${zipCode}) has reached a level of concern:</p>
-          
-          <div style="background-color: ${alertColor}20; border: 1px solid ${alertColor}; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            <h3 style="color: ${alertColor}; margin-top: 0;">Air Quality Index: ${aqi} - ${alertLevel}</h3>
-            <p>${category}</p>
-            <p><strong>Health Guidance:</strong> ${healthGuidance}</p>
-          </div>
-          
-          <div style="margin-top: 20px; padding: 15px; background-color: #f7fafc; border-radius: 6px;">
-            <h4 style="margin-top: 0;">What should you do?</h4>
-            <ul>
-              <li>Monitor local air quality reports</li>
-              <li>Adjust your outdoor activities based on the AQI level</li>
-              <li>If you have respiratory issues, keep medications on hand</li>
-              <li>Consider using air purifiers indoors</li>
-            </ul>
-          </div>
-          
-          <p style="color: #718096; font-size: 14px; margin-top: 20px;">
-            You're receiving this email because you subscribed to air quality alerts for ZIP code ${zipCode}. 
-            To unsubscribe, reply to this email with "UNSUBSCRIBE" in the subject line.
-          </p>
-        </div>
-      `;
+      // Generate the email HTML using the template
+      const html = airQualityAlertEmail({
+        zipCode,
+        aqi,
+        alertLevel,
+        category,
+        alertColor,
+        healthGuidance
+      });
       
       // Send the email
       return sendEmail(
