@@ -3,7 +3,7 @@
  */
 import { prisma } from '../db.js';
 import { sendEmail } from './twilio.js'; // Using the existing email service
-import { airQualityAlertEmail } from '../templates/email/index.js';
+import { airQualityAlertEmail, goodAirQualityEmail } from '../templates/email/index.js';
 
 // Subscription types
 export interface Subscription {
@@ -115,11 +115,57 @@ export async function subscriptionExists(email: string, zipCode: string): Promis
 }
 
 /**
- * Send air quality alert emails to users when AQI exceeds thresholds
+ * Send air quality alerts to users based on current AQI
+ * Send alerts for both poor air quality (>= Moderate) and good air quality (Good category)
  */
-export async function sendAirQualityAlerts(zipCode: string, aqi: number, category: string): Promise<number> {
+export async function sendAirQualityAlerts(zipCode: string, aqi: number, category: string, dominantPollutant: string = 'PM2.5'): Promise<number> {
   try {
-    // Determine if this AQI value exceeds any of our alert thresholds
+    // Get all active subscriptions for this ZIP code
+    const subscriptions = await prisma.userSubscription.findMany({
+      where: {
+        zipCode,
+        active: true
+      }
+    });
+    
+    if (subscriptions.length === 0) {
+      console.log(`No active subscriptions for ZIP code ${zipCode} to send alerts to`);
+      return 0;
+    }
+    
+    // For Good air quality (AQI < 51)
+    if (aqi < 51) {
+      console.log(`Sending good air quality updates to ${subscriptions.length} subscribers for ZIP code ${zipCode}`);
+      
+      // Send email to each subscriber
+      const emailPromises = subscriptions.map(subscription => {
+        // Generate the email HTML using the template for good air quality
+        const html = goodAirQualityEmail({
+          zipCode,
+          aqi,
+          dominantPollutant
+        });
+        
+        // Send the email
+        return sendEmail(
+          subscription.email,
+          `Daily AQI Update: Good Air Quality in Your Area`,
+          html
+        );
+      });
+      
+      // Wait for all emails to be sent
+      const results = await Promise.all(emailPromises);
+      
+      // Count successful sends
+      const successCount = results.filter(result => result.success).length;
+      console.log(`Successfully sent ${successCount} of ${subscriptions.length} good air quality updates`);
+      
+      return successCount;
+    }
+    
+    // For poor air quality (AQI >= 51)
+    // Determine which threshold the AQI value exceeds
     let alertLevel = '';
     let alertColor = '';
     let healthGuidance = '';
@@ -144,22 +190,6 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
       alertLevel = 'MODERATE';
       alertColor = '#FFFF00'; // Yellow
       healthGuidance = 'People who are unusually sensitive to air pollution should consider reducing prolonged or heavy outdoor exertion.';
-    } else {
-      // No alert needed for Good air quality
-      return 0;
-    }
-    
-    // Get all active subscriptions for this ZIP code
-    const subscriptions = await prisma.userSubscription.findMany({
-      where: {
-        zipCode,
-        active: true
-      }
-    });
-    
-    if (subscriptions.length === 0) {
-      console.log(`No active subscriptions for ZIP code ${zipCode} to send alerts to`);
-      return 0;
     }
     
     console.log(`Sending air quality alerts to ${subscriptions.length} subscribers for ZIP code ${zipCode}`);

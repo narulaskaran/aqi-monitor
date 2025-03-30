@@ -24,6 +24,11 @@
   - POST `/api/verify-code` - Verify email code
   - GET `/api/test-email?email=your@email.com` - Send a test email (simple server only)
   - GET `/api/cron/update-air-quality` - Daily cron job to update air quality data (runs at midnight UTC)
+  
+- Admin Interface:
+  - `/admin` - Access the admin panel (password: "aqiadmin")
+  - Allows manual triggering of the cron job for testing
+  - Secured with a basic password and optional API key authentication
 
 ## Deployment
 - **Preview**: `vercel deploy` - creates a preview deployment
@@ -93,4 +98,7 @@ For local development, you need a `.env` file in the server directory with:
 - DATABASE_URL and DATABASE_URL_UNPOOLED for PostgreSQL connection
 - GOOGLE_AIR_QUALITY_API_KEY for air quality data
 - RESEND_API_KEY for email functionality
-- CRON_SECRET (optional) for securing cron job endpoints
+- CRON_SECRET (optional) for securing cron job endpoints and API access
+  - When set, this value is required as a Bearer token to manually trigger the cron job
+  - Format: `Authorization: Bearer your-cron-secret-value`
+  - Example: `curl -H "Authorization: Bearer aqi-cron-secret-key" https://your-app.com/api/cron/update-air-quality`
