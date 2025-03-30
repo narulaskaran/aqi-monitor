@@ -1,18 +1,33 @@
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model UserSubscription {
-    id          String    @id @default(uuid())
-    phone       String // Must be a valid US phone number
-    zipCode     String // Must be a valid US zip code
-    createdAt   DateTime  @default(now())
-    active      Boolean   @default(true) // Indicates whether the subscription is active
-    activatedAt DateTime? // Indicates when the subscription was activated
-    updatedAt   DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  email       String    // User's email address
+  zipCode     String    // Must be a valid US zip code
+  createdAt   DateTime  @default(now())
+  active      Boolean   @default(true) // Indicates whether the subscription is active
+  activatedAt DateTime? // Indicates when the subscription was activated
+  updatedAt   DateTime  @updatedAt
+
+  @@index([email, zipCode]) // Add index for common query pattern
+}
+
+model VerificationCode {
+  id        String   @id @default(uuid())
+  email     String   // Email address the code was sent to
+  code      String   // The verification code
+  expires   DateTime // When the code expires
+  createdAt DateTime @default(now())
+  usedAt    DateTime? // When the code was used (null if not used)
+
+  @@index([email]) // For quick lookup by email
+  @@index([code]) // For quick lookup by code
 }

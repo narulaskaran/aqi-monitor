@@ -4,10 +4,10 @@
   "installCommand": "npm install",
   "builds": [
     {
-      "src": "server/src/index.ts",
+      "src": "api/*.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/prisma/**/*"]
+        "includeFiles": ["server/dist/**/*", "server/prisma/**/*"]
       }
     },
     {
@@ -20,8 +20,18 @@
   ],
   "routes": [
     {
-      "src": "/trpc/(.*)",
-      "dest": "server/src/index.ts"
+      "src": "/api/air-quality",
+      "dest": "/api/air-quality.js"
+    },
+    {
+      "src": "/api/verify",
+      "methods": ["POST", "OPTIONS"],
+      "dest": "/api/verify.js"
+    },
+    {
+      "src": "/api/verify-code",
+      "methods": ["POST", "OPTIONS"],
+      "dest": "/api/verify-code.js"
     },
     {
       "src": "/assets/(.*)",

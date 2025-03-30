@@ -1,0 +1,41 @@
+interface AQIIconProps {
+  className?: string;
+}
+
+export function AQIIcon({ className = "" }: AQIIconProps) {
+  return (
+    <svg
+      width="32"
+      height="32"
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <rect width="32" height="32" rx="8" fill="#3B82F6" />
+      <path
+        d="M6 16C6 16 8 10 16 10C24 10 26 16 26 16C26 16 24 22 16 22C8 22 6 16 6 16Z"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6 10C6 10 8 4 16 4C24 4 26 10 26 10"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.5"
+      />
+      <path
+        d="M6 22C6 22 8 28 16 28C24 28 26 22 26 22"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.5"
+      />
+    </svg>
+  );
+}

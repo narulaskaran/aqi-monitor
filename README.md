@@ -1,97 +1,169 @@
 # AQI Monitor
 
-A real-time [Air Quality Index (AQI) monitoring application](https://aqi-monitor.vercel.app/) that provides air quality data for any US ZIP code. Built with React, TypeScript, and tRPC.
-
-You can also click through the [archived implementation](https://github.com/shadcn/aqi-monitor/tree/impl_archive) written in Python.
+A real-time Air Quality Index (AQI) monitoring application that allows users to check air quality in their area and subscribe to SMS alerts for air quality changes.
 
 ## Features
 
-- Look up air quality data by US ZIP code
-- Display EPA Air Quality Index (AQI)
-- Show dominant pollutant information
-- Color-coded indicators for air quality levels
-- US location validation
-- Responsive design
+- Real-time air quality data using Google Air Quality API
+- Color-coded AQI display with category and recommendations
+- SMS alerts for air quality changes using Twilio
+- Phone number verification for subscriptions
+- Responsive design for desktop and mobile
 
-## Project Structure
+## Tech Stack
 
-```
-src/
-├── components/         # React components
-│   ├── AQICard.tsx    # Displays AQI information
-│   ├── AQIHeader.tsx  # Application header
-│   ├── AQIIcon.tsx    # Air quality icon
-│   └── ui/            # Shadcn UI components
-├── lib/               # Utility functions and configurations
-│   └── trpc.ts       # tRPC client setup
-└── App.tsx           # Main application component
+- **Frontend:**
+  - React + TypeScript
+  - Vite for build tooling
+  - Tailwind CSS for styling
+  - shadcn/ui for UI components
 
-server/
-└── src/
-    └── index.ts      # tRPC server and API endpoints
-```
+- **Backend:**
+  - Node.js + Express
+  - RESTful API endpoints
+  - Prisma ORM for database access
+  - PostgreSQL database (Vercel Postgres)
+  - Twilio for SMS verification and alerts
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v16+)
 - npm or yarn
-- Google Air Quality API key
+- PostgreSQL database or Vercel Postgres
+- Twilio account
+- Google Maps Platform API key
 
-### Environment Setup
+### Environment Variables
 
-1. Create a `.env` file in the `server` directory:
+Create a `.env` file in the server directory with the following:
 
-```env
-GOOGLE_AIR_QUALITY_API_KEY=your_api_key_here
+```
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/aqi_monitor"
+DATABASE_URL_UNPOOLED="postgresql://user:password@localhost:5432/aqi_monitor"
+
+# Twilio (for SMS verification)
+TWILIO_ACCOUNT_SID="your_twilio_account_sid"
+TWILIO_AUTH_TOKEN="your_twilio_auth_token"
+TWILIO_VERIFICATION_SERVICE_SID="optional_existing_service_sid"
+
+# Google Air Quality API
+GOOGLE_AIR_QUALITY_API_KEY="your_google_api_key"
+
+# Environment
+NODE_ENV="development"
 ```
 
-### Running the Application
-
-1. Install dependencies:
+### Installation and Local Development
 
 ```bash
+# Install dependencies
 npm install
-cd server && npm install
-```
 
-2. Start the backend server:
+# Install server dependencies
+cd server && npm install && cd ..
 
-```bash
-cd server
+# Generate Prisma client
+cd server && npx prisma generate && cd ..
+
+# Run development servers (frontend + backend)
 npm run dev
 ```
 
-3. Start the frontend development server:
+The application will be available at:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3000
+
+### Production Build
 
 ```bash
-# In the root directory
-npm run dev
+# Build for production
+npm run build
+
+# Start the production server
+npm start
 ```
 
-The application will be available at `http://localhost:5173`
+## Deployment
 
-## API Integration
+This project is set up for easy deployment to Vercel:
 
-This project uses:
+```bash
+# Deploy to Vercel
+vercel deploy
+```
 
-- Google Air Quality API for AQI data
-- OpenStreetMap Nominatim API for geocoding
-- tRPC for type-safe API communication
+## API Endpoints
 
-## Contributing
+### REST Endpoints
 
-Feel free to submit issues and enhancement requests!
+- `GET /api/air-quality` - Get air quality data for a location
+- `POST /api/verify` - Start phone verification process
+- `POST /api/verify-code` - Verify SMS code
+- `GET /health` - Health check endpoint
 
-## Upcoming Features
+### API Usage Examples
 
-- [ ] SMS Notifications
-  - [ ] User signup for AQI alerts by zip code
-  - [ ] Support for multiple zip code subscriptions
-  - [ ] Configurable subscription expiration dates
-- [ ] Trip Planning Features
-  - [ ] AQI predictions for travel dates
-  - [ ] Travel AQI subscriptions (with date range support)
+```javascript
+// Get air quality data
+fetch("/api/air-quality?latitude=37.7749&longitude=-122.4194")
+  .then(response => response.json())
+  .then(data => console.log(data));
 
-These features are in development. Feel free to open issues with suggestions or contribute to their implementation!
+// Start verification
+fetch("/api/verify", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ phone: "+11234567890", zipCode: "94107" })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+
+// Verify code
+fetch("/api/verify-code", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ 
+    phone: "+11234567890", 
+    zipCode: "94107", 
+    code: "123456" 
+  })
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+## Project Structure
+
+```
+/
+├── src/                  # Frontend source code
+│   ├── components/       # React components
+│   ├── lib/              # Utilities and API clients
+│   └── types/            # TypeScript type definitions
+├── server/               # Backend source code
+│   ├── src/              # Server code
+│   │   └── services/     # Service modules
+│   └── prisma/           # Prisma schema and migrations
+├── api/                  # Serverless API endpoints for Vercel
+└── public/               # Static assets
+```
+
+## Development vs Production
+
+### Development Mode
+- Frontend and backend run as separate servers
+- Backend provides REST API endpoints
+- Mock Twilio verification is used by default (code: 123456)
+
+### Production Mode (Vercel)
+- Frontend is served as static assets
+- API endpoints run as serverless functions
+- Mock verification is used for demo purposes
+- The application can be easily configured to use real Twilio verification
+
+## License
+
+MIT
