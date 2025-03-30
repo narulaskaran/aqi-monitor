@@ -4,6 +4,7 @@
 import { Resend } from 'resend';
 import { z } from 'zod';
 import { prisma } from '../db.js';
+import { verificationEmail } from '../templates/email/index.js';
 
 // Validate environment variables
 const envSchema = z.object({
@@ -114,18 +115,7 @@ export async function sendVerificationCode(email: string): Promise<VerificationR
       from: 'AQI Monitor <notifications@narula.xyz>',
       to: [email],
       subject: 'Your AQI Monitor Verification Code',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4a5568;">AQI Monitor Verification</h2>
-          <p>Your verification code is:</p>
-          <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; font-size: 24px; text-align: center; letter-spacing: 2px; font-weight: bold;">
-            ${code}
-          </div>
-          <p style="color: #718096; font-size: 14px; margin-top: 20px;">
-            This code will expire in 10 minutes. If you didn't request this code, you can safely ignore this email.
-          </p>
-        </div>
-      `
+      html: verificationEmail(code)
     });
     
     if (error) {

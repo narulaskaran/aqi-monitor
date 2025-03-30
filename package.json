@@ -13,7 +13,8 @@
     "clean": "rm -rf dist server/dist",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "vercel-build": "npm run build"
+    "vercel-build": "npm run build",
+    "db:migrate": "cd server && npm run db:migrate"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",

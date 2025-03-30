@@ -10,7 +10,8 @@
     "dev": "NODE_ENV=development tsx watch src/index.ts",
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "vercel-build": "npm run build"
+    "vercel-build": "prisma migrate deploy && npm run build",
+    "db:migrate": "prisma migrate deploy"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

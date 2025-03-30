@@ -2,6 +2,11 @@
   "version": 2,
   "buildCommand": "npm run build",
   "installCommand": "npm install",
+  "functions": {
+    "api/*.js": {
+      "runtime": "vercel-node@1.15.0"
+    }
+  },
   "builds": [
     {
       "src": "api/*.js",
