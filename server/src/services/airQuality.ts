@@ -101,31 +101,65 @@ export async function getCoordinatesForZipCode(zipCode: string): Promise<{ latit
   return coordinates;
 }
 
-// Helper function to fetch coordinates from the Census Bureau API
+// Helper function to fetch coordinates using OpenStreetMap Nominatim API
 async function fetchCoordinatesFromAPI(zipCode: string): Promise<{ latitude: number; longitude: number }> {
-  // Use the US Census Bureau's free geocoding API
-  const url = `https://geocoding.geo.census.gov/geocoder/locations/address?street=&city=&state=&benchmark=2020&format=json&zip=${zipCode}`;
-  
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    throw new Error(`Census API responded with status: ${response.status}`);
+  try {
+    const coordinates = await fetchFromNominatimAPI(zipCode);
+    return coordinates;
+  } catch (error: any) {
+    console.error(`Nominatim API failed for ZIP ${zipCode}:`, error);
+    throw new Error(`Failed to get coordinates for ZIP ${zipCode}: ${error.message || 'Unknown error'}`);
   }
+}
+
+// OpenStreetMap Nominatim API service
+async function fetchFromNominatimAPI(zipCode: string): Promise<{ latitude: number; longitude: number }> {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${zipCode}`;
   
-  const data = await response.json();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
   
-  // Check if we got valid coordinates
-  if (data.result?.addressMatches?.length > 0) {
-    const coordinates = data.result.addressMatches[0].coordinates;
+  try {
+    // Include a proper User-Agent header as recommended by OSM
+    const response = await fetch(url, { 
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'AQI-Monitor/1.0 (https://aqi-monitor.vercel.app)'
+      }
+    });
     
-    // Census API returns coordinates as { x: longitude, y: latitude }
-    return {
-      latitude: coordinates.y,
-      longitude: coordinates.x
-    };
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    
+    
+    // Check if we got any results
+    if (data && data.length > 0) {
+      const usLocation = data.find((location: any) => 
+        location.display_name.endsWith(", United States")
+      );
+      
+      if (usLocation) {
+        // Nominatim returns lat/lon as strings
+        return {
+          latitude: parseFloat(usLocation.lat),
+          longitude: parseFloat(usLocation.lon)
+        };
+      }
+    }
+    
+    throw new Error('No locations found for this ZIP code');
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  
-  throw new Error(`No coordinates found in Census API response for ZIP code: ${zipCode}`);
 }
 
 /**
@@ -167,15 +201,23 @@ export async function fetchAirQuality(
     }
 
     const data = await response.json();
+    console.log('Successfully fetched air quality data:', JSON.stringify(data, null, 2));
+    
+    // Log available indexes
+    if (data.indexes) {
+      console.log('Available indexes:', data.indexes.map((index: any) => index.code));
+    } else {
+      console.log('No indexes found in response');
+    }
     
     // Extract the relevant data from the response
-    const indexes = data.indexes || [];
-    const epaIndex = indexes.find((index: any) => index.code === 'usa_epa');
-
+    // The API returns an array of indexes, we want the USA EPA AQI
+    const epaIndex = data.indexes?.find((index: any) => index.code === 'usa_epa');
+    
     if (!epaIndex) {
       throw new Error('US EPA AQI data not available for this location');
     }
-
+    
     // Extract pollutant data if available
     const pollutants: Record<string, { concentration: number; unit: string }> = {};
     
@@ -187,12 +229,12 @@ export async function fetchAirQuality(
         };
       }
     }
-
+    
     return {
       index: epaIndex.aqi,
       category: epaIndex.category,
       dominantPollutant: epaIndex.dominantPollutant || 'Unknown',
-      pollutants: Object.keys(pollutants).length > 0 ? pollutants : undefined,
+      pollutants: Object.keys(pollutants).length > 0 ? pollutants : undefined
     };
   } catch (error) {
     console.error('Error fetching air quality data:', error);
@@ -221,7 +263,7 @@ export function getMockAirQualityData(): AirQualityData {
         concentration: 30.5,
         unit: 'ppb',
       },
-    },
+    }
   };
 }
 
@@ -268,22 +310,25 @@ export async function fetchAndStoreAirQualityForZip(zipCode: string): Promise<vo
     
     console.log(`Successfully stored air quality data for ZIP code: ${zipCode}`);
     
-    // Check if we need to send air quality alerts
-    if (airQualityData.index >= 51) { // Moderate or worse
-      try {
-        const alertsSent = await sendAirQualityAlerts(
-          zipCode, 
-          airQualityData.index, 
-          airQualityData.category
-        );
-        
-        if (alertsSent > 0) {
+    // Always send air quality notifications (both good and poor air quality)
+    try {
+      const alertsSent = await sendAirQualityAlerts(
+        zipCode, 
+        airQualityData.index, 
+        airQualityData.category,
+        airQualityData.dominantPollutant
+      );
+      
+      if (alertsSent > 0) {
+        if (airQualityData.index < 51) {
+          console.log(`Sent ${alertsSent} good air quality update emails for ZIP code ${zipCode}`);
+        } else {
           console.log(`Sent ${alertsSent} air quality alert emails for ZIP code ${zipCode}`);
         }
-      } catch (alertError) {
-        console.error(`Error sending air quality alerts for ZIP code ${zipCode}:`, alertError);
-        // Do not rethrow, we don't want alert failures to break the data storage flow
       }
+    } catch (alertError) {
+      console.error(`Error sending air quality alerts for ZIP code ${zipCode}:`, alertError);
+      // Do not rethrow, we don't want alert failures to break the data storage flow
     }
   } catch (error) {
     console.error(`Error processing air quality for ZIP code ${zipCode}:`, error);

@@ -119,8 +119,8 @@ app.get('/api/air-quality', async (req, res) => {
       const error = err as Error;
       console.error(`Error processing air quality request for ZIP code ${zipCode}:`, error);
       
-      if (error.message?.includes('No coordinates found') || 
-          error.message?.includes('Invalid ZIP code')) {
+      // Improved error handling with better messaging for different failure scenarios
+      if (error.message?.includes('No locations found')) {
         return res.status(400).json({ 
           error: `Invalid or unsupported ZIP code: ${zipCode}. Please try a different ZIP code.` 
         });
@@ -128,7 +128,20 @@ app.get('/api/air-quality', async (req, res) => {
       
       if (error.message?.includes('API responded with status')) {
         return res.status(503).json({ 
-          error: 'Geocoding service temporarily unavailable. Please try again later.' 
+          error: 'Location service temporarily unavailable. Please try again later.'
+        });
+      }
+      
+      if (error.message?.includes('Request timeout')) {
+        return res.status(503).json({ 
+          error: 'Location service timed out. Please try again later.'
+        });
+      }
+      
+      if (error.message?.includes('Failed to get coordinates')) {
+        console.error(`Geocoding failed for ZIP ${zipCode}`);
+        return res.status(500).json({ 
+          error: 'Unable to determine location from this ZIP code. Please try a different ZIP code or contact support if the problem persists.'
         });
       }
       
@@ -242,8 +255,8 @@ app.get('/api/cron/update-air-quality', async (req, res) => {
     const authHeader = req.headers.authorization || '';
     const cronSecret = process.env.CRON_SECRET;
     
-    // If we're in production and a CRON_SECRET is set, validate it
-    if (process.env.NODE_ENV === 'production' && cronSecret) {
+    // If we're in production or a CRON_SECRET is set, validate it
+    if (cronSecret || process.env.NODE_ENV === 'production') {
       if (!authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== cronSecret) {
         console.warn('Unauthorized cron job attempt detected');
         return res.status(401).json({ success: false, error: 'Unauthorized' });

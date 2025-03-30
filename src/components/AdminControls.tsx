@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { ExclamationTriangleIcon, RefreshCwIcon, CheckCircledIcon } from '@radix-ui/react-icons';
+import { ExclamationTriangleIcon, ReloadIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 
 const getBaseUrl = () => {
   // Check if we're running on Vercel
@@ -116,12 +116,12 @@ export default function AdminControls() {
         >
           {isLoading ? (
             <>
-              <RefreshCwIcon className="mr-2 h-4 w-4 animate-spin" />
+              <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
               Processing...
             </>
           ) : (
             <>
-              <RefreshCwIcon className="mr-2 h-4 w-4" />
+              <ReloadIcon className="mr-2 h-4 w-4" />
               Trigger Data Update
             </>
           )}
