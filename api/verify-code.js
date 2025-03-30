@@ -29,14 +29,55 @@ export default async function handler(req, res) {
     
     console.log('REST API verify-code request:', { email, zipCode, code });
     
-    // Simplify verification for serverless function
-    // In development and production, accept any valid 6-digit code
-    const isValid = /^\d{6}$/.test(code);
-    console.log('Verification result:', isValid ? 'approved' : 'rejected');
+    // Clean up expired codes
+    try {
+      await prisma.verificationCode.deleteMany({
+        where: {
+          expires: {
+            lt: new Date()
+          }
+        }
+      });
+    } catch (cleanupError) {
+      console.error('Error cleaning up expired codes:', cleanupError);
+      // Continue anyway
+    }
+    
+    // Find a matching verification code
+    const verificationCode = await prisma.verificationCode.findFirst({
+      where: {
+        email,
+        code,
+        expires: {
+          gt: new Date() // Not expired
+        },
+        usedAt: null // Not used yet
+      },
+      orderBy: {
+        createdAt: 'desc' // Get the most recent one
+      }
+    });
+    
+    // For development fallback
+    let isValid = !!verificationCode;
+    
+    // In development, accept code 123456 as fallback
+    if (!isValid && process.env.NODE_ENV === 'development' && code === '123456') {
+      console.log('Using development fallback for code 123456');
+      isValid = true;
+    }
     
     // If verification is successful, create subscription
     if (isValid) {
       try {
+        // Mark the code as used if it exists
+        if (verificationCode) {
+          await prisma.verificationCode.update({
+            where: { id: verificationCode.id },
+            data: { usedAt: new Date() }
+          });
+        }
+        
         // Create new subscription
         await prisma.userSubscription.create({
           data: {
@@ -46,6 +87,8 @@ export default async function handler(req, res) {
             activatedAt: new Date(),
           }
         });
+        
+        console.log('Successfully created subscription for:', email);
       } catch (dbError) {
         console.error('Error creating subscription after verification:', dbError);
         return res.json({
@@ -55,12 +98,14 @@ export default async function handler(req, res) {
           error: 'Verification successful but failed to create subscription'
         });
       }
+    } else {
+      console.log('Invalid verification code for:', email);
     }
     
     return res.json({
       success: true,
       valid: isValid,
-      status: isValid ? 'approved' : 'pending'
+      status: isValid ? 'approved' : 'rejected'
     });
   } catch (error) {
     console.error('Error in code verification API:', error);

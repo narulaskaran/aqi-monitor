@@ -35,7 +35,8 @@ export default async function handler(req, res) {
       const existingSubscription = await prisma.userSubscription.findFirst({
         where: { 
           email,
-          zipCode
+          zipCode,
+          active: true
         }
       });
       
@@ -48,6 +49,36 @@ export default async function handler(req, res) {
     } catch (dbError) {
       console.error('Database error checking subscription:', dbError);
       // Continue anyway to allow verification
+    }
+    
+    // Clean up any expired verification codes
+    try {
+      await prisma.verificationCode.deleteMany({
+        where: {
+          expires: {
+            lt: new Date()
+          }
+        }
+      });
+    } catch (cleanupError) {
+      console.error('Error cleaning up expired codes:', cleanupError);
+      // Continue anyway
+    }
+    
+    // Invalidate any existing verification codes for this email
+    try {
+      await prisma.verificationCode.updateMany({
+        where: {
+          email,
+          usedAt: null
+        },
+        data: {
+          usedAt: new Date()
+        }
+      });
+    } catch (invalidateError) {
+      console.error('Error invalidating existing codes:', invalidateError);
+      // Continue anyway
     }
     
     // Send verification code via email

@@ -38,7 +38,8 @@
 - **Email Setup**: 
   - RESEND_API_KEY is required for email functionality
   - Configure DNS for your domain with Resend: https://resend.com/docs/dashboard/domains/introduction
-  - For verification, any valid 6-digit code will be accepted
+  - Each verification code expires after 10 minutes
+  - In development mode only, the code "123456" is always accepted
 - **Module Resolution**: In development, some imports may need special handling for ESM compatibility
 - **API Request Format**:
   ```js
@@ -76,6 +77,10 @@
 - **Serverless**: API handlers in `/api` directory for Vercel deployment
 - **Database**: PostgreSQL accessed through Prisma ORM
 - **Email**: Resend for email verification and notifications
+
+## Database Models
+- **UserSubscription**: Stores subscriptions for email alerts
+- **VerificationCode**: Stores email verification codes with expiration
 
 ## Environment Setup
 For local development, you need a `.env` file in the server directory with:
