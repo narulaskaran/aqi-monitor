@@ -37,15 +37,15 @@ function App() {
   const handleClick = async () => {
     try {
       setError(null);
-      
+
       // Basic ZIP code validation
       if (!zipCode.match(/^\d{5}$/)) {
         throw new Error("Please enter a valid 5-digit US ZIP code");
       }
-      
+
       // Update current ZIP code to trigger reset in SubscriptionForm
       setCurrentZipCode(zipCode);
-      
+
       // Get air quality data directly using the ZIP code
       const data = await getAirQuality(zipCode);
 
@@ -86,7 +86,13 @@ function App() {
     >
       <div className="max-w-md mx-auto w-full flex-1">
         <AQIHeader />
-        <div className="flex gap-2 mb-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleClick();
+          }}
+          className="flex gap-2 mb-4"
+        >
           <Input
             type="text"
             placeholder="Zip code"
@@ -94,20 +100,19 @@ function App() {
             onChange={(e: ChangeEvent<HTMLInputElement>) =>
               setZipCode(e.target.value)
             }
-            onKeyUp={handleKeyPress}
             className="flex-1"
           />
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={handleClick}>Get Air Quality</Button>
+                <Button type="submit">Get Air Quality</Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>US codes only at this time</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
+        </form>
 
         {error && <div className="text-red-500 mb-4">{error}</div>}
 
@@ -124,8 +129,8 @@ function App() {
       </div>
 
       <div className="flex justify-between items-center w-full mt-4">
-        <a 
-          href="/admin" 
+        <a
+          href="/admin"
           className="text-xs text-gray-500 hover:text-gray-700"
           title="Admin Area"
         >
