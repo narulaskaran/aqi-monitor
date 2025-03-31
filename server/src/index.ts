@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { connectToDatabase, disconnectFromDatabase } from './db.js';
 import { handleGetAirQuality, handleUpdateAirQuality } from './handlers/airQuality.js';
 import { handleStartVerification, handleVerifyCode } from './handlers/verification.js';
+import { handleUnsubscribe } from './handlers/subscription.js';
 
 // Load environment variables
 dotenv.config();
@@ -22,10 +23,10 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // CORS middleware for all routes
-// In development, allow all origins for easier testing
 const corsOptions = process.env.NODE_ENV === 'development' 
   ? { 
-      origin: '*', // Allow all origins in development
+      origin: 'http://localhost:5173', // Allow only the frontend origin in development
+      credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization']
     }
@@ -63,6 +64,7 @@ app.get('/api/air-quality', handleGetAirQuality);
 app.get('/api/cron/update-air-quality', handleUpdateAirQuality);
 app.post('/api/verify', handleStartVerification);
 app.post('/api/verify-code', handleVerifyCode);
+app.post('/api/unsubscribe', handleUnsubscribe);
 
 // Start server
 app.listen(port, () => {
