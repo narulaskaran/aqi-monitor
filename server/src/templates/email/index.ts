@@ -32,6 +32,8 @@ export interface AirQualityAlertEmailParams {
   category: string;
   alertColor: string;
   healthGuidance: string;
+  unsubscribeToken: string;
+  websiteUrl: string;
 }
 
 /**
@@ -40,33 +42,48 @@ export interface AirQualityAlertEmailParams {
  * @returns HTML content
  */
 export function airQualityAlertEmail(params: AirQualityAlertEmailParams): string {
-  const { zipCode, aqi, alertLevel, category, alertColor, healthGuidance } = params;
+  const {
+    zipCode,
+    aqi,
+    alertLevel,
+    category,
+    alertColor,
+    healthGuidance,
+    unsubscribeToken,
+    websiteUrl
+  } = params;
   
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #4a5568;">AQI Monitor Alert</h2>
-      <p>The air quality in your area (ZIP: ${zipCode}) has reached a level of concern:</p>
-      
-      <div style="background-color: ${alertColor}20; border: 1px solid ${alertColor}; padding: 15px; border-radius: 6px; margin: 20px 0;">
-        <h3 style="color: ${alertColor}; margin-top: 0;">Air Quality Index: ${aqi} - ${alertLevel}</h3>
-        <p>${category}</p>
-        <p><strong>Health Guidance:</strong> ${healthGuidance}</p>
-      </div>
-      
-      <div style="margin-top: 20px; padding: 15px; background-color: #f7fafc; border-radius: 6px;">
-        <h4 style="margin-top: 0;">What should you do?</h4>
-        <ul>
-          <li>Monitor local air quality reports</li>
-          <li>Adjust your outdoor activities based on the AQI level</li>
-          <li>If you have respiratory issues, keep medications on hand</li>
-          <li>Consider using air purifiers indoors</li>
-        </ul>
-      </div>
-      
-      <p style="color: #718096; font-size: 14px; margin-top: 20px;">
-        You're receiving this email because you subscribed to air quality alerts for ZIP code ${zipCode}.
-      </p>
-    </div>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Air Quality Alert</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2d3748; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+          <h1 style="color: ${alertColor}; margin-bottom: 20px;">Air Quality Alert: ${alertLevel}</h1>
+          
+          <p style="margin-bottom: 15px;">
+            The current Air Quality Index (AQI) in your area (ZIP code: ${zipCode}) is <strong>${aqi}</strong>.
+            This is considered <strong>${category}</strong>.
+          </p>
+
+          <div style="background-color: #f7fafc; border-left: 4px solid ${alertColor}; padding: 15px; margin-bottom: 20px;">
+            <h2 style="color: #4a5568; margin-top: 0;">Health Guidance</h2>
+            <p style="margin-bottom: 0;">${healthGuidance}</p>
+          </div>
+
+          <p style="color: #718096; font-size: 0.875rem; margin-top: 30px;">
+            You're receiving this email because you subscribed to air quality alerts.
+            <br>
+            <a href="${websiteUrl}/unsubscribe?token=${unsubscribeToken}" style="color: #4a5568; text-decoration: underline;">
+              Unsubscribe from these alerts
+            </a>
+          </p>
+        </div>
+      </body>
+    </html>
   `;
 }
 
@@ -77,6 +94,8 @@ export interface GoodAirQualityEmailParams {
   zipCode: string;
   aqi: number;
   dominantPollutant: string;
+  unsubscribeToken: string;
+  websiteUrl: string;
 }
 
 /**
@@ -85,32 +104,47 @@ export interface GoodAirQualityEmailParams {
  * @returns HTML content
  */
 export function goodAirQualityEmail(params: GoodAirQualityEmailParams): string {
-  const { zipCode, aqi, dominantPollutant } = params;
+  const {
+    zipCode,
+    aqi,
+    dominantPollutant,
+    unsubscribeToken,
+    websiteUrl
+  } = params;
   
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #4a5568;">AQI Monitor Daily Update</h2>
-      <p>Good news! The air quality in your area (ZIP: ${zipCode}) is currently good:</p>
-      
-      <div style="background-color: #e6ffed; border: 1px solid #00e400; padding: 15px; border-radius: 6px; margin: 20px 0;">
-        <h3 style="color: #00e400; margin-top: 0;">Air Quality Index: ${aqi} - GOOD</h3>
-        <p>Air quality is considered satisfactory, and air pollution poses little or no risk.</p>
-        <p><strong>Dominant Pollutant:</strong> ${dominantPollutant}</p>
-      </div>
-      
-      <div style="margin-top: 20px; padding: 15px; background-color: #f7fafc; border-radius: 6px;">
-        <h4 style="margin-top: 0;">Perfect day for:</h4>
-        <ul>
-          <li>Outdoor activities and exercise</li>
-          <li>Opening windows for fresh air</li>
-          <li>Enjoying parks and nature</li>
-          <li>Walking or biking instead of driving</li>
-        </ul>
-      </div>
-      
-      <p style="color: #718096; font-size: 14px; margin-top: 20px;">
-        You're receiving this email because you subscribed to air quality updates for ZIP code ${zipCode}.
-      </p>
-    </div>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Good Air Quality Update</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2d3748; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+          <h1 style="color: #48bb78; margin-bottom: 20px;">Good Air Quality Today!</h1>
+          
+          <p style="margin-bottom: 15px;">
+            Good news! The current Air Quality Index (AQI) in your area (ZIP code: ${zipCode}) is <strong>${aqi}</strong>.
+            This indicates good air quality with low levels of air pollution.
+          </p>
+
+          <div style="background-color: #f0fff4; border-left: 4px solid #48bb78; padding: 15px; margin-bottom: 20px;">
+            <h2 style="color: #2f855a; margin-top: 0;">What This Means</h2>
+            <p style="margin-bottom: 0;">
+              The air quality is satisfactory, and air pollution poses little or no risk. 
+              The primary pollutant is ${dominantPollutant}, but levels are within a healthy range.
+            </p>
+          </div>
+
+          <p style="color: #718096; font-size: 0.875rem; margin-top: 30px;">
+            You're receiving this email because you subscribed to air quality alerts.
+            <br>
+            <a href="${websiteUrl}/unsubscribe?token=${unsubscribeToken}" style="color: #4a5568; text-decoration: underline;">
+              Unsubscribe from these alerts
+            </a>
+          </p>
+        </div>
+      </body>
+    </html>
   `;
 }

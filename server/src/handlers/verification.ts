@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db.js';
 import { sendVerificationCode, checkVerificationCode } from '../services/twilio.js';
+import { findSubscriptionByEmail } from '../services/subscription.js';
 
 export async function handleStartVerification(req: Request, res: Response) {
   try {
@@ -15,21 +16,16 @@ export async function handleStartVerification(req: Request, res: Response) {
     
     console.log('REST API verify request:', { email, zipCode });
     
-    // Check if this email/zipCode combo already exists
-    const existingSubscription = await prisma.userSubscription.findFirst({
-      where: { 
-        email,
-        zipCode
-      }
-    });
-    
-    if (existingSubscription) {
+    // Check if subscription already exists
+    const existingSubscription = await findSubscriptionByEmail(email);
+
+    if (existingSubscription && existingSubscription.active) {
       return res.json({
         success: false,
         error: 'This email is already subscribed for this ZIP code'
       });
     }
-    
+
     // Send verification code
     const result = await sendVerificationCode(email);
     return res.json(result);

@@ -4,6 +4,7 @@
 import { prisma } from '../db.js';
 import { sendEmail } from './twilio.js'; // Using the existing email service
 import { airQualityAlertEmail, goodAirQualityEmail } from '../templates/email/index.js';
+import jwt from 'jsonwebtoken';
 
 // Subscription types
 export interface Subscription {
@@ -74,19 +75,75 @@ export async function activateSubscription(email: string, zipCode: string): Prom
 }
 
 /**
- * Deactivates a subscription (unsubscribe)
+ * Generates an unsubscribe token for a subscription
  */
-export async function deactivateSubscription(id: string): Promise<boolean> {
-  const result = await prisma.userSubscription.update({
-    where: {
-      id,
-    },
-    data: {
-      active: false,
-    },
-  });
+export function generateUnsubscribeToken(subscriptionId: string): string {
+  // Create a JWT token with the subscription ID
+  const token = jwt.sign(
+    { subscriptionId },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '1y' } // Token expires in 1 year
+  );
+  return token;
+}
+
+/**
+ * Validates an unsubscribe token and returns the subscription ID
+ */
+export function validateUnsubscribeToken(token: string): string | null {
+  try {
+    console.log('Validating unsubscribe token');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { subscriptionId: string };
+    console.log('Token validated successfully:', { subscriptionId: decoded.subscriptionId });
+    return decoded.subscriptionId;
+  } catch (error) {
+    console.error('Token validation failed:', error);
+    if (error instanceof Error) {
+      console.error('Token validation error details:', {
+        name: error.name,
+        message: error.message
+      });
+    }
+    return null;
+  }
+}
+
+/**
+ * Deactivates a subscription (unsubscribe) using a token
+ */
+export async function deactivateSubscription(token: string): Promise<boolean> {
+  console.log('Starting subscription deactivation process');
+  const subscriptionId = validateUnsubscribeToken(token);
   
-  return !!result;
+  if (!subscriptionId) {
+    console.log('Failed to validate token, cannot deactivate subscription');
+    return false;
+  }
+
+  try {
+    console.log('Attempting to update subscription:', { subscriptionId });
+    const result = await prisma.userSubscription.update({
+      where: {
+        id: subscriptionId,
+      },
+      data: {
+        active: false,
+      },
+    });
+    
+    console.log('Subscription update result:', result);
+    return !!result;
+  } catch (error) {
+    console.error('Error updating subscription:', error);
+    if (error instanceof Error) {
+      console.error('Subscription update error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    return false;
+  }
 }
 
 /**
@@ -132,6 +189,15 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
       console.log(`No active subscriptions for ZIP code ${zipCode} to send alerts to`);
       return 0;
     }
+
+    // Determine the website URL based on environment
+    const websiteUrl = process.env.NODE_ENV === 'development'
+      ? 'http://localhost:5173'
+      : process.env.VITE_API_URL
+    
+    if (!websiteUrl) {
+      throw new Error('No website URL configured. Please set VITE_API_URL or WEBSITE_URL in environment variables.');
+    }
     
     // For Good air quality (AQI < 51)
     if (aqi < 51) {
@@ -139,11 +205,16 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
       
       // Send email to each subscriber
       const emailPromises = subscriptions.map(subscription => {
+        // Generate unsubscribe token
+        const unsubscribeToken = generateUnsubscribeToken(subscription.id);
+        
         // Generate the email HTML using the template for good air quality
         const html = goodAirQualityEmail({
           zipCode,
           aqi,
-          dominantPollutant
+          dominantPollutant,
+          unsubscribeToken,
+          websiteUrl
         });
         
         // Send the email
@@ -196,6 +267,9 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
     
     // Send email to each subscriber
     const emailPromises = subscriptions.map(subscription => {
+      // Generate unsubscribe token
+      const unsubscribeToken = generateUnsubscribeToken(subscription.id);
+      
       // Generate the email HTML using the template
       const html = airQualityAlertEmail({
         zipCode,
@@ -203,7 +277,9 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
         alertLevel,
         category,
         alertColor,
-        healthGuidance
+        healthGuidance,
+        unsubscribeToken,
+        websiteUrl
       });
       
       // Send the email

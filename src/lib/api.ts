@@ -6,7 +6,7 @@ import { AirQualityData } from '../types/air-quality';
 /**
  * Gets the base URL for API requests based on environment
  */
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   // Check if we're running on Vercel
   if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
     return window.location.origin;
@@ -19,6 +19,16 @@ const getBaseUrl = () => {
   
   // Fallback to current origin
   return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+};
+
+// Export a helper to get full API URLs
+export const getApiUrl = (path: string) => {
+  const baseUrl = getBaseUrl();
+  // Remove any leading slash from path
+  const cleanPath = path.replace(/^\/+/, '');
+  // Ensure path starts with /api/
+  const apiPath = cleanPath.startsWith('api/') ? `/${cleanPath}` : `/api/${cleanPath}`;
+  return `${baseUrl}${apiPath}`;
 };
 
 /**
