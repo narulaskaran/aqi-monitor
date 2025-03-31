@@ -149,8 +149,8 @@ export async function deactivateSubscription(token: string): Promise<boolean> {
 /**
  * Finds a subscription by email
  */
-export async function findSubscriptionByEmail(email: string): Promise<Subscription | null> {
-  return await prisma.userSubscription.findFirst({
+export async function findSubscriptionsForEmail(email: string): Promise<Subscription[] | []> {
+  return await prisma.userSubscription.findMany({
     where: {
       email,
     },

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db.js';
 import { sendVerificationCode, checkVerificationCode } from '../services/twilio.js';
-import { findSubscriptionByEmail } from '../services/subscription.js';
+import { findSubscriptionsForEmail } from '../services/subscription.js';
 
 export async function handleStartVerification(req: Request, res: Response) {
   try {
@@ -17,7 +17,8 @@ export async function handleStartVerification(req: Request, res: Response) {
     console.log('REST API verify request:', { email, zipCode });
     
     // Check if subscription already exists
-    const existingSubscription = await findSubscriptionByEmail(email);
+    const subscriptions = await findSubscriptionsForEmail(email);
+    const existingSubscription = subscriptions.find(sub => sub.zipCode === zipCode);
 
     if (existingSubscription && existingSubscription.active) {
       return res.json({
