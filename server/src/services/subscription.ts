@@ -2,7 +2,7 @@
  * Subscription service for managing user subscriptions
  */
 import { prisma } from '../db.js';
-import { sendEmail } from './twilio.js'; // Using the existing email service
+import { sendEmail } from './email.js'; // Using the email service
 import { airQualityAlertEmail, goodAirQualityEmail } from '../templates/email/index.js';
 import jwt from 'jsonwebtoken';
 
@@ -204,7 +204,10 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
       console.log(`Sending good air quality updates to ${subscriptions.length} subscribers for ZIP code ${zipCode}`);
       
       // Send email to each subscriber
-      const emailPromises = subscriptions.map(subscription => {
+      const emailPromises = subscriptions.map(async (subscription, index) => {
+        // Add a delay based on the index (500ms * index)
+        await new Promise(resolve => setTimeout(resolve, 500 * index));
+        
         // Generate unsubscribe token
         const unsubscribeToken = generateUnsubscribeToken(subscription.id);
         
