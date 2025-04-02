@@ -5,6 +5,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { Resend } from "resend";
+import { getMockAirQualityData } from "./services/airQuality.js";
 
 dotenv.config();
 
@@ -114,26 +115,8 @@ app.get("/api/air-quality", (req, res) => {
     });
   }
   
-  // Return mock data for testing
-  res.json({
-    index: 42,
-    category: "Good",
-    dominantPollutant: "PM2.5",
-    pollutants: {
-      "PM2.5": {
-        concentration: 10.2,
-        unit: "µg/m³"
-      },
-      "PM10": {
-        concentration: 15.7,
-        unit: "µg/m³"
-      },
-      "O3": {
-        concentration: 30.5,
-        unit: "ppb"
-      }
-    }
-  });
+  // Use the mock data function from the service instead of duplicating the data
+  res.json(getMockAirQualityData());
 });
 
 // Start the server
