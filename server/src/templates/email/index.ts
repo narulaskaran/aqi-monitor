@@ -23,117 +23,97 @@ export function verificationEmail(code: string): string {
 }
 
 /**
- * Parameters for air quality alert email
+ * Parameters for air quality email
  */
-export interface AirQualityAlertEmailParams {
+export interface AirQualityEmailParams {
   zipCode: string;
   aqi: number;
-  alertLevel: string;
-  category: string;
-  alertColor: string;
-  healthGuidance: string;
+  isGoodAirQuality: boolean;
+  // For poor air quality
+  alertLevel?: string;
+  category?: string;
+  alertColor?: string;
+  healthGuidance?: string;
+  // For good air quality
+  dominantPollutant?: string;
+  // Common
   unsubscribeToken: string;
   websiteUrl: string;
 }
 
 /**
- * Generates HTML for air quality alert email
- * @param params - Alert parameters
+ * Generates HTML for air quality email (both good and poor air quality)
+ * @param params - Air quality parameters
  * @returns HTML content
  */
-export function airQualityAlertEmail(params: AirQualityAlertEmailParams): string {
+export function airQualityEmail(params: AirQualityEmailParams): string {
   const {
     zipCode,
     aqi,
+    isGoodAirQuality,
     alertLevel,
     category,
     alertColor,
     healthGuidance,
-    unsubscribeToken,
-    websiteUrl
-  } = params;
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Air Quality Alert</title>
-      </head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2d3748; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-          <h1 style="color: ${alertColor}; margin-bottom: 20px;">Air Quality Alert: ${alertLevel}</h1>
-          
-          <p style="margin-bottom: 15px;">
-            The current Air Quality Index (AQI) in your area (ZIP code: ${zipCode}) is <strong>${aqi}</strong>.
-            This is considered <strong>${category}</strong>.
-          </p>
-
-          <div style="background-color: #f7fafc; border-left: 4px solid ${alertColor}; padding: 15px; margin-bottom: 20px;">
-            <h2 style="color: #4a5568; margin-top: 0;">Health Guidance</h2>
-            <p style="margin-bottom: 0;">${healthGuidance}</p>
-          </div>
-
-          <p style="color: #718096; font-size: 0.875rem; margin-top: 30px;">
-            You're receiving this email because you subscribed to air quality alerts.
-            <br>
-            <a href="${websiteUrl}/unsubscribe?token=${unsubscribeToken}" style="color: #4a5568; text-decoration: underline;">
-              Unsubscribe from these alerts
-            </a>
-          </p>
-        </div>
-      </body>
-    </html>
-  `;
-}
-
-/**
- * Parameters for good air quality email
- */
-export interface GoodAirQualityEmailParams {
-  zipCode: string;
-  aqi: number;
-  dominantPollutant: string;
-  unsubscribeToken: string;
-  websiteUrl: string;
-}
-
-/**
- * Generates HTML for good air quality email
- * @param params - Good air quality parameters
- * @returns HTML content
- */
-export function goodAirQualityEmail(params: GoodAirQualityEmailParams): string {
-  const {
-    zipCode,
-    aqi,
     dominantPollutant,
     unsubscribeToken,
     websiteUrl
   } = params;
   
+  // Set default values for good air quality
+  const title = isGoodAirQuality 
+    ? "Good Air Quality Today!" 
+    : `Air Quality Alert: ${alertLevel}`;
+  
+  const titleColor = isGoodAirQuality 
+    ? "#48bb78" // Green
+    : alertColor;
+  
+  const infoBoxBgColor = isGoodAirQuality 
+    ? "#f0fff4" // Light green
+    : "#f7fafc"; // Light gray
+  
+  const infoBoxBorderColor = isGoodAirQuality 
+    ? "#48bb78" // Green
+    : alertColor;
+  
+  const infoBoxTitleColor = isGoodAirQuality 
+    ? "#2f855a" // Dark green
+    : "#4a5568"; // Gray
+  
+  const infoBoxTitle = isGoodAirQuality 
+    ? "What This Means" 
+    : "Health Guidance";
+  
+  const infoBoxContent = isGoodAirQuality 
+    ? `The air quality is satisfactory, and air pollution poses little or no risk. 
+       The primary pollutant is ${dominantPollutant}, but levels are within a healthy range.`
+    : healthGuidance;
+  
+  const mainContent = isGoodAirQuality
+    ? `Good news! The current Air Quality Index (AQI) in your area (ZIP code: ${zipCode}) is <strong>${aqi}</strong>.
+       This indicates good air quality with low levels of air pollution.`
+    : `The current Air Quality Index (AQI) in your area (ZIP code: ${zipCode}) is <strong>${aqi}</strong>.
+       This is considered <strong>${category}</strong>.`;
+  
   return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8">
-        <title>Good Air Quality Update</title>
+        <title>${isGoodAirQuality ? "Good Air Quality Update" : "Air Quality Alert"}</title>
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2d3748; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-          <h1 style="color: #48bb78; margin-bottom: 20px;">Good Air Quality Today!</h1>
+          <h1 style="color: ${titleColor}; margin-bottom: 20px;">${title}</h1>
           
           <p style="margin-bottom: 15px;">
-            Good news! The current Air Quality Index (AQI) in your area (ZIP code: ${zipCode}) is <strong>${aqi}</strong>.
-            This indicates good air quality with low levels of air pollution.
+            ${mainContent}
           </p>
 
-          <div style="background-color: #f0fff4; border-left: 4px solid #48bb78; padding: 15px; margin-bottom: 20px;">
-            <h2 style="color: #2f855a; margin-top: 0;">What This Means</h2>
-            <p style="margin-bottom: 0;">
-              The air quality is satisfactory, and air pollution poses little or no risk. 
-              The primary pollutant is ${dominantPollutant}, but levels are within a healthy range.
-            </p>
+          <div style="background-color: ${infoBoxBgColor}; border-left: 4px solid ${infoBoxBorderColor}; padding: 15px; margin-bottom: 20px;">
+            <h2 style="color: ${infoBoxTitleColor}; margin-top: 0;">${infoBoxTitle}</h2>
+            <p style="margin-bottom: 0;">${infoBoxContent}</p>
           </div>
 
           <p style="color: #718096; font-size: 0.875rem; margin-top: 30px;">
