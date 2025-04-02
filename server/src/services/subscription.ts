@@ -3,7 +3,7 @@
  */
 import { prisma } from '../db.js';
 import { sendEmail } from './email.js'; // Using the email service
-import { airQualityAlertEmail, goodAirQualityEmail } from '../templates/email/index.js';
+import { airQualityEmail } from '../templates/email/index.js';
 import jwt from 'jsonwebtoken';
 
 // Subscription types
@@ -175,7 +175,13 @@ export async function subscriptionExists(email: string, zipCode: string): Promis
  * Send air quality alerts to users based on current AQI
  * Send alerts for both poor air quality (>= Moderate) and good air quality (Good category)
  */
-export async function sendAirQualityAlerts(zipCode: string, aqi: number, category: string, dominantPollutant: string = 'PM2.5'): Promise<number> {
+export async function sendAirQualityAlerts(
+  zipCode: string,
+  aqi: number,
+  category: string,
+  dominantPollutant: string,
+  websiteUrl: string
+): Promise<number> {
   try {
     // Get all active subscriptions for this ZIP code
     const subscriptions = await prisma.userSubscription.findMany({
@@ -186,57 +192,11 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
     });
     
     if (subscriptions.length === 0) {
-      console.log(`No active subscriptions for ZIP code ${zipCode} to send alerts to`);
+      console.log(`No active subscriptions found for ZIP code ${zipCode}`);
       return 0;
     }
-
-    // Determine the website URL based on environment
-    const websiteUrl = process.env.NODE_ENV === 'development'
-      ? 'http://localhost:5173'
-      : process.env.VITE_API_URL
     
-    if (!websiteUrl) {
-      throw new Error('No website URL configured. Please set VITE_API_URL or WEBSITE_URL in environment variables.');
-    }
-    
-    // For Good air quality (AQI < 51)
-    if (aqi < 51) {
-      console.log(`Sending good air quality updates to ${subscriptions.length} subscribers for ZIP code ${zipCode}`);
-      
-      // Send email to each subscriber
-      const emailPromises = subscriptions.map(async (subscription, index) => {
-        // Add a delay based on the index (500ms * index)
-        await new Promise(resolve => setTimeout(resolve, 500 * index));
-        
-        // Generate unsubscribe token
-        const unsubscribeToken = generateUnsubscribeToken(subscription.id);
-        
-        // Generate the email HTML using the template for good air quality
-        const html = goodAirQualityEmail({
-          zipCode,
-          aqi,
-          dominantPollutant,
-          unsubscribeToken,
-          websiteUrl
-        });
-        
-        // Send the email
-        return sendEmail(
-          subscription.email,
-          `Daily AQI Update: Good Air Quality in Your Area`,
-          html
-        );
-      });
-      
-      // Wait for all emails to be sent
-      const results = await Promise.all(emailPromises);
-      
-      // Count successful sends
-      const successCount = results.filter(result => result.success).length;
-      console.log(`Successfully sent ${successCount} of ${subscriptions.length} good air quality updates`);
-      
-      return successCount;
-    }
+    console.log(`Found ${subscriptions.length} active subscriptions for ZIP code ${zipCode}`);
     
     // For poor air quality (AQI >= 51)
     // Determine which threshold the AQI value exceeds
@@ -264,31 +224,43 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
       alertLevel = 'MODERATE';
       alertColor = '#FFFF00'; // Yellow
       healthGuidance = 'People who are unusually sensitive to air pollution should consider reducing prolonged or heavy outdoor exertion.';
+    } else {
+      // For Good air quality (AQI < 51)
+      alertLevel = 'GOOD';
+      alertColor = '#009966'; // Green
+      healthGuidance = 'Air quality is satisfactory and poses little or no risk.';
     }
     
-    console.log(`Sending air quality alerts to ${subscriptions.length} subscribers for ZIP code ${zipCode}`);
+    console.log(`Sending air quality ${aqi < 51 ? 'updates' : 'alerts'} to ${subscriptions.length} subscribers for ZIP code ${zipCode}`);
     
     // Send email to each subscriber
-    const emailPromises = subscriptions.map(subscription => {
+    const emailPromises = subscriptions.map(async (subscription, index) => {
+      // Add a delay based on the index (500ms * index) to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500 * index));
+      
       // Generate unsubscribe token
       const unsubscribeToken = generateUnsubscribeToken(subscription.id);
       
-      // Generate the email HTML using the template
-      const html = airQualityAlertEmail({
+      // Generate the email HTML using the consolidated template
+      const html = airQualityEmail({
         zipCode,
         aqi,
+        isGoodAirQuality: aqi < 51,
         alertLevel,
         category,
         alertColor,
         healthGuidance,
+        dominantPollutant,
         unsubscribeToken,
         websiteUrl
       });
       
-      // Send the email
+      // Send the email with appropriate subject
       return sendEmail(
         subscription.email,
-        `AQI Alert: ${alertLevel} Air Quality in Your Area`,
+        aqi < 51 
+          ? `Daily AQI Update: Good Air Quality in Your Area`
+          : `AQI Alert: ${alertLevel} Air Quality in Your Area`,
         html
       );
     });
@@ -298,11 +270,11 @@ export async function sendAirQualityAlerts(zipCode: string, aqi: number, categor
     
     // Count successful sends
     const successCount = results.filter(result => result.success).length;
-    console.log(`Successfully sent ${successCount} of ${subscriptions.length} air quality alerts`);
+    console.log(`Successfully sent ${successCount} of ${subscriptions.length} ${aqi < 51 ? 'good air quality updates' : 'air quality alerts'}`);
     
     return successCount;
   } catch (error) {
-    console.error('Error sending air quality alerts:', error);
-    return 0;
+    console.error(`Error sending air quality ${aqi < 51 ? 'updates' : 'alerts'} for ZIP code ${zipCode}:`, error);
+    throw error;
   }
 }
