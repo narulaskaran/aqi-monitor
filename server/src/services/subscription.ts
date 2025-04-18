@@ -260,12 +260,13 @@ export async function sendAirQualityAlerts(
       `Sending air quality ${aqi < 51 ? "updates" : "alerts"} to ${subscriptions.length} subscribers for ZIP code ${zipCode}`,
     );
 
-    // Send email to each subscriber
-    const emailPromises = subscriptions.map(async (subscription, index) => {
-      // Add a delay based on the index (500ms * index) to avoid rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 500 * index));
+    // Send email to each subscriber sequentially to avoid rate limiting
+    const results = [];
+    for (const subscription of subscriptions) {
+      // Add a 500ms delay before each email. We are allowed to send two emails per second.
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Generate unsubscribe token
+      // Generate unsubscribe token for the footer
       const unsubscribeToken = generateUnsubscribeToken(subscription.id);
 
       // Generate the email HTML using the consolidated template
@@ -274,12 +275,12 @@ export async function sendAirQualityAlerts(
         process.env.NODE_ENV === "development"
           ? "http://localhost:5173"
           : process.env.VITE_API_URL;
-
       if (!websiteUrl) {
         throw new Error(
           "No website URL configured. Please set VITE_API_URL in environment variables.",
         );
       }
+
       const html = airQualityEmail({
         zipCode,
         aqi,
@@ -294,17 +295,15 @@ export async function sendAirQualityAlerts(
       });
 
       // Send the email with appropriate subject
-      return sendEmail(
+      const result = await sendEmail(
         subscription.email,
         aqi < 51
           ? `Daily AQI Update: Good Air Quality in Your Area`
           : `AQI Alert: ${alertLevel} Air Quality in Your Area`,
         html,
       );
-    });
-
-    // Wait for all emails to be sent
-    const results = await Promise.all(emailPromises);
+      results.push(result);
+    }
 
     // Count successful sends
     const successCount = results.filter((result) => result.success).length;
