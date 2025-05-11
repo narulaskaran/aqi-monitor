@@ -5,6 +5,7 @@ import { prisma } from "../db.js";
 import { sendEmail } from "./email.js"; // Using the email service
 import { airQualityEmail } from "../templates/email/index.js";
 import jwt from "jsonwebtoken";
+import PQueue from "p-queue"; // Make sure to install p-queue: npm install p-queue
 
 // Subscription types
 export interface Subscription {
@@ -260,16 +261,44 @@ export async function sendAirQualityAlerts(
       `Sending air quality ${aqi < 51 ? "updates" : "alerts"} to ${subscriptions.length} subscribers for ZIP code ${zipCode}`,
     );
 
-    // Send email to each subscriber sequentially to avoid rate limiting
-    const results = [];
-    for (const subscription of subscriptions) {
-      // Add a 500ms delay before each email. We are allowed to send two emails per second.
-      await new Promise((resolve) => setTimeout(resolve, 500));
+    // Set up a global queue for email sending (2 per second)
+    const queue = new PQueue({ interval: 1000, intervalCap: 2 });
+    const results: any[] = [];
 
+    // Helper for retry logic
+    async function sendWithRetry(
+      email: string,
+      subject: string,
+      html: string,
+      maxRetries = 3,
+    ) {
+      let attempt = 0;
+      let delay = 1000; // Start with 1s
+      while (attempt <= maxRetries) {
+        const result = await sendEmail(email, subject, html);
+        if (result.success) return result;
+        // Check for 429
+        if (
+          result.error &&
+          typeof result.error === "object" &&
+          "statusCode" in result.error &&
+          (result.error as any).statusCode === 429
+        ) {
+          attempt++;
+          if (attempt > maxRetries) return result;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          delay *= 2; // Exponential backoff
+        } else {
+          return result;
+        }
+      }
+      return { success: false, error: "Max retries exceeded" };
+    }
+
+    // Queue all email jobs
+    for (const subscription of subscriptions) {
       // Generate unsubscribe token for the footer
       const unsubscribeToken = generateUnsubscribeToken(subscription.id);
-
-      // Generate the email HTML using the consolidated template
       // Determine the website URL based on environment
       const websiteUrl =
         process.env.NODE_ENV === "development"
@@ -280,7 +309,6 @@ export async function sendAirQualityAlerts(
           "No website URL configured. Please set VITE_API_URL in environment variables.",
         );
       }
-
       const html = airQualityEmail({
         zipCode,
         aqi,
@@ -293,17 +321,17 @@ export async function sendAirQualityAlerts(
         unsubscribeToken,
         websiteUrl,
       });
-
-      // Send the email with appropriate subject
-      const result = await sendEmail(
-        subscription.email,
+      const subject =
         aqi < 51
           ? `Daily AQI Update: Good Air Quality in Your Area`
-          : `AQI Alert: ${alertLevel} Air Quality in Your Area`,
-        html,
-      );
-      results.push(result);
+          : `AQI Alert: ${alertLevel} Air Quality in Your Area`;
+      queue.add(async () => {
+        const result = await sendWithRetry(subscription.email, subject, html);
+        results.push(result);
+      });
     }
+
+    await queue.onIdle();
 
     // Count successful sends
     const successCount = results.filter((result) => result.success).length;
