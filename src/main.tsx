@@ -7,6 +7,7 @@ import AdminPage from "./pages/AdminPage.tsx";
 import { UnsubscribePage } from "./pages/UnsubscribePage.tsx";
 import { ThemeProvider } from "./lib/theme";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider>
       <RouterProvider router={router} />
       <Analytics />
+      <SpeedInsights />
     </ThemeProvider>
   </StrictMode>
 );
