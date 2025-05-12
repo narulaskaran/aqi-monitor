@@ -202,7 +202,6 @@ export async function subscriptionExists(
 
 /**
  * Send air quality alerts to users based on current AQI
- * Send alerts for both poor air quality (>= Moderate) and good air quality (Good category)
  */
 export async function sendAirQualityAlerts(
   zipCode: string,
@@ -222,18 +221,58 @@ export async function sendAirQualityAlerts(
     if (subscriptions.length === 0) {
       console.log(`No active subscriptions found for ZIP code ${zipCode}`);
       return 0;
+    } else {
+      console.log(
+        `Found ${subscriptions.length} active subscriptions for ZIP code ${zipCode}`,
+      );
     }
 
-    console.log(
-      `Found ${subscriptions.length} active subscriptions for ZIP code ${zipCode}`,
-    );
+    const emails: any[] = [];
+    async function sendWithRetry(
+      email: string,
+      subject: string,
+      html: string,
+      maxRetries = 4,
+    ) {
+      let attempt = 0;
+      while (attempt <= maxRetries) {
+        // Wait until we're allowed to send an email
+        let allowed = false;
+        let counter = 0;
+        while (!allowed) {
+          const { success } = await ratelimit.limit("resend:email:global");
+          if (success) {
+            allowed = true;
+          } else {
+            // Exponential backoff
+            counter += 1;
+            await new Promise((resolve) => setTimeout(resolve, 100 ** counter));
+          }
+        }
 
-    // For poor air quality (AQI >= 51)
+        const result = await sendEmail(email, subject, html);
+        if (
+          result.error &&
+          result.error.toLowerCase().includes("too many requests")
+        ) {
+          attempt++;
+          if (attempt < maxRetries) {
+            // Exponential backoff
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 ** attempt),
+            );
+          }
+        } else {
+          return result;
+        }
+      }
+      return { success: false, error: "Max retries exceeded" };
+    }
+
     // Determine which threshold the AQI value exceeds
     let alertLevel = "";
     let alertColor = "";
     let healthGuidance = "";
-
     if (aqi >= AirQualityThreshold.HAZARDOUS) {
       alertLevel = "HAZARDOUS";
       alertColor = "#7E0023"; // Maroon
@@ -268,52 +307,11 @@ export async function sendAirQualityAlerts(
     }
 
     console.log(
-      `Sending air quality ${aqi < 51 ? "updates" : "alerts"} to ${subscriptions.length} subscribers for ZIP code ${zipCode}`,
+      `Sending air quality updates to ${subscriptions.length} subscribers for ZIP code ${zipCode}`,
     );
 
-    // Remove PQueue logic, use distributed rate limiting instead
-    const results: any[] = [];
-    async function sendWithRetry(
-      email: string,
-      subject: string,
-      html: string,
-      maxRetries = 3,
-    ) {
-      let attempt = 0;
-      let delay = 1000;
-      while (attempt <= maxRetries) {
-        // Distributed rate limit: wait until allowed
-        let allowed = false;
-        while (!allowed) {
-          const { success } = await ratelimit.limit("resend:email:global");
-          if (success) {
-            allowed = true;
-          } else {
-            // Wait 100ms before retrying
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-        }
-        const result = await sendEmail(email, subject, html);
-        if (result.success) return result;
-        if (
-          result.error &&
-          typeof result.error === "object" &&
-          "statusCode" in result.error &&
-          (result.error as any).statusCode === 429
-        ) {
-          attempt++;
-          if (attempt > maxRetries) return result;
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          delay *= 2;
-        } else {
-          return result;
-        }
-      }
-      return { success: false, error: "Max retries exceeded" };
-    }
-    // Sequentially process emails to respect distributed rate limit
+    let results = [];
     for (const subscription of subscriptions) {
-      // Generate unsubscribe token for the footer
       const unsubscribeToken = generateUnsubscribeToken(subscription.id);
       const websiteUrl =
         process.env.NODE_ENV === "development"
@@ -340,21 +338,20 @@ export async function sendAirQualityAlerts(
         aqi < 51
           ? `Daily AQI Update: Good Air Quality in Your Area`
           : `AQI Alert: ${alertLevel} Air Quality in Your Area`;
-      // Await each send to ensure rate limit is respected globally
-      const result = await sendWithRetry(subscription.email, subject, html);
-      results.push(result);
+      results.push(sendWithRetry(subscription.email, subject, html));
     }
 
     // Count successful sends
+    results = await Promise.all(results);
     const successCount = results.filter((result) => result.success).length;
     console.log(
-      `Successfully sent ${successCount} of ${subscriptions.length} ${aqi < 51 ? "good air quality updates" : "air quality alerts"}`,
+      `Successfully sent ${successCount} of ${subscriptions.length} "air quality alerts"`,
     );
 
     return successCount;
   } catch (error) {
     console.error(
-      `Error sending air quality ${aqi < 51 ? "updates" : "alerts"} for ZIP code ${zipCode}:`,
+      `Error sending air quality updates for ZIP code ${zipCode}:`,
       error,
     );
     throw error;
