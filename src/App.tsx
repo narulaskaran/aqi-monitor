@@ -80,11 +80,7 @@ function App() {
   }, [zipCode, currentZipCode]);
 
   return (
-    <div
-      className={`min-h-screen p-4 transition-colors duration-300 rounded-lg shadow ${
-        airQuality?.color || "bg-white"
-      } flex flex-col`}
-    >
+    <div className="min-h-screen p-4 transition-colors duration-300 rounded-lg shadow bg-background flex flex-col">
       <ThemeToggle />
       <div className="max-w-md mx-auto w-full flex-1">
         <AQIHeader />
