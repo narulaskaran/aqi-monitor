@@ -6,6 +6,7 @@ import App from "./App.tsx";
 import AdminPage from "./pages/AdminPage.tsx";
 import { UnsubscribePage } from "./pages/UnsubscribePage.tsx";
 import { ThemeProvider } from "./lib/theme";
+import { Analytics } from "@vercel/analytics/react";
 
 const router = createBrowserRouter([
   {
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <RouterProvider router={router} />
+      <Analytics />
     </ThemeProvider>
   </StrictMode>
 );
