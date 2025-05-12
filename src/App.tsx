@@ -13,6 +13,7 @@ import "./App.css";
 import { useState, ChangeEvent, KeyboardEvent, useEffect } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
 import { getAirQuality } from "./lib/api";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 function App() {
   const [zipCode, setZipCode] = useState("");
@@ -84,6 +85,7 @@ function App() {
         airQuality?.color || "bg-white"
       } flex flex-col`}
     >
+      <ThemeToggle />
       <div className="max-w-md mx-auto w-full flex-1">
         <AQIHeader />
         <form
