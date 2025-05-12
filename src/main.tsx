@@ -5,6 +5,7 @@ import "./index.css";
 import App from "./App.tsx";
 import AdminPage from "./pages/AdminPage.tsx";
 import { UnsubscribePage } from "./pages/UnsubscribePage.tsx";
+import { ThemeProvider } from "./lib/theme";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
   </StrictMode>
 );

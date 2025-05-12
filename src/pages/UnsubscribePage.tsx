@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { getApiUrl } from "../lib/api";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 export function UnsubscribePage() {
   const [searchParams] = useSearchParams();
@@ -78,6 +79,7 @@ export function UnsubscribePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <ThemeToggle />
       <Card className="max-w-md mx-auto">
         <CardHeader>
           <CardTitle>Unsubscribe Status</CardTitle>
