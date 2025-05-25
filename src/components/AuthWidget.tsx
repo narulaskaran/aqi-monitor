@@ -199,15 +199,15 @@ export default function AuthWidget() {
         </>
       ) : (
         <>
-          <span className="text-sm text-gray-700">
-            Signed in{email && ` as ${email}`}
-          </span>
           <button
-            className="px-3 py-1 rounded bg-gray-200 text-gray-800"
+            className="px-3 py-1 rounded bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100"
             onClick={handleSignOut}
           >
             Sign Out
           </button>
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            Signed in{email && ` as ${email}`}
+          </span>
         </>
       )}
     </div>
