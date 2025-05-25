@@ -10,6 +10,7 @@ export default function AuthWidget() {
   const [step, setStep] = useState<"email" | "code">("email");
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const verifyButtonRef = useRef<HTMLButtonElement>(null);
@@ -22,15 +23,43 @@ export default function AuthWidget() {
     handlePaste,
   } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
-  // On mount, check for token and (optionally) fetch user info
+  // On mount, check for token and validate with backend
   useEffect(() => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (token) {
-      // Optionally decode token to get email, or fetch from backend
-      // For sketch, just mark as signed in
-      setIsSignedIn(true);
-      // setEmail(decodedEmail);
+    if (!token) {
+      setIsValidatingToken(false);
+      return;
     }
+    setIsValidatingToken(true);
+    fetch("/api/validate-token", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Invalid token");
+        return res.json();
+      })
+      .then((data) => {
+        if (data.valid) {
+          setIsSignedIn(true);
+          if (data.email) setEmail(data.email);
+        } else {
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+          setIsSignedIn(false);
+          setEmail("");
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        setIsSignedIn(false);
+        setEmail("");
+      })
+      .finally(() => {
+        setIsValidatingToken(false);
+      });
   }, []);
 
   const handleSignIn = () => {
@@ -101,7 +130,11 @@ export default function AuthWidget() {
 
   return (
     <div className="flex items-center space-x-2">
-      {!isSignedIn ? (
+      {isValidatingToken ? (
+        <span className="text-gray-500 dark:text-gray-400 text-sm">
+          Loading...
+        </span>
+      ) : !isSignedIn ? (
         <>
           <button
             className="px-3 py-1 rounded bg-blue-600 text-white"
