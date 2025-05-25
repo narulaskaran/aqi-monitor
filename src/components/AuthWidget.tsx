@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { handlePasteCode, isValidEmail } from "../lib/utils";
+import { useState, useEffect, useRef } from "react";
+import { isValidEmail } from "../lib/utils";
 import { useCodeInput } from "../lib/useCodeInput";
 
 const AUTH_TOKEN_KEY = "aqi_auth_token";
@@ -12,6 +12,7 @@ export default function AuthWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const verifyButtonRef = useRef<HTMLButtonElement>(null);
   const {
     code,
     setCode,
@@ -19,7 +20,7 @@ export default function AuthWidget() {
     handleDigitChange,
     handleKeyDown,
     handlePaste,
-  } = useCodeInput(6);
+  } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
   // On mount, check for token and (optionally) fetch user info
   useEffect(() => {
@@ -166,7 +167,7 @@ export default function AuthWidget() {
                         <input
                           key={idx}
                           ref={inputRefs[idx]}
-                          className="w-10 h-12 text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                          className="w-10 h-12 text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700"
                           type="text"
                           maxLength={1}
                           value={code[idx]}
@@ -183,6 +184,7 @@ export default function AuthWidget() {
                       type="submit"
                       className="w-full bg-blue-600 text-white rounded py-2"
                       disabled={isLoading || code.some((d) => d === "")}
+                      ref={verifyButtonRef}
                     >
                       {isLoading ? "Verifying..." : "Verify Code"}
                     </button>

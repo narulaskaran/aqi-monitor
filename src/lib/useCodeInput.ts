@@ -1,7 +1,10 @@
 import { useState, useRef } from "react";
 import { handlePasteCode } from "./utils";
 
-export function useCodeInput(length = 6) {
+export function useCodeInput(
+  length = 6,
+  onComplete?: (code: string[]) => void
+) {
   const [code, setCode] = useState(Array(length).fill(""));
   const inputRefs = Array.from({ length }, () =>
     useRef<HTMLInputElement>(null)
@@ -13,6 +16,7 @@ export function useCodeInput(length = 6) {
     newCode[idx] = value;
     setCode(newCode);
     if (value && idx < length - 1) inputRefs[idx + 1].current?.focus();
+    if (onComplete && newCode.every((d) => d !== "")) onComplete(newCode);
   };
 
   const handleKeyDown = (
@@ -28,6 +32,10 @@ export function useCodeInput(length = 6) {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     handlePasteCode(e, code, setCode, inputRefs);
+    setTimeout(() => {
+      const latest = inputRefs.map((ref) => ref.current?.value || "");
+      if (onComplete && latest.every((d) => d !== "")) onComplete(latest);
+    }, 0);
   };
 
   return {

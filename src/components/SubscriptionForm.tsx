@@ -1,8 +1,8 @@
-import { useState, KeyboardEvent, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { startVerification, verifyCode } from "../lib/api";
-import { handlePasteCode, isValidEmail } from "../lib/utils";
+import { isValidEmail } from "../lib/utils";
 import { useCodeInput } from "../lib/useCodeInput";
 
 interface SubscriptionFormProps {
@@ -21,6 +21,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [retryCount, setRetryCount] = useState(0);
   const [lastZipCode, setLastZipCode] = useState(zipCode);
 
+  const verifyButtonRef = useRef<HTMLButtonElement>(null);
   const {
     code: verificationCode,
     setCode: setVerificationCode,
@@ -28,7 +29,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
     handleDigitChange,
     handleKeyDown,
     handlePaste,
-  } = useCodeInput(6);
+  } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
   // Reset form when ZIP code changes
   useEffect(() => {
@@ -238,7 +239,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
                 <div key={index} className="w-10 h-12">
                   <input
                     ref={inputRefs[index]}
-                    className="w-full h-full text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    className="w-full h-full text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700"
                     type="text"
                     maxLength={1}
                     value={verificationCode[index]}
@@ -259,6 +260,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
               disabled={
                 isLoading || verificationCode.some((digit) => digit === "")
               }
+              ref={verifyButtonRef}
             >
               {isLoading ? "Verifying..." : "Verify Code"}
             </Button>
