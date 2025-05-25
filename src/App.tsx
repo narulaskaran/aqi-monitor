@@ -14,6 +14,7 @@ import { useState, ChangeEvent, KeyboardEvent, useEffect } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
 import { getAirQuality } from "./lib/api";
 import { ThemeToggle } from "./components/ThemeToggle";
+import AuthWidget from "./components/AuthWidget";
 
 function App() {
   const [zipCode, setZipCode] = useState("");
@@ -81,7 +82,10 @@ function App() {
 
   return (
     <div className="min-h-screen p-4 transition-colors duration-300 rounded-lg shadow bg-background flex flex-col">
-      <ThemeToggle />
+      <div className="flex justify-between items-center mb-2">
+        <AuthWidget />
+        <ThemeToggle />
+      </div>
       <div className="max-w-md mx-auto w-full flex-1">
         <AQIHeader />
         <form

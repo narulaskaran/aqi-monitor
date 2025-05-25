@@ -5,6 +5,7 @@ import {
   validateCronSecret,
 } from "./middleware.js";
 import { handleUpdateAirQuality } from "../server/dist/handlers/airQuality.js";
+import { deleteExpiredAuthTokens } from "../server/dist/services/subscription.js";
 
 export default async function handler(req, res) {
   // Apply middleware
@@ -12,6 +13,13 @@ export default async function handler(req, res) {
     validateMethod("GET")(req, res, () => {
       validateCronSecret(req, res, async () => {
         await handleUpdateAirQuality(req, res);
+        // Clean up expired auth tokens as part of the daily cron job
+        try {
+          const deleted = await deleteExpiredAuthTokens();
+          console.log(`Deleted ${deleted} expired auth tokens.`);
+        } catch (err) {
+          console.error("Error deleting expired auth tokens:", err);
+        }
       });
     });
   });
