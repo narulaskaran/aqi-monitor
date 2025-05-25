@@ -3,7 +3,7 @@ import { prisma } from "../db.js";
 import {
   sendVerificationCode,
   checkVerificationCode,
-} from "../services/twilio.js";
+} from "../services/email.js";
 import { findSubscriptionsForEmail } from "../services/subscription.js";
 
 export async function handleStartVerification(req: Request, res: Response) {
