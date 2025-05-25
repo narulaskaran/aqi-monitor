@@ -125,9 +125,9 @@ export default function AuthWidget() {
           </button>
           {showModal && (
             <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg shadow-lg p-6 w-80 relative">
+              <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg shadow-lg p-6 w-80 relative">
                 <button
-                  className="absolute top-2 right-2 text-gray-400"
+                  className="absolute top-2 right-2 text-gray-400 dark:text-gray-500"
                   onClick={() => setShowModal(false)}
                 >
                   &times;
@@ -143,7 +143,7 @@ export default function AuthWidget() {
                     <h3 className="text-lg font-semibold">Sign In</h3>
                     <input
                       type="email"
-                      className="w-full border rounded px-3 py-2"
+                      className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -152,7 +152,7 @@ export default function AuthWidget() {
                     />
                     <button
                       type="submit"
-                      className="w-full bg-blue-600 text-white rounded py-2"
+                      className="w-full bg-blue-600 text-white rounded py-2 hover:bg-blue-700 focus:outline-none"
                       disabled={isLoading}
                     >
                       {isLoading ? "Sending..." : "Send Code"}
