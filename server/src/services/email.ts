@@ -91,7 +91,10 @@ function getAllowlistedRecipients(): string[] {
 function isEmailAllowlisted(email: string): boolean {
   const allowlist = getAllowlistedRecipients();
   // If no allowlist is set, allow all (for production)
-  if (process.env.NODE_ENV === "production" || allowlist.length === 0)
+  if (
+    (process.env.VERCEL_ENV || process.env.NODE_ENV) === "production" ||
+    allowlist.length === 0
+  )
     return true;
   return allowlist.includes(email.trim().toLowerCase());
 }
@@ -170,8 +173,10 @@ export async function sendVerificationCode(
     console.error("Error sending verification code:", error);
 
     // In development mode, return success even on error and use a fixed code
-    if (process.env.NODE_ENV === "development") {
-      console.log("Returning mock success response in development mode");
+    if ((process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production") {
+      console.log(
+        "Returning mock success response in development/preview mode",
+      );
 
       // Ensure a mock code exists in the database for testing
       try {
@@ -221,9 +226,12 @@ export async function checkVerificationCode(
     await cleanupExpiredCodes();
 
     // In development mode with no Resend API key, accept a known test code
-    if (process.env.NODE_ENV === "development" && !process.env.RESEND_API_KEY) {
+    if (
+      (process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production" &&
+      !process.env.RESEND_API_KEY
+    ) {
       console.log(
-        "In development mode with no API key - accepting code 123456",
+        "In development/preview mode with no API key - accepting code 123456",
       );
 
       if (code === "123456") {
@@ -276,7 +284,7 @@ export async function checkVerificationCode(
     console.error("Error checking verification code:", error);
 
     // In development mode, provide more flexibility
-    if (process.env.NODE_ENV === "development") {
+    if ((process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production") {
       // Check if the code exists in the database regardless of expiration
       try {
         const anyCode = await prisma.verificationCode.findFirst({

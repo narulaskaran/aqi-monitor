@@ -314,7 +314,7 @@ export async function sendAirQualityAlerts(
     for (const subscription of subscriptions) {
       const unsubscribeToken = generateUnsubscribeToken(subscription.id);
       const websiteUrl =
-        process.env.NODE_ENV === "development"
+        (process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production"
           ? "http://localhost:5173"
           : process.env.VITE_API_URL;
       if (!websiteUrl) {

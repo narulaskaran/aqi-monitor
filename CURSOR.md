@@ -130,3 +130,8 @@ Defined in `server/prisma/schema.prisma`:
 - /api/unsubscribe is now protected and requires a valid token in the Authorization header.
 - Unsubscribe tokens are single-use: all tokens for the user are deleted after a successful unsubscribe.
 - Added daily cleanup of expired tokens, triggered from the cron-update-air-quality endpoint (which now runs all daily jobs).
+
+## Local Development
+
+- Always use `vercel dev` for local development and testing. This ensures that environment variables such as `VERCEL_ENV` are set correctly, mirroring Vercel's deployment environments.
+- Do not use `npm run dev` for local development, as it does not set `VERCEL_ENV` and may cause inconsistent behavior.

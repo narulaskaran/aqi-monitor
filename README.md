@@ -206,6 +206,16 @@ The application uses OpenStreetMap's Nominatim API to convert ZIP codes to latit
 - Caches coordinates in the database to reduce API calls
 - Coordinates are refreshed every 30 days for accuracy
 
+## Local Development
+
+To run the app locally, use the Vercel CLI:
+
+```sh
+vercel dev
+```
+
+This ensures that the `VERCEL_ENV` environment variable is set to `development`, matching the environment used in Vercel deployments. Do **not** use `npm run dev` for local development, as it does not set `VERCEL_ENV` automatically and may result in inconsistent behavior.
+
 ## License
 
 MIT

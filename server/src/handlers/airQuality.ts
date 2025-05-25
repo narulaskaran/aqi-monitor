@@ -32,7 +32,7 @@ export async function handleGetAirQuality(req: Request, res: Response) {
 
     // Use mock data in development mode if no API key is available
     if (
-      process.env.NODE_ENV === "development" &&
+      (process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production" &&
       !process.env.GOOGLE_AIR_QUALITY_API_KEY
     ) {
       console.log("Using mock air quality data in development mode");
