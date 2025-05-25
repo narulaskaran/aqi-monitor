@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from "./components/ui/tooltip";
 import "./App.css";
-import { useState, ChangeEvent, KeyboardEvent, useEffect } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
 import { getAirQuality } from "./lib/api";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -64,12 +64,6 @@ function App() {
           ? error.message
           : "Failed to fetch air quality data"
       );
-    }
-  };
-
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleClick();
     }
   };
 
