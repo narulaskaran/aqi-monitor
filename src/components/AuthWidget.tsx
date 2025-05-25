@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { handlePasteCode, isValidEmail } from "../lib/utils";
+import { useCodeInput } from "../lib/useCodeInput";
 
 const AUTH_TOKEN_KEY = "aqi_auth_token";
 
@@ -9,15 +11,15 @@ export default function AuthWidget() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [code, setCode] = useState(["", "", "", "", "", ""]);
-  const inputRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
+
+  const {
+    code,
+    setCode,
+    inputRefs,
+    handleDigitChange,
+    handleKeyDown,
+    handlePaste,
+  } = useCodeInput(6);
 
   // On mount, check for token and (optionally) fetch user info
   useEffect(() => {
@@ -42,6 +44,7 @@ export default function AuthWidget() {
     setIsLoading(true);
     setError(null);
     try {
+      if (!isValidEmail(email)) throw new Error("Invalid email format");
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,24 +96,6 @@ export default function AuthWidget() {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     setIsSignedIn(false);
     setEmail("");
-  };
-
-  const handleDigitChange = (idx: number, value: string) => {
-    if (!/^\d?$/.test(value)) return;
-    const newCode = [...code];
-    newCode[idx] = value;
-    setCode(newCode);
-    if (value && idx < 5) inputRefs[idx + 1].current?.focus();
-  };
-
-  const handleKeyDown = (
-    idx: number,
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (e.key === "Backspace" && code[idx] === "" && idx > 0)
-      inputRefs[idx - 1].current?.focus();
-    if (e.key === "ArrowLeft" && idx > 0) inputRefs[idx - 1].current?.focus();
-    if (e.key === "ArrowRight" && idx < 5) inputRefs[idx + 1].current?.focus();
   };
 
   return (
@@ -173,7 +158,10 @@ export default function AuthWidget() {
                     <h3 className="text-lg font-semibold">
                       Enter Verification Code
                     </h3>
-                    <div className="flex gap-2 justify-center">
+                    <div
+                      className="flex gap-2 justify-center"
+                      onPaste={handlePaste}
+                    >
                       {[0, 1, 2, 3, 4, 5].map((idx) => (
                         <input
                           key={idx}

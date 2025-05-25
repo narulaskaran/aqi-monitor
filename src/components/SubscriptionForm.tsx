@@ -2,28 +2,15 @@ import { useState, KeyboardEvent, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { startVerification, verifyCode } from "../lib/api";
+import { handlePasteCode, isValidEmail } from "../lib/utils";
+import { useCodeInput } from "../lib/useCodeInput";
 
 interface SubscriptionFormProps {
   zipCode: string;
 }
 
-// Function to validate email
-const isValidEmail = (email: string): boolean => {
-  // Basic email validation using regex
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
 export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [email, setEmail] = useState("");
-  const [verificationCode, setVerificationCode] = useState([
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-  ]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -34,15 +21,14 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [retryCount, setRetryCount] = useState(0);
   const [lastZipCode, setLastZipCode] = useState(zipCode);
 
-  // Create refs for each input digit
-  const inputRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
+  const {
+    code: verificationCode,
+    setCode: setVerificationCode,
+    inputRefs,
+    handleDigitChange,
+    handleKeyDown,
+    handlePaste,
+  } = useCodeInput(6);
 
   // Reset form when ZIP code changes
   useEffect(() => {
@@ -56,50 +42,6 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setRetryCount(0);
     }
   }, [zipCode, lastZipCode]);
-
-  // Function to focus on the next input box
-  const focusNextInput = (index: number) => {
-    if (index < 5 && inputRefs[index + 1].current) {
-      inputRefs[index + 1].current?.focus();
-    }
-  };
-
-  // Function to focus on the previous input box
-  const focusPrevInput = (index: number) => {
-    if (index > 0 && inputRefs[index - 1].current) {
-      inputRefs[index - 1].current?.focus();
-    }
-  };
-
-  // Handle digit input
-  const handleDigitChange = (index: number, value: string) => {
-    // Allow only a single digit
-    if (!/^\d?$/.test(value)) {
-      return;
-    }
-
-    // Create a copy of the verification code array
-    const newCode = [...verificationCode];
-    newCode[index] = value;
-    setVerificationCode(newCode);
-
-    // If a digit was entered and not deleted, focus the next input
-    if (value !== "") {
-      focusNextInput(index);
-    }
-  };
-
-  // Handle key down events
-  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
-    // If Backspace is pressed and the current input is empty, focus the previous input
-    if (e.key === "Backspace" && verificationCode[index] === "") {
-      focusPrevInput(index);
-    } else if (e.key === "ArrowLeft") {
-      focusPrevInput(index);
-    } else if (e.key === "ArrowRight") {
-      focusNextInput(index);
-    }
-  };
 
   // Check if all digits are filled when code changes
   useEffect(() => {
@@ -230,34 +172,6 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
     // Trigger new verification
     handleSubscribe();
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData("text");
-
-    // Extract only digits from pasted data
-    const digits = pastedData.replace(/\D/g, "").slice(0, 6);
-
-    if (digits.length > 0) {
-      // Create a new verification code array
-      const newCode = [...verificationCode];
-
-      // Fill in the digits
-      digits.split("").forEach((digit, index) => {
-        if (index < 6) {
-          newCode[index] = digit;
-        }
-      });
-
-      // Update the state
-      setVerificationCode(newCode);
-
-      // Focus the appropriate input
-      if (digits.length < 6 && inputRefs[digits.length]) {
-        inputRefs[digits.length].current?.focus();
-      }
-    }
   };
 
   if (success) {
