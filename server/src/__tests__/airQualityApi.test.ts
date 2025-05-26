@@ -32,6 +32,14 @@ vi.mock("../services/airQuality.js", () => ({
   getLatestAirQualityForZip: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock("../services/email.js", () => ({
+  sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
+  checkVerificationCode: vi
+    .fn()
+    .mockResolvedValue({ success: true, valid: true }),
+  sendEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 describe("handleGetAirQuality", () => {
   beforeEach(() => {
     vi.clearAllMocks();

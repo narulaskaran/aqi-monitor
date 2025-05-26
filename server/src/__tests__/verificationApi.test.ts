@@ -63,6 +63,17 @@ describe("Verification API", () => {
     });
     const subMod = await import("../services/subscription.js");
     vi.spyOn(subMod, "findSubscriptionsForEmail").mockResolvedValue([]);
+    const dbMod = await import("../db.js");
+    vi.spyOn(dbMod.prisma.userSubscription, "create").mockResolvedValue({
+      id: "id",
+      email: "a@b.com",
+      zipCode: "12345",
+      createdAt: new Date(),
+      active: true,
+      activatedAt: new Date(),
+      updatedAt: new Date(),
+      lastEmailSentAt: null,
+    });
     await handleVerifyCode(req, res);
     expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
   });
