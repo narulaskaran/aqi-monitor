@@ -17,6 +17,7 @@ export interface Subscription {
   active: boolean;
   activatedAt: Date | null;
   updatedAt: Date;
+  lastEmailSentAt: Date | null;
 }
 
 // Air quality alert thresholds
@@ -36,6 +37,8 @@ const ratelimit = new Ratelimit({
   analytics: true,
   prefix: "resend:email:ratelimit",
 });
+
+const HOURS_BETWEEN_EMAILS = 20;
 
 /**
  * Creates a new subscription for the given email and ZIP code
@@ -312,6 +315,23 @@ export async function sendAirQualityAlerts(
 
     let results = [];
     for (const subscription of subscriptions) {
+      // 20-hour interval check
+      const lastSent = subscription.lastEmailSentAt;
+      let shouldSend = false;
+      if (!lastSent) {
+        shouldSend = true;
+      } else {
+        const now = new Date();
+        const diffMs = now.getTime() - new Date(lastSent).getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+        shouldSend = diffHours >= HOURS_BETWEEN_EMAILS;
+      }
+      if (!shouldSend) {
+        console.log(
+          `Skipping email for ${subscription.email} (last sent ${lastSent}) - not enough time elapsed`,
+        );
+        continue;
+      }
       const unsubscribeToken = generateUnsubscribeToken(subscription.id);
       const websiteUrl =
         (process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production"
@@ -338,7 +358,20 @@ export async function sendAirQualityAlerts(
         aqi < 51
           ? `Daily AQI Update: Good Air Quality in Your Area`
           : `AQI Alert: ${alertLevel} Air Quality in Your Area`;
-      results.push(sendWithRetry(subscription.email, subject, html));
+      // Send email and update lastEmailSentAt if successful
+      results.push(
+        sendWithRetry(subscription.email, subject, html).then(
+          async (result) => {
+            if (result.success) {
+              await prisma.userSubscription.update({
+                where: { id: subscription.id },
+                data: { lastEmailSentAt: new Date() },
+              });
+            }
+            return result;
+          },
+        ),
+      );
     }
 
     // Count successful sends
