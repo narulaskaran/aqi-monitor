@@ -83,10 +83,12 @@ export function validateAdminAuth(req, res, next) {
 import { prisma } from "../server/dist/db.js";
 export async function validateAuthToken(req, res, next) {
   const authHeader = req.headers.authorization;
+  console.log("Auth header:", authHeader); // Debug log
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Missing or invalid auth token" });
   }
   const token = authHeader.split(" ")[1];
+  console.log("Extracted token:", token); // Debug log
   try {
     const record = await prisma.authentication.findFirst({ where: { token } });
     if (!record || new Date(record.expiresAt) < new Date()) {
