@@ -23,7 +23,14 @@ export default function AuthWidget() {
     handlePaste,
   } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
-  // On mount, check for token and validate with backend
+  // DEV ONLY: Force signed-in state for UI testing without a server
+  // useEffect(() => {
+  //   setIsSignedIn(true);
+  //   setEmail("narulaskaran@gmail.com");
+  //   setIsValidatingToken(false);
+  // }, []);
+
+  // Restore original useEffect for token validation
   useEffect(() => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
@@ -231,17 +238,42 @@ export default function AuthWidget() {
           )}
         </>
       ) : (
-        <>
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 shadow-sm border border-gray-200 dark:border-gray-700">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-500 text-white mr-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 1115 0v.208a2.25 2.25 0 01-2.25 2.25H6.75a2.25 2.25 0 01-2.25-2.25v-.208z"
+              />
+            </svg>
+          </span>
+          <div className="flex flex-col mr-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+              Signed in as
+            </span>
+            <span
+              className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight truncate max-w-[120px]"
+              title={email}
+            >
+              {email}
+            </span>
+          </div>
           <button
-            className="px-3 py-1 rounded bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100"
+            className="ml-2 px-2 py-1 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
             onClick={handleSignOut}
+            title="Sign Out"
           >
             Sign Out
           </button>
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Signed in{email && ` as ${email}`}
-          </span>
-        </>
+        </div>
       )}
     </div>
   );

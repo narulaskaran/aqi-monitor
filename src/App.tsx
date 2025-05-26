@@ -77,7 +77,6 @@ function App() {
   return (
     <div className="min-h-screen p-4 transition-colors duration-300 rounded-lg shadow bg-background flex flex-col">
       <div className="flex justify-between items-center mb-2">
-        <AuthWidget />
         <ThemeToggle />
       </div>
       <div className="max-w-md mx-auto w-full flex-1">
@@ -124,6 +123,10 @@ function App() {
         )}
       </div>
 
+      {/* Move AuthWidget to the bottom, above Admin/Ko-Fi */}
+      <div className="flex justify-center max-w-md mx-auto w-full mb-2">
+        <AuthWidget />
+      </div>
       <div className="flex justify-between items-center w-full mt-4">
         <a
           href="/admin"
