@@ -70,6 +70,7 @@ Defined in `server/prisma/schema.prisma`:
   - `POST /api/verify` — Start email verification.
   - `POST /api/verify-code` — Verify email code.
   - `GET /api/cron/update-air-quality` — Trigger AQI data update (secured).
+  - `POST /api/unsubscribe`: Unsubscribe from email alerts (protected by authentication middleware).
 - **Frontend API Client (`src/lib/api.ts`):** Provides helpers for all major API actions.
 
 ---
@@ -106,3 +107,31 @@ Defined in `server/prisma/schema.prisma`:
 - For local development, see `.env.example` for required environment variables.
 - For production, environment variables should be set in the Vercel dashboard.
 - The backend uses Prisma ORM with a PostgreSQL database.
+
+## Authentication Token & UI (WIP)
+
+- Added `src/components/AuthWidget.tsx` for sign in/sign out UI and localStorage token management.
+- Integrated `AuthWidget` into the top left of the main layout in `App.tsx` (beside ThemeToggle).
+- This is part of the implementation for persistent authentication using a 2FA email code and a 30-day token, as described in Issue #25.
+- Next steps: implement 2FA modal, backend token issuance, and token validation middleware.
+
+- Implemented modal-based 2FA sign-in flow in `AuthWidget` (email input, code input, token storage in localStorage).
+- Backend issues and stores a 30-day auth token in the new `Authentication` table after successful code verification (mode='signin').
+- Updated `/api/verify-code` handler to support both subscription and sign-in flows.
+
+- Updated unsubscribe flow:
+
+  - /api/unsubscribe is now protected by authentication middleware (token in Authorization header).
+  - Unsubscribe email links include both token and subscription_id as query params.
+  - UnsubscribePage extracts both from the URL, sends token in header and subscription_id in body.
+  - Backend sets active=false for the matching UserSubscription if the token is valid and the subscription belongs to the user.
+
+- Added authentication middleware for both Express and serverless endpoints (validateAuthToken).
+- /api/unsubscribe is now protected and requires a valid token in the Authorization header.
+- Unsubscribe tokens are single-use: all tokens for the user are deleted after a successful unsubscribe.
+- Added daily cleanup of expired tokens, triggered from the cron-update-air-quality endpoint (which now runs all daily jobs).
+
+## Local Development
+
+- Always use `vercel dev` for local development and testing. This ensures that environment variables such as `VERCEL_ENV` are set correctly, mirroring Vercel's deployment environments.
+- Do not use `npm run dev` for local development, as it does not set `VERCEL_ENV` and may cause inconsistent behavior.

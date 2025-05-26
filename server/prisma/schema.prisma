@@ -10,8 +10,8 @@ datasource db {
 
 model UserSubscription {
   id          String    @id @default(uuid())
-  email       String    // User's email address
-  zipCode     String    // Must be a valid US zip code
+  email       String // User's email address
+  zipCode     String // Must be a valid US zip code
   createdAt   DateTime  @default(now())
   active      Boolean   @default(true) // Indicates whether the subscription is active
   activatedAt DateTime? // Indicates when the subscription was activated
@@ -21,11 +21,11 @@ model UserSubscription {
 }
 
 model VerificationCode {
-  id        String   @id @default(uuid())
-  email     String   // Email address the code was sent to
-  code      String   // The verification code
+  id        String    @id @default(uuid())
+  email     String // Email address the code was sent to
+  code      String // The verification code
   expires   DateTime // When the code expires
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   usedAt    DateTime? // When the code was used (null if not used)
 
   @@index([email]) // For quick lookup by email
@@ -34,31 +34,41 @@ model VerificationCode {
 
 model AirQualityRecord {
   id                String   @id @default(uuid())
-  zipCode           String   // The ZIP code for this air quality record
-  aqi               Int      // Air Quality Index value
-  category          String   // Category description (Good, Moderate, etc.)
-  dominantPollutant String   // The dominant pollutant
+  zipCode           String // The ZIP code for this air quality record
+  aqi               Int // Air Quality Index value
+  category          String // Category description (Good, Moderate, etc.)
+  dominantPollutant String // The dominant pollutant
   timestamp         DateTime @default(now()) // When this record was created
-  
+
   // Optional pollutant data stored as JSON
-  pollutantData     Json?    // Store pollutant concentrations as JSON
-  
-  // Create a compound index for zipCode and timestamp
-  @@index([zipCode, timestamp])
-  
+  pollutantData Json? // Store pollutant concentrations as JSON
+
   // Add a unique constraint for zipCode and hour
   // This ensures we only have one record per zipCode per hour
   @@unique([zipCode, timestamp])
+  // Create a compound index for zipCode and timestamp
+  @@index([zipCode, timestamp])
 }
 
 // Cache for ZIP code to coordinates mapping
 model ZipCoordinates {
-  zipCode      String    @id // ZIP code (primary key)
-  latitude     Float     // Latitude coordinate
-  longitude    Float     // Longitude coordinate
-  createdAt    DateTime  @default(now()) // When this record was created
-  updatedAt    DateTime  @updatedAt // When this record was last updated
-  
+  zipCode   String   @id // ZIP code (primary key)
+  latitude  Float // Latitude coordinate
+  longitude Float // Longitude coordinate
+  createdAt DateTime @default(now()) // When this record was created
+  updatedAt DateTime @updatedAt // When this record was last updated
+
   // We'll use this to determine if we should refresh the coordinates
-  refreshAfter DateTime  // Date after which we should refresh these coordinates
+  refreshAfter DateTime // Date after which we should refresh these coordinates
+}
+
+model Authentication {
+  id        String   @id @default(uuid())
+  email     String // User's email address
+  token     String // Auth token (JWT or random string)
+  createdAt DateTime @default(now())
+  expiresAt DateTime // When the token expires (30 days from creation)
+
+  @@index([email])
+  @@index([token])
 }

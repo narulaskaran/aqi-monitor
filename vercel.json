@@ -21,6 +21,11 @@
   ],
   "routes": [
     {
+      "src": "/api/validate-token",
+      "methods": ["POST", "OPTIONS"],
+      "dest": "/api/validate-token.js"
+    },
+    {
       "src": "/api/air-quality",
       "dest": "/api/air-quality.js"
     },

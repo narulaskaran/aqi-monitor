@@ -314,7 +314,7 @@ export async function sendAirQualityAlerts(
     for (const subscription of subscriptions) {
       const unsubscribeToken = generateUnsubscribeToken(subscription.id);
       const websiteUrl =
-        process.env.NODE_ENV === "development"
+        (process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production"
           ? "http://localhost:5173"
           : process.env.VITE_API_URL;
       if (!websiteUrl) {
@@ -356,4 +356,27 @@ export async function sendAirQualityAlerts(
     );
     throw error;
   }
+}
+
+/**
+ * Deletes expired authentication tokens from the Authentication table
+ */
+export async function deleteExpiredAuthTokens(): Promise<number> {
+  const now = new Date();
+  const result = await prisma.authentication.deleteMany({
+    where: {
+      expiresAt: { lt: now },
+    },
+  });
+  return result.count;
+}
+
+/**
+ * Deletes all authentication tokens for a given email
+ */
+export async function deleteAuthTokensForEmail(email: string): Promise<number> {
+  const result = await prisma.authentication.deleteMany({
+    where: { email },
+  });
+  return result.count;
 }

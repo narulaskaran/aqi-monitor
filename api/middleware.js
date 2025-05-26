@@ -76,3 +76,28 @@ export function validateAdminAuth(req, res, next) {
 
   next();
 }
+
+/**
+ * Validate authentication token for protected endpoints
+ */
+import { prisma } from "../server/dist/db.js";
+export async function validateAuthToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  console.log("Auth header:", authHeader); // Debug log
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid auth token" });
+  }
+  const token = authHeader.split(" ")[1];
+  console.log("Extracted token:", token); // Debug log
+  try {
+    const record = await prisma.authentication.findFirst({ where: { token } });
+    if (!record || new Date(record.expiresAt) < new Date()) {
+      return res.status(401).json({ error: "Token expired or invalid" });
+    }
+    req.user = { email: record.email };
+    next();
+  } catch (error) {
+    console.error("Error in validateAuthToken middleware:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}

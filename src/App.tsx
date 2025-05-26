@@ -10,10 +10,11 @@ import {
   TooltipTrigger,
 } from "./components/ui/tooltip";
 import "./App.css";
-import { useState, ChangeEvent, KeyboardEvent, useEffect } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
 import { getAirQuality } from "./lib/api";
 import { ThemeToggle } from "./components/ThemeToggle";
+import AuthWidget from "./components/AuthWidget";
 
 function App() {
   const [zipCode, setZipCode] = useState("");
@@ -66,12 +67,6 @@ function App() {
     }
   };
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleClick();
-    }
-  };
-
   // Update currentZipCode when zipCode changes in the input
   useEffect(() => {
     if (!currentZipCode && zipCode) {
@@ -81,7 +76,9 @@ function App() {
 
   return (
     <div className="min-h-screen p-4 transition-colors duration-300 rounded-lg shadow bg-background flex flex-col">
-      <ThemeToggle />
+      <div className="flex justify-between items-center mb-2">
+        <ThemeToggle />
+      </div>
       <div className="max-w-md mx-auto w-full flex-1">
         <AQIHeader />
         <form
@@ -126,6 +123,10 @@ function App() {
         )}
       </div>
 
+      {/* Move AuthWidget to the bottom, above Admin/Ko-Fi */}
+      <div className="flex justify-center max-w-md mx-auto w-full mb-2">
+        <AuthWidget />
+      </div>
       <div className="flex justify-between items-center w-full mt-4">
         <a
           href="/admin"

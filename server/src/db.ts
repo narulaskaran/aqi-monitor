@@ -1,7 +1,7 @@
 /**
  * Prisma client singleton for database access
  */
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 // Global type declaration for the Prisma instance in development
 declare global {
@@ -11,7 +11,7 @@ declare global {
 // Create a singleton instance of PrismaClient
 const createPrismaClient = () => {
   return new PrismaClient({
-    log: ['error', 'warn'],
+    log: ["error", "warn"],
   });
 };
 
@@ -19,7 +19,7 @@ const createPrismaClient = () => {
 export const prisma = global.prisma || createPrismaClient();
 
 // Save the client reference in development to enable hot reloading
-if (process.env.NODE_ENV !== 'production') {
+if ((process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production") {
   global.prisma = prisma;
 }
 
@@ -34,19 +34,21 @@ export async function connectToDatabase() {
   for (let i = 0; i < retries; i++) {
     try {
       await prisma.$connect();
-      console.log('✅ Database connected successfully');
+      console.log("✅ Database connected successfully");
       return true;
     } catch (error) {
       console.error(`❌ Database connection attempt ${i + 1} failed:`, error);
-      
+
       if (i < retries - 1) {
-        console.log(`Retrying in ${delay/1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.log(`Retrying in ${delay / 1000} seconds...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
-  
-  console.error('Failed to establish database connection after multiple retries');
+
+  console.error(
+    "Failed to establish database connection after multiple retries",
+  );
   return false;
 }
 
