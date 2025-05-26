@@ -7,6 +7,14 @@ import * as subscriptionService from "../services/subscription.js";
 import { vi } from "vitest";
 import { mockSubscription } from "./testUtils.js";
 
+vi.mock("../services/email.js", () => ({
+  sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
+  checkVerificationCode: vi
+    .fn()
+    .mockResolvedValue({ success: true, valid: true }),
+  sendEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 const OLD_ENV = process.env;
 
 describe("Unsubscribe Token", () => {

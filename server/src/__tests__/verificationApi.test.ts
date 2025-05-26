@@ -5,6 +5,14 @@ import {
 } from "../handlers/verification.js";
 import { mockRes, mockSubscription } from "./testUtils.js";
 
+vi.mock("../services/email.js", () => ({
+  sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
+  checkVerificationCode: vi
+    .fn()
+    .mockResolvedValue({ success: true, valid: true }),
+  sendEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 describe("Verification API", () => {
   beforeEach(() => {
     vi.clearAllMocks();

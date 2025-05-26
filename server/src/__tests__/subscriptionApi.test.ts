@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleUnsubscribe } from "../handlers/subscription.js";
 
+vi.mock("../services/email.js", () => ({
+  sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
+  checkVerificationCode: vi
+    .fn()
+    .mockResolvedValue({ success: true, valid: true }),
+  sendEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 function mockRes() {
   const res: any = {};
   res.status = vi.fn().mockReturnValue(res);
