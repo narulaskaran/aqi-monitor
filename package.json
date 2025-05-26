@@ -15,7 +15,10 @@
     "typecheck": "tsc --noEmit",
     "vercel-build": "npm run db:migrate && npm run build",
     "db:migrate": "cd server && npm run db:migrate",
-    "db:migrate:prod": "cd server && npm run db:migrate:prod"
+    "db:migrate:prod": "cd server && npm run db:migrate:prod",
+    "test:frontend": "vitest run",
+    "test:backend": "cd server && npm test",
+    "test": "npm run test:frontend && npm run test:backend"
   },
   "dependencies": {
     "@radix-ui/react-icons": "^1.3.2",
@@ -40,9 +43,12 @@
   },
   "devDependencies": {
     "@shadcn/ui": "^0.0.4",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^22.13.11",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
+    "@types/testing-library__jest-dom": "^5.14.9",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react": "^4.2.1",
@@ -51,9 +57,11 @@
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^26.1.0",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
-    "vite": "^5.1.4"
+    "vite": "^5.1.4",
+    "vitest": "^3.1.4"
   }
 }
