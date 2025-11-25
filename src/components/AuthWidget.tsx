@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { isValidEmail } from "../lib/utils";
 import { useCodeInput } from "../lib/useCodeInput";
+import { Input } from "./ui/input";
 
 const AUTH_TOKEN_KEY = "aqi_auth_token";
 
@@ -17,9 +18,8 @@ export default function AuthWidget() {
   const {
     code,
     setCode,
-    inputRefs,
-    handleDigitChange,
-    handleKeyDown,
+    inputRef,
+    handleChange,
     handlePaste,
   } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
@@ -90,7 +90,7 @@ export default function AuthWidget() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to send code");
       setStep("code");
-      setTimeout(() => inputRefs[0].current?.focus(), 100);
+      setTimeout(() => inputRef.current?.focus(), 100);
     } catch (err: any) {
       setError(err.message || "Failed to send code");
     } finally {
@@ -123,7 +123,7 @@ export default function AuthWidget() {
     } catch (err: any) {
       setError(err.message || "Failed to verify code");
       setCode(["", "", "", "", "", ""]);
-      setTimeout(() => inputRefs[0].current?.focus(), 100);
+      setTimeout(() => inputRef.current?.focus(), 100);
     } finally {
       setIsLoading(false);
     }
@@ -199,27 +199,19 @@ export default function AuthWidget() {
                     <h3 className="text-lg font-semibold">
                       Enter Verification Code
                     </h3>
-                    <div
-                      className="flex gap-2 justify-center"
+                    <Input
+                      ref={inputRef}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={code.join("")}
+                      onChange={handleChange}
                       onPaste={handlePaste}
-                    >
-                      {[0, 1, 2, 3, 4, 5].map((idx) => (
-                        <input
-                          key={idx}
-                          ref={inputRefs[idx]}
-                          className="w-10 h-12 text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700"
-                          type="text"
-                          maxLength={1}
-                          value={code[idx]}
-                          onChange={(e) =>
-                            handleDigitChange(idx, e.target.value)
-                          }
-                          onKeyDown={(e) => handleKeyDown(idx, e)}
-                          disabled={isLoading}
-                          autoComplete="one-time-code"
-                        />
-                      ))}
-                    </div>
+                      disabled={isLoading}
+                      autoComplete="one-time-code"
+                      placeholder="000000"
+                      className="text-center text-lg font-medium tracking-widest w-full"
+                    />
                     <button
                       type="submit"
                       className="w-full bg-blue-600 text-white rounded py-2"

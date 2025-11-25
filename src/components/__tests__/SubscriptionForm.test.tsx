@@ -78,11 +78,34 @@ describe("SubscriptionForm", () => {
         0
       );
     });
-    // Simulate entering 6 digits (not implemented)
-    // fireEvent.change(screen.getByPlaceholderText(/code/i), { target: { value: "123456" } });
-    // fireEvent.click(screen.getByRole("button", { name: /verify/i }));
-    // await waitFor(() => {
-    //   expect(screen.getByText(/invalid code/i)).toBeInTheDocument();
-    // });
+    // Simulate entering 6 digits in the single input field
+    const codeInput = screen.getByPlaceholderText("000000");
+    fireEvent.change(codeInput, { target: { value: "123456" } });
+    await waitFor(() => {
+      expect(screen.getByText(/invalid code/i)).toBeInTheDocument();
+    });
+  });
+
+  it("allows pasting verification code", async () => {
+    startVerification.mockResolvedValue({ success: true });
+    renderWithTheme(<SubscriptionForm zipCode="12345" />);
+    const emailInput = screen.getByPlaceholderText(/email/i);
+    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => {
+      expect(screen.getAllByText(/verification code/i).length).toBeGreaterThan(
+        0
+      );
+    });
+    const codeInput = screen.getByPlaceholderText("000000");
+    // Simulate paste event
+    fireEvent.paste(codeInput, {
+      clipboardData: {
+        getData: () => "123456",
+      },
+    });
+    await waitFor(() => {
+      expect(codeInput).toHaveValue("123456");
+    });
   });
 });

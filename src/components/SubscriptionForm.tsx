@@ -25,9 +25,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const {
     code: verificationCode,
     setCode: setVerificationCode,
-    inputRefs,
-    handleDigitChange,
-    handleKeyDown,
+    inputRef,
+    handleChange,
     handlePaste,
   } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
@@ -42,15 +41,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setVerificationCode(["", "", "", "", "", ""]);
       setRetryCount(0);
     }
-  }, [zipCode, lastZipCode]);
-
-  // Check if all digits are filled when code changes
-  useEffect(() => {
-    // If all digits are filled and not currently loading, verify the code
-    if (verificationCode.every((digit) => digit !== "") && !isLoading) {
-      handleVerify();
-    }
-  }, [verificationCode]);
+  }, [zipCode, lastZipCode, setVerificationCode]);
 
   const handleSubscribe = async () => {
     try {
@@ -81,9 +72,9 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
         setRetryCount(0);
         // Clear any existing verification code
         setVerificationCode(["", "", "", "", "", ""]);
-        // Focus the first input
+        // Focus the input
         setTimeout(() => {
-          inputRefs[0].current?.focus();
+          inputRef.current?.focus();
         }, 100);
       } else {
         throw new Error(result.error || "Failed to send verification code");
@@ -156,9 +147,9 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
           ? err.message
           : "An error occurred. Please try again."
       );
-      // Focus the first input after error
+      // Focus the input after error
       setTimeout(() => {
-        inputRefs[0].current?.focus();
+        inputRef.current?.focus();
       }, 100);
     } finally {
       setIsLoading(false);
@@ -231,26 +222,19 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             <label className="text-sm font-medium text-gray-600">
               Enter verification code
             </label>
-            <div
-              className="flex gap-2 w-full justify-center"
+            <Input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={verificationCode.join("")}
+              onChange={handleChange}
               onPaste={handlePaste}
-            >
-              {[0, 1, 2, 3, 4, 5].map((index) => (
-                <div key={index} className="w-10 h-12">
-                  <input
-                    ref={inputRefs[index]}
-                    className="w-full h-full text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700"
-                    type="text"
-                    maxLength={1}
-                    value={verificationCode[index]}
-                    onChange={(e) => handleDigitChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    disabled={isLoading}
-                    autoComplete="one-time-code"
-                  />
-                </div>
-              ))}
-            </div>
+              disabled={isLoading}
+              autoComplete="one-time-code"
+              placeholder="000000"
+              className="text-center text-lg font-medium tracking-widest w-full max-w-xs"
+            />
           </div>
 
           <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
