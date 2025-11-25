@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build && npm run build:server",
-    "build:server": "cd server && npm install && npm run build",
+    "build:server": "npm run server:install && cd server && npm run build",
     "start": "cd server && npm start",
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
     "dev:client": "vite",
@@ -13,7 +13,8 @@
     "clean": "rm -rf dist server/dist",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "vercel-build": "npm run db:migrate && npm run build",
+    "vercel-build": "npm run server:install && npm run db:migrate && npm run build",
+    "server:install": "cd server && npm install",
     "db:migrate": "cd server && npm run db:migrate",
     "db:migrate:prod": "cd server && npm run db:migrate:prod",
     "test:frontend": "vitest run",
