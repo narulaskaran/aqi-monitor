@@ -16,6 +16,13 @@ import fs from 'fs';
 // Get directory path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const prismaPath = path.resolve(__dirname, '..', 'node_modules', '.bin', 'prisma');
+
+// Check if prisma executable exists
+if (!fs.existsSync(prismaPath)) {
+  console.error('❌ Could not find prisma executable at', prismaPath);
+  process.exit(1);
+}
 
 // Check if database URL is available
 const dbUrl = process.env.DATABASE_URL;
@@ -29,16 +36,17 @@ console.log('🔍 Starting database migration process...');
 
 // Run prisma migrate deploy
 try {
-  console.log('📦 Running prisma migrate deploy...');
+  console.log('📦 Running prisma generate...');
   
   // Generate prisma client first
-  execSync('npx prisma generate', { 
+  execSync(`node ${prismaPath} generate`, { 
     stdio: 'inherit',
     cwd: path.resolve(__dirname, '..') 
   });
 
+  console.log('📦 Running prisma migrate deploy...');
   // Then run migrations
-  execSync('npx prisma migrate deploy', { 
+  execSync(`node ${prismaPath} migrate deploy`, { 
     stdio: 'inherit',
     cwd: path.resolve(__dirname, '..') 
   });
