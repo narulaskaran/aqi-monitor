@@ -28,15 +28,15 @@ console.log('🔍 Starting database migration process...');
 
 // Run prisma migrate deploy
 try {
-  console.log('📦 Running prisma migrate deploy...');
-  execSync('npx prisma migrate deploy', { 
+  console.log('📦 Pushing database schema...');
+  execSync('npx prisma db push --accept-data-loss', { 
     stdio: 'inherit',
     cwd: path.resolve(__dirname, '..') 
   });
 
-  console.log('✅ Database migrations completed successfully');
+  console.log('✅ Database schema pushed successfully');
 } catch (error) {
-  console.error('❌ Failed to run migrations:', error.message);
+  console.error('❌ Failed to push database schema:', error.message);
   process.exit(1);
 }
 
