@@ -1,9 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { startVerification, verifyCode } from "../lib/api";
 import { isValidEmail } from "../lib/utils";
-import { useCodeInput } from "../lib/useCodeInput";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  REGEXP_ONLY_DIGITS,
+} from "@/components/ui/input-otp";
 
 interface SubscriptionFormProps {
   zipCode: string;
@@ -21,163 +26,281 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [retryCount, setRetryCount] = useState(0);
   const [lastZipCode, setLastZipCode] = useState(zipCode);
 
+  const [otp, setOtp] = useState("");
+
   const verifyButtonRef = useRef<HTMLButtonElement>(null);
-  const {
-    code: verificationCode,
-    setCode: setVerificationCode,
-    inputRefs,
-    handleDigitChange,
-    handleKeyDown,
-    handlePaste,
-  } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
-  // Reset form when ZIP code changes
-  useEffect(() => {
-    if (zipCode !== lastZipCode) {
-      // Reset the form state when ZIP code changes
-      setLastZipCode(zipCode);
-      setSuccess(false);
-      setIsVerifying(false);
-      setError(null);
-      setVerificationCode(["", "", "", "", "", ""]);
-      setRetryCount(0);
-    }
-  }, [zipCode, lastZipCode]);
+    const handleSubscribe = useCallback(async () => {
 
-  // Check if all digits are filled when code changes
-  useEffect(() => {
-    // If all digits are filled and not currently loading, verify the code
-    if (verificationCode.every((digit) => digit !== "") && !isLoading) {
-      handleVerify();
-    }
-  }, [verificationCode]);
+      try {
 
-  const handleSubscribe = async () => {
-    try {
-      if (!isValidEmail(email)) {
-        setError(
-          "Please enter a valid email address (e.g., example@domain.com)"
-        );
-        return;
-      }
+        if (!isValidEmail(email)) {
 
-      if (!zipCode) {
-        setError("ZIP code is required");
-        return;
-      }
+          setError(
 
-      setError(null);
-      setIsLoading(true);
+            "Please enter a valid email address (e.g., example@domain.com)"
 
-      console.log("Starting verification for:", { email, zipCode });
-
-      const result = await startVerification(email, zipCode);
-      console.log("Verification response:", result);
-
-      if (result.success) {
-        setIsVerifying(true);
-        setVerificationStatus(result.status || "pending");
-        // Reset retry count when starting a new verification
-        setRetryCount(0);
-        // Clear any existing verification code
-        setVerificationCode(["", "", "", "", "", ""]);
-        // Focus the first input
-        setTimeout(() => {
-          inputRefs[0].current?.focus();
-        }, 100);
-      } else {
-        throw new Error(result.error || "Failed to send verification code");
-      }
-    } catch (err) {
-      console.error("Verification error:", err);
-      // Log more details about the error
-      if (err instanceof Error) {
-        console.error("Error details:", {
-          message: err.message,
-          name: err.name,
-          stack: err.stack,
-        });
-      } else {
-        console.error("Unknown error type:", err);
-      }
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred. Please try again."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerify = async () => {
-    // Join the digits to form the complete code
-    const completeCode = verificationCode.join("");
-
-    // Validate code format
-    if (completeCode.length !== 6) {
-      setError("Please enter a valid 6-digit verification code");
-      return;
-    }
-
-    try {
-      setError(null);
-      setIsLoading(true);
-
-      const result = await verifyCode(email, zipCode, completeCode);
-      console.log("Code verification response:", result);
-
-      if (result.success && result.valid) {
-        setSuccess(true);
-        setVerificationStatus("approved");
-      } else {
-        // Increment retry count
-        const newRetryCount = retryCount + 1;
-        setRetryCount(newRetryCount);
-
-        // Clear the verification code
-        setVerificationCode(["", "", "", "", "", ""]);
-
-        // If too many failed attempts, offer to resend
-        if (newRetryCount >= 3) {
-          throw new Error(
-            "Too many invalid attempts. Try requesting a new code."
           );
-        } else {
-          throw new Error(
-            result.error || "Invalid verification code. Please try again."
-          );
+
+          return;
+
         }
+
+  
+
+        if (!zipCode) {
+
+          setError("ZIP code is required");
+
+          return;
+
+        }
+
+  
+
+        setError(null);
+
+        setIsLoading(true);
+
+  
+
+        console.log("Starting verification for:", { email, zipCode });
+
+  
+
+        const result = await startVerification(email, zipCode);
+
+        console.log("Verification response:", result);
+
+  
+
+        if (result.success) {
+
+          setIsVerifying(true);
+
+          setVerificationStatus(result.status || "pending");
+
+          // Reset retry count when starting a new verification
+
+          setRetryCount(0);
+
+          // Clear any existing verification code
+
+          setOtp("");
+
+        } else {
+
+          throw new Error(result.error || "Failed to send verification code");
+
+        }
+
+            } catch (err: unknown) {
+
+              console.error("Verification error:", err);
+
+        // Log more details about the error
+
+        if (err instanceof Error) {
+
+          console.error("Error details:", {
+
+            message: err.message,
+
+            name: err.name,
+
+            stack: err.stack,
+
+          });
+
+        } else {
+
+          console.error("Unknown error type:", err);
+
+        }
+
+        setError(
+
+          err instanceof Error
+
+            ? err.message
+
+            : "An error occurred. Please try again."
+
+        );
+
+      } finally {
+
+        setIsLoading(false);
+
       }
-    } catch (err) {
-      console.error("Code verification error:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred. Please try again."
-      );
-      // Focus the first input after error
-      setTimeout(() => {
-        inputRefs[0].current?.focus();
-      }, 100);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleResendCode = () => {
-    // Reset verification state
-    setVerificationCode(["", "", "", "", "", ""]);
-    setIsVerifying(false);
-    setError(null);
+    }, [email, zipCode, setIsLoading, setError, setIsVerifying, setVerificationStatus, setRetryCount, setOtp]);
 
-    // Trigger new verification
-    handleSubscribe();
-  };
+  
 
-  if (success) {
-    return (
-      <div className="mt-4 p-4 bg-green-100 rounded-lg text-green-800">
+    const handleVerify = useCallback(async () => {
+
+      // Validate code format
+
+      if (otp.length !== 6) {
+
+        setError("Please enter a valid 6-digit verification code");
+
+        return;
+
+      }
+
+  
+
+      try {
+
+        setError(null);
+
+        setIsLoading(true);
+
+  
+
+        const result = await verifyCode(email, zipCode, otp);
+
+        console.log("Code verification response:", result);
+
+  
+
+        if (result.success && result.valid) {
+
+          setSuccess(true);
+
+          setVerificationStatus("approved");
+
+        } else {
+
+          // Increment retry count
+
+          const newRetryCount = retryCount + 1;
+
+          setRetryCount(newRetryCount);
+
+  
+
+          // Clear the verification code
+
+          setOtp("");
+
+  
+
+          // If too many failed attempts, offer to resend
+
+          if (newRetryCount >= 3) {
+
+            throw new Error(
+
+              "Too many invalid attempts. Try requesting a new code."
+
+            );
+
+          } else {
+
+            throw new Error(
+
+              result.error || "Invalid verification code. Please try again."
+
+            );
+
+          }
+
+        }
+
+      } catch (err: unknown) {
+
+        console.error("Code verification error:", err);
+
+        setError(
+
+          err instanceof Error
+
+            ? err.message
+
+            : "An error occurred. Please try again."
+
+        );
+
+      } finally {
+
+        setIsLoading(false);
+
+      }
+
+    }, [email, zipCode, otp, retryCount, setIsLoading, setError, setRetryCount, setOtp, setSuccess, setVerificationStatus]);
+
+  
+
+    const handleResendCode = useCallback(() => {
+
+      // Reset verification state
+
+      setOtp("");
+
+      setIsVerifying(false);
+
+      setError(null);
+
+  
+
+      // Trigger new verification
+
+      handleSubscribe();
+
+    }, [setOtp, setIsVerifying, setError, handleSubscribe]);
+
+  
+
+    useEffect(() => {
+
+      // If all digits are filled and not currently loading, verify the code
+
+      if (otp.length === 6 && !isLoading) {
+
+        handleVerify();
+
+      }
+
+    }, [otp, handleVerify, isLoading]);
+
+  
+
+    // Reset form when ZIP code changes
+
+    useEffect(() => {
+
+      if (zipCode !== lastZipCode) {
+
+        // Reset the form state when ZIP code changes
+
+        setLastZipCode(zipCode);
+
+        setSuccess(false);
+
+        setIsVerifying(false);
+
+        setError(null);
+
+        setOtp("");
+
+        setRetryCount(0);
+
+      }
+
+    }, [zipCode, lastZipCode, setSuccess, setIsVerifying, setError, setOtp, setRetryCount]);
+
+  
+
+    if (success) {
+
+      return (
+
+        <div className="mt-4 p-4 bg-green-100 rounded-lg text-green-800">
+
+  
         <p className="font-semibold">Verification successful! 🎉</p>
         <p className="mt-2">
           You will now receive email alerts about air quality changes for your
@@ -231,35 +354,29 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             <label className="text-sm font-medium text-gray-600">
               Enter verification code
             </label>
-            <div
-              className="flex gap-2 w-full justify-center"
-              onPaste={handlePaste}
+            <InputOTP
+              maxLength={6}
+              pattern={REGEXP_ONLY_DIGITS}
+              value={otp}
+              onChange={(value) => setOtp(value)}
+              autoFocus
             >
-              {[0, 1, 2, 3, 4, 5].map((index) => (
-                <div key={index} className="w-10 h-12">
-                  <input
-                    ref={inputRefs[index]}
-                    className="w-full h-full text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700"
-                    type="text"
-                    maxLength={1}
-                    value={verificationCode[index]}
-                    onChange={(e) => handleDigitChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    disabled={isLoading}
-                    autoComplete="one-time-code"
-                  />
-                </div>
-              ))}
-            </div>
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
             <Button
               type="submit"
               className="flex-1"
-              disabled={
-                isLoading || verificationCode.some((digit) => digit === "")
-              }
+              disabled={isLoading || otp.length < 6}
               ref={verifyButtonRef}
             >
               {isLoading ? "Verifying..." : "Verify Code"}

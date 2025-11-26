@@ -1,6 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { isValidEmail } from "../lib/utils";
-import { useCodeInput } from "../lib/useCodeInput";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  REGEXP_ONLY_DIGITS,
+} from "@/components/ui/input-otp";
 
 const AUTH_TOKEN_KEY = "aqi_auth_token";
 
@@ -13,15 +18,9 @@ export default function AuthWidget() {
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [otp, setOtp] = useState("");
+
   const verifyButtonRef = useRef<HTMLButtonElement>(null);
-  const {
-    code,
-    setCode,
-    inputRefs,
-    handleDigitChange,
-    handleKeyDown,
-    handlePaste,
-  } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
   // DEV ONLY: Force signed-in state for UI testing without a server
   // useEffect(() => {
@@ -73,7 +72,7 @@ export default function AuthWidget() {
     setShowModal(true);
     setStep("email");
     setEmail("");
-    setCode(["", "", "", "", "", ""]);
+    setOtp("");
     setError(null);
   };
 
@@ -89,28 +88,25 @@ export default function AuthWidget() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to send code");
-      setStep("code");
-      setTimeout(() => inputRefs[0].current?.focus(), 100);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || "Failed to send code");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVerifyCode = async () => {
+  const handleVerifyCode = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const codeStr = code.join("");
-      if (codeStr.length !== 6) throw new Error("Enter 6-digit code");
+      if (otp.length !== 6) throw new Error("Enter 6-digit code");
       const res = await fetch("/api/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
           zipCode: "00000",
-          code: codeStr,
+          code: otp,
           mode: "signin",
         }),
       });
@@ -120,14 +116,19 @@ export default function AuthWidget() {
       localStorage.setItem(AUTH_TOKEN_KEY, data.token);
       setIsSignedIn(true);
       setShowModal(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || "Failed to verify code");
-      setCode(["", "", "", "", "", ""]);
-      setTimeout(() => inputRefs[0].current?.focus(), 100);
+      setOtp("");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [otp, email, setIsLoading, setError, setOtp, setIsSignedIn, setShowModal]);
+
+  useEffect(() => {
+    if (otp.length === 6) {
+      handleVerifyCode();
+    }
+  }, [otp, handleVerifyCode]);
 
   const handleSignOut = () => {
     localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -201,29 +202,28 @@ export default function AuthWidget() {
                     </h3>
                     <div
                       className="flex gap-2 justify-center"
-                      onPaste={handlePaste}
                     >
-                      {[0, 1, 2, 3, 4, 5].map((idx) => (
-                        <input
-                          key={idx}
-                          ref={inputRefs[idx]}
-                          className="w-10 h-12 text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700"
-                          type="text"
-                          maxLength={1}
-                          value={code[idx]}
-                          onChange={(e) =>
-                            handleDigitChange(idx, e.target.value)
-                          }
-                          onKeyDown={(e) => handleKeyDown(idx, e)}
-                          disabled={isLoading}
-                          autoComplete="one-time-code"
-                        />
-                      ))}
+                      <InputOTP
+                        maxLength={6}
+                        pattern={REGEXP_ONLY_DIGITS}
+                        value={otp}
+                        onChange={(value) => setOtp(value)}
+                        autoFocus
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
                     </div>
                     <button
                       type="submit"
                       className="w-full bg-blue-600 text-white rounded py-2"
-                      disabled={isLoading || code.some((d) => d === "")}
+                      disabled={isLoading || otp.length < 6}
                       ref={verifyButtonRef}
                     >
                       {isLoading ? "Verifying..." : "Verify Code"}
