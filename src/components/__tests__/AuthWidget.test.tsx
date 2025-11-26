@@ -9,7 +9,7 @@ import AuthWidget from "../AuthWidget";
 
 describe("AuthWidget", () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error - vitest is not defined in the global scope
     global.fetch = undefined;
     localStorage.clear();
   });

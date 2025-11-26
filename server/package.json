@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "@prisma/adapter-neon": "^7.0.1",
     "@prisma/client": "^7.0.1",
     "@types/jsonwebtoken": "^9.0.9",
     "cors": "^2.8.5",

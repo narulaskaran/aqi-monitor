@@ -2,6 +2,8 @@
  * Prisma client singleton for database access
  */
 import { PrismaClient } from "@prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { Pool } from "@neondatabase/serverless";
 
 // Global type declaration for the Prisma instance in development
 declare global {
@@ -11,7 +13,10 @@ declare global {
 
 // Create a singleton instance of PrismaClient
 const createPrismaClient = () => {
+  const neon = new Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaNeon(neon);
   return new PrismaClient({
+    adapter,
     log: ["error", "warn"],
   });
 };

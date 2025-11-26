@@ -6,8 +6,7 @@ import {
 import * as airQualityService from "../services/airQuality.js";
 import {
   mockRes,
-  mockSubscription,
-  mockAirQualityRecord,
+    mockAirQualityRecord,
 } from "./testUtils.js";
 import * as subscriptionService from "../services/subscription.js";
 

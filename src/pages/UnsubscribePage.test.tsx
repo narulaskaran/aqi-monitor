@@ -4,7 +4,7 @@ import { UnsubscribePage } from "./UnsubscribePage";
 
 describe("UnsubscribePage", () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error - vi is not defined in the global scope
     global.fetch = undefined;
   });
 

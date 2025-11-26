@@ -9,7 +9,7 @@ import AdminControls from "../AdminControls";
 
 describe("AdminControls", () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error - vitest is not defined in the global scope
     global.fetch = undefined;
   });
 
