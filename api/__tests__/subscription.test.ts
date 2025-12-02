@@ -2,12 +2,12 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
   generateUnsubscribeToken,
   validateUnsubscribeToken,
-} from "../services/subscription.js";
-import * as subscriptionService from "../services/subscription.js";
+} from "../_lib/services/subscription.js";
+import * as subscriptionService from "../_lib/services/subscription.js";
 import { vi } from "vitest";
 import { mockSubscription } from "./testUtils.js";
 
-vi.mock("../services/email.js", () => ({
+vi.mock("../_lib/services/email.js", () => ({
   sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
   checkVerificationCode: vi
     .fn()
@@ -90,7 +90,7 @@ describe("Subscription Service", () => {
 
 describe("sendAirQualityAlerts and token cleanup", () => {
   it("sendAirQualityAlerts sends emails only if enough time elapsed", async () => {
-    const mod = await import("../services/subscription.js");
+    const mod = await import("../_lib/services/subscription.js");
     vi.spyOn(mod, "sendAirQualityAlerts").mockResolvedValue(2);
     const result = await mod.sendAirQualityAlerts(
       "12345",
@@ -101,13 +101,13 @@ describe("sendAirQualityAlerts and token cleanup", () => {
     expect(result).toBe(2);
   });
   it("deleteExpiredAuthTokens deletes expired tokens", async () => {
-    const mod = await import("../services/subscription.js");
+    const mod = await import("../_lib/services/subscription.js");
     vi.spyOn(mod, "deleteExpiredAuthTokens").mockResolvedValue(3);
     const result = await mod.deleteExpiredAuthTokens();
     expect(result).toBe(3);
   });
   it("deleteAuthTokensForEmail deletes tokens for email", async () => {
-    const mod = await import("../services/subscription.js");
+    const mod = await import("../_lib/services/subscription.js");
     vi.spyOn(mod, "deleteAuthTokensForEmail").mockResolvedValue(2);
     const result = await mod.deleteAuthTokensForEmail("a@b.com");
     expect(result).toBe(2);

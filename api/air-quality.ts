@@ -1,19 +1,27 @@
-import { Request, Response } from "express";
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
-  fetchAirQuality,
   getMockAirQualityData,
   getLatestAirQualityForZip,
   getCoordinatesForZipCode,
+  fetchAirQuality,
   fetchAndStoreAirQualityForZip,
-  updateAirQualityForAllSubscriptions,
-} from "../services/airQuality.js";
+} from './_lib/services/airQuality.js';
 
-export async function handleGetAirQuality(req: Request, res: Response) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Handle CORS (optional, usually handled by Vercel config or middleware wrapper)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
     const { zipCode } = req.query;
 
     // We now require zipCode for all requests
-    if (!zipCode) {
+    if (!zipCode || typeof zipCode !== 'string') {
       return res.status(400).json({ error: "ZIP code is required" });
     }
 
@@ -23,7 +31,7 @@ export async function handleGetAirQuality(req: Request, res: Response) {
     console.log(
       `Checking for cached air quality data for ZIP code: ${zipCode}`,
     );
-    const storedData = await getLatestAirQualityForZip(zipCode as string);
+    const storedData = await getLatestAirQualityForZip(zipCode);
 
     if (storedData) {
       console.log(`Found cached air quality data for ZIP code: ${zipCode}`);
@@ -32,7 +40,7 @@ export async function handleGetAirQuality(req: Request, res: Response) {
 
     // Use mock data in development mode if no API key is available
     if (
-      (process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production" &&
+      process.env.NODE_ENV !== "production" &&
       !process.env.GOOGLE_AIR_QUALITY_API_KEY
     ) {
       console.log("Using mock air quality data in development mode");
@@ -41,7 +49,7 @@ export async function handleGetAirQuality(req: Request, res: Response) {
 
     try {
       // Get coordinates from ZIP code
-      const coordinates = await getCoordinatesForZipCode(zipCode as string);
+      const coordinates = await getCoordinatesForZipCode(zipCode);
       console.log(`Resolved coordinates for ZIP ${zipCode}:`, coordinates);
 
       // Call the air quality service with the coordinates
@@ -52,7 +60,7 @@ export async function handleGetAirQuality(req: Request, res: Response) {
 
       // Also store this data in the database for future use
       try {
-        await fetchAndStoreAirQualityForZip(zipCode as string);
+        await fetchAndStoreAirQualityForZip(zipCode);
         console.log(
           `Stored air quality data for future use for ZIP code: ${zipCode}`,
         );
@@ -72,7 +80,6 @@ export async function handleGetAirQuality(req: Request, res: Response) {
         error,
       );
 
-      // Improved error handling with better messaging for different failure scenarios
       if (error.message?.includes("No locations found")) {
         return res.status(400).json({
           error: `Invalid or unsupported ZIP code: ${zipCode}. Please try a different ZIP code.`,
@@ -108,32 +115,5 @@ export async function handleGetAirQuality(req: Request, res: Response) {
   } catch (error) {
     console.error("Error in air quality API:", error);
     return res.status(500).json({ error: "Failed to fetch air quality data" });
-  }
-}
-
-export async function handleUpdateAirQuality(req: Request, res: Response) {
-  try {
-    // Validate CRON_SECRET
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res
-        .status(401)
-        .json({ error: "Missing or invalid authorization header" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    if (token !== process.env.CRON_SECRET) {
-      return res.status(403).json({ error: "Invalid CRON_SECRET" });
-    }
-
-    // Update air quality data for all subscriptions
-    await updateAirQualityForAllSubscriptions();
-    return res.json({
-      success: true,
-      message: "Air quality data updated successfully",
-    });
-  } catch (error) {
-    console.error("Error updating air quality data:", error);
-    return res.status(500).json({ error: "Failed to update air quality data" });
   }
 }

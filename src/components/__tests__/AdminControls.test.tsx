@@ -9,7 +9,7 @@ import AdminControls from "../AdminControls";
 
 describe("AdminControls", () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error - Mocking fetch
     global.fetch = undefined;
   });
 

@@ -15,17 +15,15 @@ A real-time Air Quality Index (AQI) monitoring application that allows users to 
 ## Tech Stack
 
 - **Frontend:**
-
   - React + TypeScript
   - Vite for build tooling
   - Tailwind CSS for styling
   - shadcn/ui for UI components
 
 - **Backend:**
-  - Node.js + Express
-  - RESTful API endpoints
-  - Prisma ORM for database access
-  - PostgreSQL database (Vercel Postgres)
+  - Vercel Serverless Functions (Node.js)
+  - Prisma ORM (v7) with Neon Serverless Driver
+  - PostgreSQL database (Neon / Vercel Postgres)
   - OpenStreetMap Nominatim API for geocoding
   - Scheduled cron jobs for data updates
 
@@ -33,20 +31,19 @@ A real-time Air Quality Index (AQI) monitoring application that allows users to 
 
 ### Prerequisites
 
-- Node.js (v16+)
-- npm or yarn
-- PostgreSQL database or Vercel Postgres
+- Node.js (v20+)
+- npm
+- PostgreSQL database (e.g., Neon)
 - Google Maps Platform API key with Air Quality API enabled
-- Email service (for alerts)
+- Resend API key (for emails)
 
 ### Environment Variables
 
-Create a `.env` file in the server directory with the following:
+Create a `.env` file in the root directory with the following:
 
-```
+```env
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/aqi_monitor"
-DATABASE_URL_UNPOOLED="postgresql://user:password@localhost:5432/aqi_monitor"
+DATABASE_URL="postgresql://user:password@host/database?sslmode=require"
 
 # Email (for verification and alerts)
 EMAIL_FROM="noreply@yourdomain.com"
@@ -55,161 +52,70 @@ RESEND_API_KEY="your_resend_api_key"
 # Google Air Quality API
 GOOGLE_AIR_QUALITY_API_KEY="your_google_api_key"
 
-# Admin access (for secured endpoints)
-ADMIN_API_KEY="your_admin_api_key"
+# Admin access
 CRON_SECRET="your_cron_job_secret"
+JWT_SECRET="your_jwt_secret"
 
-# Environment
-NODE_ENV="development"
+# Frontend
+VITE_API_URL="http://localhost:3000"
 ```
 
 ### Installation and Local Development
 
-```bash
-# Install dependencies
-npm install
+This project uses the Vercel CLI for a seamless local development experience.
 
-# Install server dependencies
-cd server && npm install && cd ..
+1.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-# Generate Prisma client
-cd server && npx prisma generate && cd ..
+2.  **Install Vercel CLI (globally or rely on npx):**
+    ```bash
+    npm i -g vercel
+    ```
 
-# Run development servers (frontend + backend)
-npm run dev
-```
+3.  **Run development server:**
+    ```bash
+    vercel dev
+    ```
+    This starts both the frontend (Vite) and the serverless API functions, mimicking the Vercel production environment. The app will be available at `http://localhost:3000`.
 
-The application will be available at:
+### Database Migrations
 
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3000
-
-### Production Build
-
-```bash
-# Build for production
-npm run build
-
-# Start the production server
-npm start
-```
-
-## Deployment
-
-This project is set up for easy deployment to Vercel:
+To apply database migrations locally:
 
 ```bash
-# Deploy to Vercel
-vercel deploy
+npx prisma migrate dev
 ```
 
-## API Endpoints
+To deploy migrations to production (or if you want to just deploy without generating new migration files):
 
-### REST Endpoints
-
-- `GET /api/air-quality?zipCode=12345` - Get air quality data for a ZIP code
-- `POST /api/verify` - Start email verification process
-- `POST /api/verify-code` - Verify email code
-- `GET /api/cron/update-air-quality` - Trigger air quality data update (secured)
-- `GET /health` - Health check endpoint
-
-### API Usage Examples
-
-```javascript
-// Get air quality data by ZIP code
-fetch("/api/air-quality?zipCode=94107")
-  .then((response) => response.json())
-  .then((data) => console.log(data));
-
-// Start email verification
-fetch("/api/verify", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email: "user@example.com", zipCode: "94107" }),
-})
-  .then((response) => response.json())
-  .then((data) => console.log(data));
-
-// Verify email code
-fetch("/api/verify-code", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    email: "user@example.com",
-    zipCode: "94107",
-    code: "123456",
-  }),
-})
-  .then((response) => response.json())
-  .then((data) => console.log(data));
-
-// Trigger the cron job manually (admin only)
-fetch("/api/cron/update-air-quality", {
-  headers: {
-    Authorization: "Bearer your_cron_secret",
-  },
-})
-  .then((response) => response.json())
-  .then((data) => console.log(data));
+```bash
+npx prisma migrate deploy
 ```
 
 ## Project Structure
 
 ```
 /
+├── api/                  # Vercel Serverless Functions
+│   ├── _lib/             # Shared backend logic (DB, services)
+│   └── ...               # API endpoints (e.g., air-quality.ts)
+├── prisma/               # Prisma schema and migrations
 ├── src/                  # Frontend source code
 │   ├── components/       # React components
 │   ├── lib/              # Utilities and API clients
-│   ├── templates/        # Email templates
-│   └── types/            # TypeScript type definitions
-├── server/               # Backend source code
-│   ├── src/              # Server code
-│   │   ├── services/     # Service modules
-│   │   └── db.ts         # Database connection
-│   └── prisma/           # Prisma schema and migrations
-├── api/                  # Serverless API endpoints for Vercel
+│   └── ...
 └── public/               # Static assets
 ```
 
-## Database Schema
+## Deployment
 
-The application uses the following database models:
+This project is designed to be deployed on Vercel.
 
-- **UserSubscription**: Stores user email subscriptions by ZIP code
-- **VerificationCode**: Manages verification codes for email verification
-- **AirQualityRecord**: Stores historical air quality data by ZIP code
-- **ZipCoordinates**: Caches ZIP code to coordinate mappings
-
-## Development vs Production
-
-### Development Mode
-
-- Frontend and backend run as separate servers
-- Backend provides REST API endpoints
-- Environment variables for dev stored in .env file
-- Mock verification code is used by default (code: 123456)
-
-### Production Mode (Vercel)
-
-- Frontend is served as static assets
-- API endpoints run as serverless functions
-- Cron jobs run on scheduled intervals
-- Environment variables stored in Vercel dashboard
-- Email verification through Resend API
-
-## Geocoding System
-
-The application uses OpenStreetMap's Nominatim API to convert ZIP codes to latitude/longitude coordinates. This feature:
-
-- Respects OSM usage policy with proper headers
-- Includes request timeouts and error handling
-- Caches coordinates in the database to reduce API calls
-- Coordinates are refreshed every 30 days for accuracy
-
-## Local Development
-
-To run the app locally, use `npm run dev` from the project root to start the frontend and `cd server && npm run dev` to start the server
-***This approach does not set `VERCEL_ENV`*** and may result in inconsistent behavior compared to when the project is deployed to Vercel's Preview or Production environments.
+1.  Connect your repository to Vercel.
+2.  Configure the environment variables in the Vercel dashboard.
+3.  Vercel will automatically build and deploy the application using the configured build settings (handled by `vercel-build` script).
 
 ## License
 

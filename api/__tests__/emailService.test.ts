@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as emailService from "../services/email.js";
+import * as emailService from "../_lib/services/email.js";
 
-vi.mock("../services/email.js", () => ({
+vi.mock("../_lib/services/email.js", () => ({
   sendVerificationCode: vi
     .fn()
     .mockResolvedValue({ success: true, status: "pending" }),

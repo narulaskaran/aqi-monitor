@@ -9,7 +9,7 @@ import AuthWidget from "../AuthWidget";
 
 describe("AuthWidget", () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error - Mocking fetch
     global.fetch = undefined;
     localStorage.clear();
   });

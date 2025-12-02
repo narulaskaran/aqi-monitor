@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  handleStartVerification,
-  handleVerifyCode,
-} from "../handlers/verification.js";
+import handleStartVerification from "../verify.js";
+import handleVerifyCode from "../verify-code.js";
 import { mockRes, mockSubscription } from "./testUtils.js";
 
-vi.mock("../services/email.js", () => ({
+vi.mock("../_lib/services/email.js", () => ({
   sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
   checkVerificationCode: vi
     .fn()
@@ -19,7 +17,7 @@ describe("Verification API", () => {
   });
 
   it("handleStartVerification returns 400 if missing email/zipCode", async () => {
-    const req: any = { body: {} };
+    const req: any = { method: 'POST', body: {} };
     const res = mockRes();
     await handleStartVerification(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
@@ -30,18 +28,18 @@ describe("Verification API", () => {
   });
 
   it("handleStartVerification returns 200 if valid", async () => {
-    const req: any = { body: { email: "a@b.com", zipCode: "12345" } };
+    const req: any = { method: 'POST', body: { email: "a@b.com", zipCode: "12345" } };
     const res = mockRes();
-    const mod = await import("../services/email.js");
+    const mod = await import("../_lib/services/email.js");
     vi.spyOn(mod, "sendVerificationCode").mockResolvedValue({ success: true });
-    const subMod = await import("../services/subscription.js");
+    const subMod = await import("../_lib/services/subscription.js");
     vi.spyOn(subMod, "findSubscriptionsForEmail").mockResolvedValue([]);
     await handleStartVerification(req, res);
     expect(res.json).toHaveBeenCalledWith({ success: true });
   });
 
   it("handleVerifyCode returns 400 if missing fields", async () => {
-    const req: any = { body: {} };
+    const req: any = { method: 'POST', body: {} };
     const res = mockRes();
     await handleVerifyCode(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
@@ -53,17 +51,18 @@ describe("Verification API", () => {
 
   it("handleVerifyCode returns 200 if valid", async () => {
     const req: any = {
+      method: 'POST',
       body: { email: "a@b.com", zipCode: "12345", code: "123456" },
     };
     const res = mockRes();
-    const mod = await import("../services/email.js");
+    const mod = await import("../_lib/services/email.js");
     vi.spyOn(mod, "checkVerificationCode").mockResolvedValue({
       success: true,
       valid: true,
     });
-    const subMod = await import("../services/subscription.js");
+    const subMod = await import("../_lib/services/subscription.js");
     vi.spyOn(subMod, "findSubscriptionsForEmail").mockResolvedValue([]);
-    const dbMod = await import("../db.js");
+    const dbMod = await import("../_lib/db.js");
     vi.spyOn(dbMod.prisma.userSubscription, "create").mockResolvedValue({
       id: "id",
       email: "a@b.com",
@@ -81,9 +80,9 @@ describe("Verification API", () => {
 
 describe("Verification API edge cases", () => {
   it("handleStartVerification returns error if already subscribed", async () => {
-    const req: any = { body: { email: "a@b.com", zipCode: "12345" } };
+    const req: any = { method: 'POST', body: { email: "a@b.com", zipCode: "12345" } };
     const res = mockRes();
-    const subMod = await import("../services/subscription.js");
+    const subMod = await import("../_lib/services/subscription.js");
     vi.spyOn(subMod, "findSubscriptionsForEmail").mockResolvedValue([
       mockSubscription,
     ]);
@@ -94,9 +93,9 @@ describe("Verification API edge cases", () => {
     });
   });
   it("handleStartVerification returns 500 on DB error", async () => {
-    const req: any = { body: { email: "a@b.com", zipCode: "12345" } };
+    const req: any = { method: 'POST', body: { email: "a@b.com", zipCode: "12345" } };
     const res = mockRes();
-    const subMod = await import("../services/subscription.js");
+    const subMod = await import("../_lib/services/subscription.js");
     vi.spyOn(subMod, "findSubscriptionsForEmail").mockRejectedValue(
       new Error("fail"),
     );
@@ -105,10 +104,11 @@ describe("Verification API edge cases", () => {
   });
   it("handleVerifyCode returns 500 on DB error", async () => {
     const req: any = {
+      method: 'POST',
       body: { email: "a@b.com", zipCode: "12345", code: "123456" },
     };
     const res = mockRes();
-    const mod = await import("../services/email.js");
+    const mod = await import("../_lib/services/email.js");
     vi.spyOn(mod, "checkVerificationCode").mockRejectedValue(new Error("fail"));
     await handleVerifyCode(req, res);
     expect(res.status).toHaveBeenCalledWith(500);

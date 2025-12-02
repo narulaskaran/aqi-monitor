@@ -4,7 +4,7 @@ import { UnsubscribePage } from "./UnsubscribePage";
 
 describe("UnsubscribePage", () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error - Mocking fetch
     global.fetch = undefined;
   });
 

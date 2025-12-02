@@ -42,6 +42,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setVerificationCode(["", "", "", "", "", ""]);
       setRetryCount(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zipCode, lastZipCode]);
 
   // Check if all digits are filled when code changes
@@ -50,6 +51,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
     if (verificationCode.every((digit) => digit !== "") && !isLoading) {
       handleVerify();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verificationCode]);
 
   const handleSubscribe = async () => {

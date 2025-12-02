@@ -203,6 +203,47 @@ export async function subscriptionExists(
   return count > 0;
 }
 
+async function sendWithRetry(
+  email: string,
+  subject: string,
+  html: string,
+  maxRetries = 4,
+) {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    // Wait until we're allowed to send an email
+    let allowed = false;
+    let counter = 0;
+    while (!allowed) {
+      const { success } = await ratelimit.limit("resend:email:global");
+      if (success) {
+        allowed = true;
+      } else {
+        // Exponential backoff
+        counter += 1;
+        await new Promise((resolve) => setTimeout(resolve, 100 ** counter));
+      }
+    }
+
+    const result = await sendEmail(email, subject, html);
+    if (
+      result.error &&
+      result.error.toLowerCase().includes("too many requests")
+    ) {
+      attempt++;
+      if (attempt < maxRetries) {
+        // Exponential backoff
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 ** attempt),
+        );
+      }
+    } else {
+      return result;
+    }
+  }
+  return { success: false, error: "Max retries exceeded" };
+}
+
 /**
  * Send air quality alerts to users based on current AQI
  */
@@ -228,48 +269,6 @@ export async function sendAirQualityAlerts(
       console.log(
         `Found ${subscriptions.length} active subscriptions for ZIP code ${zipCode}`,
       );
-    }
-
-    const emails: any[] = [];
-    async function sendWithRetry(
-      email: string,
-      subject: string,
-      html: string,
-      maxRetries = 4,
-    ) {
-      let attempt = 0;
-      while (attempt <= maxRetries) {
-        // Wait until we're allowed to send an email
-        let allowed = false;
-        let counter = 0;
-        while (!allowed) {
-          const { success } = await ratelimit.limit("resend:email:global");
-          if (success) {
-            allowed = true;
-          } else {
-            // Exponential backoff
-            counter += 1;
-            await new Promise((resolve) => setTimeout(resolve, 100 ** counter));
-          }
-        }
-
-        const result = await sendEmail(email, subject, html);
-        if (
-          result.error &&
-          result.error.toLowerCase().includes("too many requests")
-        ) {
-          attempt++;
-          if (attempt < maxRetries) {
-            // Exponential backoff
-            await new Promise((resolve) =>
-              setTimeout(resolve, 1000 ** attempt),
-            );
-          }
-        } else {
-          return result;
-        }
-      }
-      return { success: false, error: "Max retries exceeded" };
     }
 
     // Determine which threshold the AQI value exceeds

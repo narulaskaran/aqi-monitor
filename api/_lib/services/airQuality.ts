@@ -1,6 +1,7 @@
 /**
  * Air Quality data service using Google Air Quality API
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "../db.js";
 import { z } from "zod";
 import { sendAirQualityAlerts } from "./subscription.js";
@@ -122,10 +123,10 @@ async function fetchCoordinatesFromAPI(
   try {
     const coordinates = await fetchFromNominatimAPI(zipCode);
     return coordinates;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Nominatim API failed for ZIP ${zipCode}:`, error);
     throw new Error(
-      `Failed to get coordinates for ZIP ${zipCode}: ${error.message || "Unknown error"}`,
+      `Failed to get coordinates for ZIP ${zipCode}: ${(error as Error).message || "Unknown error"}`,
     );
   }
 }
@@ -170,8 +171,8 @@ async function fetchFromNominatimAPI(
     }
 
     throw new Error("No locations found for this ZIP code");
-  } catch (error: any) {
-    if (error.name === "AbortError") {
+  } catch (error: unknown) {
+    if ((error as Error).name === "AbortError") {
       throw new Error("Request timeout");
     }
     throw error;

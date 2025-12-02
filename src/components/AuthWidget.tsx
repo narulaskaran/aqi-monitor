@@ -91,8 +91,8 @@ export default function AuthWidget() {
       if (!data.success) throw new Error(data.error || "Failed to send code");
       setStep("code");
       setTimeout(() => inputRefs[0].current?.focus(), 100);
-    } catch (err: any) {
-      setError(err.message || "Failed to send code");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to send code");
     } finally {
       setIsLoading(false);
     }
@@ -120,8 +120,8 @@ export default function AuthWidget() {
       localStorage.setItem(AUTH_TOKEN_KEY, data.token);
       setIsSignedIn(true);
       setShowModal(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to verify code");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to verify code");
       setCode(["", "", "", "", "", ""]);
       setTimeout(() => inputRefs[0].current?.focus(), 100);
     } finally {

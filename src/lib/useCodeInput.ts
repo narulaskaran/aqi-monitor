@@ -7,6 +7,7 @@ export function useCodeInput(
 ) {
   const [code, setCode] = useState(Array(length).fill(""));
   const inputRefs = Array.from({ length }, () =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useRef<HTMLInputElement>(null)
   );
 

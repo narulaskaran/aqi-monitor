@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { handleUnsubscribe } from "../handlers/subscription.js";
+import handleUnsubscribe from "../subscribe.js";
+import { authenticate } from "../_lib/middleware/auth.js";
 
-vi.mock("../services/email.js", () => ({
+vi.mock("../_lib/services/email.js", () => ({
   sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
   checkVerificationCode: vi
     .fn()
@@ -9,10 +10,16 @@ vi.mock("../services/email.js", () => ({
   sendEmail: vi.fn().mockResolvedValue({ success: true }),
 }));
 
+vi.mock("../_lib/middleware/auth.js", () => ({
+  authenticate: vi.fn(),
+}));
+
 function mockRes() {
   const res: any = {};
   res.status = vi.fn().mockReturnValue(res);
   res.json = vi.fn().mockReturnValue(res);
+  res.setHeader = vi.fn();
+  res.end = vi.fn();
   return res;
 }
 
@@ -22,8 +29,9 @@ describe("Unsubscribe API", () => {
   });
 
   it("returns 401 if user missing", async () => {
-    const req: any = { body: { subscription_id: "id" } };
+    const req: any = { method: 'POST', body: { subscription_id: "id" } };
     const res = mockRes();
+    (authenticate as any).mockRejectedValue(new Error("Unauthorized"));
     await handleUnsubscribe(req, res);
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
@@ -33,8 +41,9 @@ describe("Unsubscribe API", () => {
   });
 
   it("returns 400 if subscription_id missing", async () => {
-    const req: any = { body: {}, user: { email: "a@b.com" } };
+    const req: any = { method: 'POST', body: {} };
     const res = mockRes();
+    (authenticate as any).mockResolvedValue({ email: "a@b.com" });
     await handleUnsubscribe(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
@@ -45,11 +54,12 @@ describe("Unsubscribe API", () => {
 
   it("returns 404 if subscription not found or not owned by user", async () => {
     const req: any = {
+      method: 'POST',
       body: { subscription_id: "id" },
-      user: { email: "a@b.com" },
     };
     const res = mockRes();
-    const mod = await import("../db.js");
+    (authenticate as any).mockResolvedValue({ email: "a@b.com" });
+    const mod = await import("../_lib/db.js");
     vi.spyOn(mod.prisma.userSubscription, "findUnique").mockResolvedValue(null);
     await handleUnsubscribe(req, res);
     expect(res.status).toHaveBeenCalledWith(404);
@@ -61,11 +71,12 @@ describe("Unsubscribe API", () => {
 
   it("returns 200 if successful", async () => {
     const req: any = {
+      method: 'POST',
       body: { subscription_id: "id" },
-      user: { email: "a@b.com" },
     };
     const res = mockRes();
-    const mod = await import("../db.js");
+    (authenticate as any).mockResolvedValue({ email: "a@b.com" });
+    const mod = await import("../_lib/db.js");
     vi.spyOn(mod.prisma.userSubscription, "findUnique").mockResolvedValue({
       id: "id",
       email: "a@b.com",
@@ -86,7 +97,7 @@ describe("Unsubscribe API", () => {
       updatedAt: new Date(),
       lastEmailSentAt: null,
     });
-    const subMod = await import("../services/subscription.js");
+    const subMod = await import("../_lib/services/subscription.js");
     vi.spyOn(subMod, "deleteAuthTokensForEmail").mockResolvedValue(1);
     await handleUnsubscribe(req, res);
     expect(res.json).toHaveBeenCalledWith({
