@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { isValidEmail } from "../lib/utils";
-import { useCodeInput } from "../lib/useCodeInput";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "./ui/input-otp";
 
 const AUTH_TOKEN_KEY = "aqi_auth_token";
 
@@ -12,23 +16,9 @@ export default function AuthWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [otp, setOtp] = useState("");
 
   const verifyButtonRef = useRef<HTMLButtonElement>(null);
-  const {
-    code,
-    setCode,
-    inputRefs,
-    handleDigitChange,
-    handleKeyDown,
-    handlePaste,
-  } = useCodeInput(6, () => verifyButtonRef.current?.click());
-
-  // DEV ONLY: Force signed-in state for UI testing without a server
-  // useEffect(() => {
-  //   setIsSignedIn(true);
-  //   setEmail("narulaskaran@gmail.com");
-  //   setIsValidatingToken(false);
-  // }, []);
 
   // Restore original useEffect for token validation
   useEffect(() => {
@@ -73,7 +63,7 @@ export default function AuthWidget() {
     setShowModal(true);
     setStep("email");
     setEmail("");
-    setCode(["", "", "", "", "", ""]);
+    setOtp("");
     setError(null);
   };
 
@@ -90,7 +80,6 @@ export default function AuthWidget() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to send code");
       setStep("code");
-      setTimeout(() => inputRefs[0].current?.focus(), 100);
     } catch (err: unknown) {
       setError((err as Error).message || "Failed to send code");
     } finally {
@@ -102,15 +91,14 @@ export default function AuthWidget() {
     setIsLoading(true);
     setError(null);
     try {
-      const codeStr = code.join("");
-      if (codeStr.length !== 6) throw new Error("Enter 6-digit code");
+      if (otp.length !== 6) throw new Error("Enter 6-digit code");
       const res = await fetch("/api/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
           zipCode: "00000",
-          code: codeStr,
+          code: otp,
           mode: "signin",
         }),
       });
@@ -122,8 +110,7 @@ export default function AuthWidget() {
       setShowModal(false);
     } catch (err: unknown) {
       setError((err as Error).message || "Failed to verify code");
-      setCode(["", "", "", "", "", ""]);
-      setTimeout(() => inputRefs[0].current?.focus(), 100);
+      setOtp("");
     } finally {
       setIsLoading(false);
     }
@@ -199,31 +186,40 @@ export default function AuthWidget() {
                     <h3 className="text-lg font-semibold">
                       Enter Verification Code
                     </h3>
-                    <div
-                      className="flex gap-2 justify-center"
-                      onPaste={handlePaste}
-                    >
-                      {[0, 1, 2, 3, 4, 5].map((idx) => (
-                        <input
-                          key={idx}
-                          ref={inputRefs[idx]}
-                          className="w-10 h-12 text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700"
-                          type="text"
-                          maxLength={1}
-                          value={code[idx]}
-                          onChange={(e) =>
-                            handleDigitChange(idx, e.target.value)
+                    <div className="flex justify-center">
+                      <InputOTP
+                        maxLength={6}
+                        value={otp}
+                        onChange={(value) => {
+                          setOtp(value);
+                          if (value.length === 6) {
+                            // Use a timeout to allow state update before submission if needed,
+                            // but direct call is usually fine.
+                            // However, verifyButtonRef click is safer to trigger form submission
+                            // naturally or just call the handler.
+                            // Given the UI has a button, let's let the user click or
+                            // auto-submit if desired. The original code auto-submitted.
+                            if (value.length === 6) {
+                                // Optional: auto-submit
+                            }
                           }
-                          onKeyDown={(e) => handleKeyDown(idx, e)}
-                          disabled={isLoading}
-                          autoComplete="one-time-code"
-                        />
-                      ))}
+                        }}
+                        onComplete={() => verifyButtonRef.current?.click()}
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
+                          <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
+                          <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
+                          <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
+                          <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
+                          <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
+                        </InputOTPGroup>
+                      </InputOTP>
                     </div>
                     <button
                       type="submit"
                       className="w-full bg-blue-600 text-white rounded py-2"
-                      disabled={isLoading || code.some((d) => d === "")}
+                      disabled={isLoading || otp.length !== 6}
                       ref={verifyButtonRef}
                     >
                       {isLoading ? "Verifying..." : "Verify Code"}
@@ -238,6 +234,7 @@ export default function AuthWidget() {
           )}
         </>
       ) : (
+
         <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 shadow-sm border border-gray-200 dark:border-gray-700">
           <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-500 text-white mr-2">
             <svg
