@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "vite",
     "build": "npx prisma generate && vite build",
     "vercel-build": "npx prisma migrate deploy && npm run build",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 10",
