@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { updateAirQualityForAllSubscriptions } from "../../_lib/services/airQuality.js";
+import { updateAirQualityForAllSubscriptions } from "../_lib/services/airQuality.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
