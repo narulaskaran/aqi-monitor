@@ -1,63 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "builds": [
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/dist/**/*", "server/prisma/**/*"],
-        "runtime": "nodejs16"
-      }
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/validate-token",
-      "methods": ["POST", "OPTIONS"],
-      "dest": "/api/validate-token.js"
-    },
-    {
-      "src": "/api/air-quality",
-      "dest": "/api/air-quality.js"
-    },
-    {
-      "src": "/api/verify",
-      "methods": ["POST", "OPTIONS"],
-      "dest": "/api/verify.js"
-    },
-    {
-      "src": "/api/verify-code",
-      "methods": ["POST", "OPTIONS"],
-      "dest": "/api/verify-code.js"
-    },
-    {
-      "src": "/api/cron/update-air-quality",
-      "dest": "/api/cron-update-air-quality.js"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/admin",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "crons": [
     {

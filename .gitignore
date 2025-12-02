@@ -2,15 +2,10 @@
 .env
 .env.local
 .env.*.local
-server/.env
-server/.env.local
-server/.env.*.local
 
 # Dependencies
 node_modules/
-server/node_modules/
 dist/
-server/dist/
 
 # Testing
 coverage/
@@ -39,9 +34,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-# Local env files
-.env*.local
 
 # Vercel
 .vercel
