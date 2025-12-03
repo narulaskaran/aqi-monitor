@@ -18,9 +18,10 @@ const renderWithRouter = (ui: ReactNode, options?: RouterOptions) => {
     <ThemeProvider>
       <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
     </ThemeProvider>,
-    rest
+    rest,
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export * from "@testing-library/react";
 export { renderWithTheme, renderWithRouter };

@@ -14,6 +14,16 @@ vi.mock("../_lib/middleware/auth.js", () => ({
   authenticate: vi.fn(),
 }));
 
+vi.mock("../_lib/db.js", () => ({
+  prisma: {
+    userSubscription: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      // Add other methods here if your code uses them (e.g., create, delete)
+    },
+  },
+}));
+
 function mockRes() {
   const res: any = {};
   res.status = vi.fn().mockReturnValue(res);
@@ -59,8 +69,13 @@ describe("Unsubscribe API", () => {
     };
     const res = mockRes();
     (authenticate as any).mockResolvedValue({ email: "a@b.com" });
+    
+    // This import now returns the MOCK defined above, not the real file
     const mod = await import("../_lib/db.js");
+    
+    // We can spy on the mock directly
     vi.spyOn(mod.prisma.userSubscription, "findUnique").mockResolvedValue(null);
+    
     await handleUnsubscribe(req, res);
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({
@@ -76,7 +91,10 @@ describe("Unsubscribe API", () => {
     };
     const res = mockRes();
     (authenticate as any).mockResolvedValue({ email: "a@b.com" });
+    
     const mod = await import("../_lib/db.js");
+    
+    // Setup the mock returns
     vi.spyOn(mod.prisma.userSubscription, "findUnique").mockResolvedValue({
       id: "id",
       email: "a@b.com",
@@ -86,7 +104,8 @@ describe("Unsubscribe API", () => {
       activatedAt: new Date(),
       updatedAt: new Date(),
       lastEmailSentAt: null,
-    });
+    } as any); // Type assertion simplifies the mock object creation
+    
     vi.spyOn(mod.prisma.userSubscription, "update").mockResolvedValue({
       id: "id",
       email: "a@b.com",
@@ -96,10 +115,13 @@ describe("Unsubscribe API", () => {
       activatedAt: new Date(),
       updatedAt: new Date(),
       lastEmailSentAt: null,
-    });
+    } as any);
+    
     const subMod = await import("../_lib/services/subscription.js");
     vi.spyOn(subMod, "deleteAuthTokensForEmail").mockResolvedValue(1);
+    
     await handleUnsubscribe(req, res);
+    
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "Successfully unsubscribed from air quality alerts",

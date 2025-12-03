@@ -1,11 +1,34 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import {
   generateUnsubscribeToken,
   validateUnsubscribeToken,
 } from "../_lib/services/subscription.js";
 import * as subscriptionService from "../_lib/services/subscription.js";
-import { vi } from "vitest";
 import { mockSubscription } from "./testUtils.js";
+
+// --- START FIX ---
+// Mock the DB to prevent "Database connection string not found" error
+vi.mock("../_lib/db.js", () => ({
+  prisma: {
+    userSubscription: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    // Add other models if strictly needed by your service logic, 
+    // but usually userSubscription is enough for these tests to load.
+    zipCoordinates: {
+      findUnique: vi.fn(),
+    },
+    airQualityRecord: {
+      upsert: vi.fn(),
+    }
+  },
+}));
+// --- END FIX ---
 
 vi.mock("../_lib/services/email.js", () => ({
   sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),

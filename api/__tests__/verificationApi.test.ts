@@ -3,6 +3,19 @@ import handleStartVerification from "../verify.js";
 import handleVerifyCode from "../verify-code.js";
 import { mockRes, mockSubscription } from "./testUtils.js";
 
+// --- START FIX ---
+vi.mock("../_lib/db.js", () => ({
+  prisma: {
+    userSubscription: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+  },
+}));
+// --- END FIX ---
+
 vi.mock("../_lib/services/email.js", () => ({
   sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
   checkVerificationCode: vi
@@ -63,6 +76,8 @@ describe("Verification API", () => {
     const subMod = await import("../_lib/services/subscription.js");
     vi.spyOn(subMod, "findSubscriptionsForEmail").mockResolvedValue([]);
     const dbMod = await import("../_lib/db.js");
+    
+    // This spy now works safely against our mock
     vi.spyOn(dbMod.prisma.userSubscription, "create").mockResolvedValue({
       id: "id",
       email: "a@b.com",
@@ -72,7 +87,8 @@ describe("Verification API", () => {
       activatedAt: new Date(),
       updatedAt: new Date(),
       lastEmailSentAt: null,
-    });
+    } as any);
+    
     await handleVerifyCode(req, res);
     expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
   });
