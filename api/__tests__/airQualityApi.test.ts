@@ -4,7 +4,6 @@ import handleUpdateAirQuality from "../cron/update-air-quality.js";
 import * as airQualityService from "../_lib/services/airQuality.js";
 import {
   mockRes,
-  mockSubscription,
   mockAirQualityRecord,
 } from "./testUtils.js";
 import * as subscriptionService from "../_lib/services/subscription.js";

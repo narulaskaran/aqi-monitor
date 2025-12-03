@@ -3,7 +3,11 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { startVerification, verifyCode } from "../lib/api";
 import { isValidEmail } from "../lib/utils";
-import { useCodeInput } from "../lib/useCodeInput";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "./ui/input-otp";
 
 interface SubscriptionFormProps {
   zipCode: string;
@@ -20,16 +24,9 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [lastZipCode, setLastZipCode] = useState(zipCode);
+  const [otp, setOtp] = useState("");
 
   const verifyButtonRef = useRef<HTMLButtonElement>(null);
-  const {
-    code: verificationCode,
-    setCode: setVerificationCode,
-    inputRefs,
-    handleDigitChange,
-    handleKeyDown,
-    handlePaste,
-  } = useCodeInput(6, () => verifyButtonRef.current?.click());
 
   // Reset form when ZIP code changes
   useEffect(() => {
@@ -39,20 +36,11 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setSuccess(false);
       setIsVerifying(false);
       setError(null);
-      setVerificationCode(["", "", "", "", "", ""]);
+      setOtp("");
       setRetryCount(0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zipCode, lastZipCode]);
 
-  // Check if all digits are filled when code changes
-  useEffect(() => {
-    // If all digits are filled and not currently loading, verify the code
-    if (verificationCode.every((digit) => digit !== "") && !isLoading) {
-      handleVerify();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verificationCode]);
+  }, [zipCode, lastZipCode]);
 
   const handleSubscribe = async () => {
     try {
@@ -82,11 +70,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
         // Reset retry count when starting a new verification
         setRetryCount(0);
         // Clear any existing verification code
-        setVerificationCode(["", "", "", "", "", ""]);
-        // Focus the first input
-        setTimeout(() => {
-          inputRefs[0].current?.focus();
-        }, 100);
+        setOtp("");
       } else {
         throw new Error(result.error || "Failed to send verification code");
       }
@@ -113,11 +97,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   };
 
   const handleVerify = async () => {
-    // Join the digits to form the complete code
-    const completeCode = verificationCode.join("");
-
     // Validate code format
-    if (completeCode.length !== 6) {
+    if (otp.length !== 6) {
       setError("Please enter a valid 6-digit verification code");
       return;
     }
@@ -126,7 +107,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setError(null);
       setIsLoading(true);
 
-      const result = await verifyCode(email, zipCode, completeCode);
+      const result = await verifyCode(email, zipCode, otp);
       console.log("Code verification response:", result);
 
       if (result.success && result.valid) {
@@ -138,7 +119,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
         setRetryCount(newRetryCount);
 
         // Clear the verification code
-        setVerificationCode(["", "", "", "", "", ""]);
+        setOtp("");
 
         // If too many failed attempts, offer to resend
         if (newRetryCount >= 3) {
@@ -158,10 +139,6 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
           ? err.message
           : "An error occurred. Please try again."
       );
-      // Focus the first input after error
-      setTimeout(() => {
-        inputRefs[0].current?.focus();
-      }, 100);
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +146,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
   const handleResendCode = () => {
     // Reset verification state
-    setVerificationCode(["", "", "", "", "", ""]);
+    setOtp("");
     setIsVerifying(false);
     setError(null);
 
@@ -233,25 +210,24 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             <label className="text-sm font-medium text-gray-600">
               Enter verification code
             </label>
-            <div
-              className="flex gap-2 w-full justify-center"
-              onPaste={handlePaste}
-            >
-              {[0, 1, 2, 3, 4, 5].map((index) => (
-                <div key={index} className="w-10 h-12">
-                  <input
-                    ref={inputRefs[index]}
-                    className="w-full h-full text-center text-lg font-medium border rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700"
-                    type="text"
-                    maxLength={1}
-                    value={verificationCode[index]}
-                    onChange={(e) => handleDigitChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    disabled={isLoading}
-                    autoComplete="one-time-code"
-                  />
-                </div>
-              ))}
+            <div className="flex justify-center w-full">
+              <InputOTP
+                maxLength={6}
+                value={otp}
+                onChange={(value) => {
+                  setOtp(value);
+                }}
+                onComplete={() => verifyButtonRef.current?.click()}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
           </div>
 
@@ -260,7 +236,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
               type="submit"
               className="flex-1"
               disabled={
-                isLoading || verificationCode.some((digit) => digit === "")
+                isLoading || otp.length !== 6
               }
               ref={verifyButtonRef}
             >

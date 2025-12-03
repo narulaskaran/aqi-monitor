@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "vite",
     "build": "npx prisma generate && vite build",
     "vercel-build": "npx prisma migrate deploy && npm run build",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 10",
@@ -30,6 +30,7 @@
     "@vercel/speed-insights": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.483.0",
     "p-queue": "^8.1.0",

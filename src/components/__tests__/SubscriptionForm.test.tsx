@@ -11,6 +11,22 @@ import {
   verifyCode as realVerifyCode,
 } from "../../lib/api";
 
+// Mock the UI components directly to avoid context issues
+vi.mock("../ui/input-otp", () => ({
+  InputOTP: ({ children, onChange, ...props }: any) => (
+    <div data-testid="input-otp-container">
+      <input
+        data-testid="otp-input"
+        onChange={(e) => onChange(e.target.value)}
+        {...props}
+      />
+      {children}
+    </div>
+  ),
+  InputOTPGroup: ({ children }: any) => <div>{children}</div>,
+  InputOTPSlot: ({ index }: any) => <div data-testid={`otp-slot-${index}`} />,
+}));
+
 vi.mock("../../lib/api", () => ({
   startVerification: vi.fn(),
   verifyCode: vi.fn(),
@@ -69,20 +85,27 @@ describe("SubscriptionForm", () => {
     startVerification.mockResolvedValue({ success: true });
     verifyCode.mockResolvedValue({ success: false, error: "Invalid code" });
     renderWithTheme(<SubscriptionForm zipCode="12345" />);
+    
+    // Start verification
     const emailInput = screen.getByPlaceholderText(/email/i);
     fireEvent.change(emailInput, { target: { value: "test@example.com" } });
     fireEvent.click(screen.getByRole("button"));
+    
+    // Wait for code input
     await waitFor(() => {
-      // Wait for code input to appear
-      expect(screen.getAllByText(/verification code/i).length).toBeGreaterThan(
-        0
-      );
+      expect(screen.getAllByText(/verification code/i).length).toBeGreaterThan(0);
     });
-    // Simulate entering 6 digits (not implemented)
-    // fireEvent.change(screen.getByPlaceholderText(/code/i), { target: { value: "123456" } });
-    // fireEvent.click(screen.getByRole("button", { name: /verify/i }));
-    // await waitFor(() => {
-    //   expect(screen.getByText(/invalid code/i)).toBeInTheDocument();
-    // });
+
+    // Enter code
+    const otpInput = screen.getByTestId("otp-input");
+    fireEvent.change(otpInput, { target: { value: "123456" } });
+    
+    // Verify
+    const verifyBtn = screen.getByRole("button", { name: /verify/i });
+    fireEvent.click(verifyBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/invalid code/i)).toBeInTheDocument();
+    });
   });
 });

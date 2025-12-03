@@ -7,12 +7,28 @@ import {
 } from "../../lib/test-utils";
 import AuthWidget from "../AuthWidget";
 
+// Mock the UI components directly to avoid context issues
+vi.mock("../ui/input-otp", () => ({
+  InputOTP: ({ children, onChange, ...props }: any) => (
+    <div data-testid="input-otp-container">
+      <input
+        data-testid="otp-input"
+        onChange={(e) => onChange(e.target.value)}
+        {...props}
+      />
+      {children}
+    </div>
+  ),
+  InputOTPGroup: ({ children }: any) => <div>{children}</div>,
+  InputOTPSlot: ({ index }: any) => <div data-testid={`otp-slot-${index}`} />,
+}));
+
 describe("AuthWidget", () => {
   beforeEach(() => {
-    // @ts-expect-error - Mocking fetch
-    global.fetch = undefined;
+    global.fetch = vi.fn();
     localStorage.clear();
   });
+// ... (rest of the file remains the same)
 
   it("renders without crashing", () => {
     renderWithTheme(<AuthWidget />);
@@ -49,7 +65,7 @@ describe("AuthWidget", () => {
   });
 
   it("shows error if code send fails", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    (global.fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({ success: false, error: "API error" }),
     });
@@ -63,7 +79,40 @@ describe("AuthWidget", () => {
     });
   });
 
-  it.skip("shows error if code verify fails", async () => {
-    // This test is skipped because simulating code entry is not implemented.
+  it("shows error if code verify fails", async () => {
+    // Mock successful email send first
+    (global.fetch as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: false, error: "Invalid code" }),
+      });
+
+    renderWithTheme(<AuthWidget />);
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    
+    // Enter email
+    const emailInput = screen.getByPlaceholderText(/email/i);
+    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /send code/i }));
+
+    // Wait for OTP input to appear (mocked)
+    const otpInput = await screen.findByTestId("otp-input");
+    expect(otpInput).toBeInTheDocument();
+
+    // Enter code
+    fireEvent.change(otpInput, { target: { value: "123456" } });
+    
+    // Click verify
+    const verifyBtn = screen.getByRole("button", { name: /verify/i });
+    expect(verifyBtn).not.toBeDisabled();
+    fireEvent.click(verifyBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Invalid code")).toBeInTheDocument();
+    });
   });
 });
