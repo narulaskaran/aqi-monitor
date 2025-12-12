@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { prisma } from "./_lib/db.js";
-import { validateUnsubscribeToken, deleteAuthTokensForEmail } from "./_lib/services/subscription.js";
+import { validateUnsubscribeToken } from "./_lib/services/subscription.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {

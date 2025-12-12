@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import handleUnsubscribe from "../unsubscribe.js";
-import { validateUnsubscribeToken, deleteAuthTokensForEmail } from "../_lib/services/subscription.js";
+import { validateUnsubscribeToken } from "../_lib/services/subscription.js";
 
 vi.mock("../_lib/services/subscription.js", () => ({
   validateUnsubscribeToken: vi.fn(),
