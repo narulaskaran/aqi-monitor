@@ -39,6 +39,7 @@ export interface AirQualityEmailParams {
   // Common
   unsubscribeToken: string;
   websiteUrl: string;
+  subscriptionId: string;
 }
 
 /**
@@ -119,7 +120,7 @@ export function airQualityEmail(params: AirQualityEmailParams): string {
           <p style="color: #718096; font-size: 0.875rem; margin-top: 30px;">
             You're receiving this email because you subscribed to air quality alerts.
             <br>
-            <a href="${websiteUrl}/unsubscribe?token=${unsubscribeToken}" style="color: #4a5568; text-decoration: underline;">
+            <a href="${websiteUrl}/unsubscribe?subscription_id=${params.subscriptionId}&token=${unsubscribeToken}" style="color: #4a5568; text-decoration: underline;">
               Unsubscribe from these alerts
             </a>
           </p>
