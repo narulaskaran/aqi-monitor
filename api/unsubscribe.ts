@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { prisma } from "./_lib/db.js";
-import { authenticate } from "./_lib/middleware/auth.js";
-import { deleteAuthTokensForEmail } from "./_lib/services/subscription.js";
+import { validateUnsubscribeToken } from "./_lib/services/subscription.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -19,40 +18,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: req.body,
     });
 
-    // Authenticate user
-    let user;
-    try {
-      user = await authenticate(req);
-    } catch (error) {
-      return res.status(401).json({ success: false, error: (error as Error).message });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+       return res.status(401).json({ success: false, error: "Missing or invalid auth token" });
+    }
+    const token = authHeader.split(" ")[1];
+
+    const subscriptionId = validateUnsubscribeToken(token);
+    if (!subscriptionId) {
+       return res.status(401).json({ success: false, error: "Invalid or expired unsubscribe token" });
     }
 
-    const { subscription_id } = req.body;
-
-    if (!subscription_id || typeof subscription_id !== "string") {
-      return res
-        .status(400)
-        .json({ success: false, error: "Missing subscription_id" });
+    const { subscription_id: bodyId } = req.body;
+    // Security check: ensure the token matches the requested subscription ID
+    if (bodyId && bodyId !== subscriptionId) {
+        return res.status(400).json({ success: false, error: "Subscription ID mismatch" });
     }
 
-    // Find the subscription and set active to false if it belongs to the user
     const subscription = await prisma.userSubscription.findUnique({
-      where: { id: subscription_id },
+      where: { id: subscriptionId },
     });
     
-    if (!subscription || subscription.email !== user.email) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Subscription not found" });
+    if (!subscription) {
+      return res.status(404).json({ success: false, error: "Subscription not found" });
     }
     
     await prisma.userSubscription.update({
-      where: { id: subscription_id },
+      where: { id: subscriptionId },
       data: { active: false },
     });
-    
-    // Delete all tokens for this user
-    await deleteAuthTokensForEmail(user.email);
     
     return res.json({
       success: true,

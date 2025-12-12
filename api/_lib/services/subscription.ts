@@ -352,6 +352,7 @@ export async function sendAirQualityAlerts(
         dominantPollutant,
         unsubscribeToken,
         websiteUrl,
+        subscriptionId: subscription.id,
       });
       const subject =
         aqi < 51

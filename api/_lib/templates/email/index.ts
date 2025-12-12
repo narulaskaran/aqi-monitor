@@ -39,6 +39,7 @@ export interface AirQualityEmailParams {
   // Common
   unsubscribeToken: string;
   websiteUrl: string;
+  subscriptionId: string;
 }
 
 /**

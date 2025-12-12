@@ -21,9 +21,8 @@ export function UnsubscribePage() {
   useEffect(() => {
     const unsubscribe = async () => {
       const token = searchParams.get("token");
-      const subscription_id = searchParams.get("subscription_id");
 
-      if (!token || !subscription_id) {
+      if (!token) {
         setStatus("error");
         setMessage(
           "Invalid unsubscribe link. Please try again or contact support."
@@ -40,7 +39,7 @@ export function UnsubscribePage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ subscription_id }),
+          body: JSON.stringify({}),
           credentials: "include", // Important for CORS
         });
 
