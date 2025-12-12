@@ -39,7 +39,6 @@ export function UnsubscribePage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          // Body is no longer needed as the token contains the identity
           body: JSON.stringify({}),
           credentials: "include", // Important for CORS
         });
