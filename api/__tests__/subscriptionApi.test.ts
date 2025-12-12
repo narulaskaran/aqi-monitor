@@ -88,6 +88,5 @@ describe("Unsubscribe API", () => {
     await handleUnsubscribe(req, res);
     
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
-    expect(deleteAuthTokensForEmail).toHaveBeenCalledWith('test@test.com');
   });
 });

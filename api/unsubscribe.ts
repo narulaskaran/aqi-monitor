@@ -48,9 +48,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       data: { active: false },
     });
     
-    // Delete all tokens for this user
-    await deleteAuthTokensForEmail(subscription.email);
-    
     return res.json({
       success: true,
       message: "Successfully unsubscribed from air quality alerts",
