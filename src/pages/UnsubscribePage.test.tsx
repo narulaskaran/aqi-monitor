@@ -8,7 +8,7 @@ describe("UnsubscribePage", () => {
     global.fetch = undefined;
   });
 
-  it("shows error for missing token or subscription_id", async () => {
+  it("shows error for missing token", async () => {
     renderWithRouter(<UnsubscribePage />, { initialEntries: ["/unsubscribe"] });
     await waitFor(() => {
       expect(screen.getByText("Unsubscribe Failed")).toBeInTheDocument();
@@ -26,7 +26,7 @@ describe("UnsubscribePage", () => {
       json: async () => ({ error: "API error" }),
     });
     renderWithRouter(<UnsubscribePage />, {
-      initialEntries: ["/unsubscribe?token=t&subscription_id=id"],
+      initialEntries: ["/unsubscribe?token=t"],
     });
     await waitFor(() => {
       screen.debug();
@@ -45,7 +45,7 @@ describe("UnsubscribePage", () => {
       json: async () => ({ success: true }),
     });
     renderWithRouter(<UnsubscribePage />, {
-      initialEntries: ["/unsubscribe?token=t&subscription_id=id"],
+      initialEntries: ["/unsubscribe?token=t"],
     });
     await waitFor(() => {
       screen.debug();
