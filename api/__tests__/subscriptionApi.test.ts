@@ -1,17 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import handleUnsubscribe from "../subscribe.js";
-import { authenticate } from "../_lib/middleware/auth.js";
+import handleUnsubscribe from "../unsubscribe.js";
+import { validateUnsubscribeToken, deleteAuthTokensForEmail } from "../_lib/services/subscription.js";
 
-vi.mock("../_lib/services/email.js", () => ({
-  sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
-  checkVerificationCode: vi
-    .fn()
-    .mockResolvedValue({ success: true, valid: true }),
-  sendEmail: vi.fn().mockResolvedValue({ success: true }),
-}));
-
-vi.mock("../_lib/middleware/auth.js", () => ({
-  authenticate: vi.fn(),
+vi.mock("../_lib/services/subscription.js", () => ({
+  validateUnsubscribeToken: vi.fn(),
+  deleteAuthTokensForEmail: vi.fn(),
+  generateUnsubscribeToken: vi.fn(),
+  sendEmail: vi.fn(),
 }));
 
 vi.mock("../_lib/db.js", () => ({
@@ -19,7 +14,6 @@ vi.mock("../_lib/db.js", () => ({
     userSubscription: {
       findUnique: vi.fn(),
       update: vi.fn(),
-      // Add other methods here if your code uses them (e.g., create, delete)
     },
   },
 }));
@@ -38,93 +32,62 @@ describe("Unsubscribe API", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 if user missing", async () => {
-    const req: any = { method: 'POST', body: { subscription_id: "id" } };
+  it("returns 401 if token missing", async () => {
+    const req: any = { method: 'POST', headers: {}, body: {} };
     const res = mockRes();
-    (authenticate as any).mockRejectedValue(new Error("Unauthorized"));
     await handleUnsubscribe(req, res);
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      error: "Unauthorized",
-    });
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Missing or invalid auth token" }));
   });
 
-  it("returns 400 if subscription_id missing", async () => {
-    const req: any = { method: 'POST', body: {} };
-    const res = mockRes();
-    (authenticate as any).mockResolvedValue({ email: "a@b.com" });
-    await handleUnsubscribe(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      error: "Missing subscription_id",
-    });
-  });
-
-  it("returns 404 if subscription not found or not owned by user", async () => {
-    const req: any = {
-      method: 'POST',
-      body: { subscription_id: "id" },
+  it("returns 401 if token invalid", async () => {
+    const req: any = { 
+        method: 'POST', 
+        headers: { authorization: 'Bearer invalid' }, 
+        body: {} 
     };
     const res = mockRes();
-    (authenticate as any).mockResolvedValue({ email: "a@b.com" });
-    
-    // This import now returns the MOCK defined above, not the real file
-    const mod = await import("../_lib/db.js");
-    
-    // We can spy on the mock directly
-    vi.spyOn(mod.prisma.userSubscription, "findUnique").mockResolvedValue(null);
+    (validateUnsubscribeToken as any).mockReturnValue(null);
     
     await handleUnsubscribe(req, res);
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      error: "Subscription not found",
-    });
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Invalid or expired unsubscribe token" }));
+  });
+
+  it("returns 400 if body ID mismatches token ID", async () => {
+    const req: any = { 
+        method: 'POST', 
+        headers: { authorization: 'Bearer valid' }, 
+        body: { subscription_id: 'other' } 
+    };
+    const res = mockRes();
+    (validateUnsubscribeToken as any).mockReturnValue('sub-123');
+    
+    await handleUnsubscribe(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Subscription ID mismatch" }));
   });
 
   it("returns 200 if successful", async () => {
-    const req: any = {
-      method: 'POST',
-      body: { subscription_id: "id" },
+     const req: any = { 
+        method: 'POST', 
+        headers: { authorization: 'Bearer valid' }, 
+        body: { subscription_id: 'sub-123' } 
     };
     const res = mockRes();
-    (authenticate as any).mockResolvedValue({ email: "a@b.com" });
+    (validateUnsubscribeToken as any).mockReturnValue('sub-123');
     
     const mod = await import("../_lib/db.js");
-    
-    // Setup the mock returns
     vi.spyOn(mod.prisma.userSubscription, "findUnique").mockResolvedValue({
-      id: "id",
-      email: "a@b.com",
-      zipCode: "12345",
-      createdAt: new Date(),
-      active: true,
-      activatedAt: new Date(),
-      updatedAt: new Date(),
-      lastEmailSentAt: null,
-    } as any); // Type assertion simplifies the mock object creation
-    
-    vi.spyOn(mod.prisma.userSubscription, "update").mockResolvedValue({
-      id: "id",
-      email: "a@b.com",
-      zipCode: "12345",
-      createdAt: new Date(),
-      active: false,
-      activatedAt: new Date(),
-      updatedAt: new Date(),
-      lastEmailSentAt: null,
+        id: 'sub-123',
+        email: 'test@test.com'
     } as any);
     
-    const subMod = await import("../_lib/services/subscription.js");
-    vi.spyOn(subMod, "deleteAuthTokensForEmail").mockResolvedValue(1);
+    vi.spyOn(mod.prisma.userSubscription, "update").mockResolvedValue({} as any);
     
     await handleUnsubscribe(req, res);
     
-    expect(res.json).toHaveBeenCalledWith({
-      success: true,
-      message: "Successfully unsubscribed from air quality alerts",
-    });
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    expect(deleteAuthTokensForEmail).toHaveBeenCalledWith('test@test.com');
   });
 });
