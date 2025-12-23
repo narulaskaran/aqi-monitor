@@ -17,6 +17,7 @@ model UserSubscription {
   activatedAt     DateTime? // Indicates when the subscription was activated
   updatedAt       DateTime  @updatedAt
   lastEmailSentAt DateTime? // When the last update email was sent
+  expiresAt       DateTime? // Optional expiration date for the subscription
 
   @@index([email, zipCode]) // Add index for common query pattern
 }

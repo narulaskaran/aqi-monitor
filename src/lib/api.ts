@@ -98,21 +98,38 @@ export async function startVerification(email: string, zipCode: string) {
 /**
  * Verifies code sent to email
  */
-export async function verifyCode(email: string, zipCode: string, code: string) {
+export async function verifyCode(
+  email: string,
+  zipCode: string,
+  code: string,
+  expiresAt?: string
+) {
   try {
     const baseUrl = getBaseUrl();
     console.log(`Verifying code: ${baseUrl}/api/verify-code`);
-    
+
+    const body: {
+      email: string;
+      zipCode: string;
+      code: string;
+      expiresAt?: string;
+    } = {
+      email,
+      zipCode,
+      code
+    };
+
+    // Add expiresAt if provided
+    if (expiresAt) {
+      body.expiresAt = expiresAt;
+    }
+
     const response = await fetch(`${baseUrl}/api/verify-code`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        email,
-        zipCode,
-        code
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {

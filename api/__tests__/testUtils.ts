@@ -16,6 +16,7 @@ export const mockSubscription = {
   activatedAt: new Date(),
   updatedAt: new Date(),
   lastEmailSentAt: null,
+  expiresAt: null,
 };
 
 export const mockAirQualityRecord = {

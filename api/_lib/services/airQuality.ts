@@ -385,6 +385,13 @@ export async function updateAirQualityForAllSubscriptions(): Promise<void> {
   try {
     console.log("Starting to update air quality data for all subscriptions");
 
+    // First, deactivate any expired subscriptions
+    const { deactivateExpiredSubscriptions } = await import("./subscription.js");
+    const deactivatedCount = await deactivateExpiredSubscriptions();
+    if (deactivatedCount > 0) {
+      console.log(`Deactivated ${deactivatedCount} expired subscription(s) before processing`);
+    }
+
     // Get all unique ZIP codes from active subscriptions
     const subscriptions = await prisma.userSubscription.findMany({
       where: {

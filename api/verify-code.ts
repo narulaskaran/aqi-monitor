@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { email, zipCode, code, mode } = req.body;
+    const { email, zipCode, code, mode, expiresAt } = req.body;
 
     if (!email || !zipCode || !code) {
       return res.status(400).json({
@@ -26,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       zipCode,
       code,
       mode,
+      expiresAt,
     });
 
     // Verify the code
@@ -54,13 +55,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         // Default: create subscription
         try {
+          const subscriptionData: {
+            email: string;
+            zipCode: string;
+            active: boolean;
+            activatedAt: Date;
+            expiresAt?: Date;
+          } = {
+            email,
+            zipCode,
+            active: true,
+            activatedAt: new Date(),
+          };
+
+          // Add expiresAt if provided
+          if (expiresAt) {
+            subscriptionData.expiresAt = new Date(expiresAt);
+          }
+
           await prisma.userSubscription.create({
-            data: {
-              email,
-              zipCode,
-              active: true,
-              activatedAt: new Date(),
-            },
+            data: subscriptionData,
           });
         } catch (dbError) {
           console.error(

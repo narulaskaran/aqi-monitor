@@ -18,6 +18,7 @@ export interface Subscription {
   activatedAt: Date | null;
   updatedAt: Date;
   lastEmailSentAt: Date | null;
+  expiresAt: Date | null;
 }
 
 // Air quality alert thresholds
@@ -389,6 +390,35 @@ export async function sendAirQualityAlerts(
     );
     throw error;
   }
+}
+
+/**
+ * Deactivates all expired subscriptions
+ * @returns The number of subscriptions that were deactivated
+ */
+export async function deactivateExpiredSubscriptions(): Promise<number> {
+  const now = new Date();
+  console.log("Checking for expired subscriptions...");
+
+  const result = await prisma.userSubscription.updateMany({
+    where: {
+      active: true,
+      expiresAt: {
+        lte: now,
+      },
+    },
+    data: {
+      active: false,
+    },
+  });
+
+  if (result.count > 0) {
+    console.log(`Deactivated ${result.count} expired subscription(s)`);
+  } else {
+    console.log("No expired subscriptions found");
+  }
+
+  return result.count;
 }
 
 /**
