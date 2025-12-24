@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "npx prisma generate && vite build",
     "vercel-build": "npx prisma migrate deploy && npm run build",
+    "db:save": "./scripts/create-migration.sh",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 10",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -45,6 +46,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@shadcn/ui": "^0.0.4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",

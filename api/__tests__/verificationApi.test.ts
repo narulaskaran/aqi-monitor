@@ -11,6 +11,7 @@ vi.mock("../_lib/db.js", () => ({
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
   },
 }));
@@ -46,7 +47,7 @@ describe("Verification API", () => {
     const mod = await import("../_lib/services/email.js");
     vi.spyOn(mod, "sendVerificationCode").mockResolvedValue({ success: true });
     const subMod = await import("../_lib/services/subscription.js");
-    vi.spyOn(subMod, "findSubscriptionsForEmail").mockResolvedValue([]);
+    vi.spyOn(subMod, "subscriptionExists").mockResolvedValue(false);
     await handleStartVerification(req, res);
     expect(res.json).toHaveBeenCalledWith({ success: true });
   });
@@ -74,7 +75,7 @@ describe("Verification API", () => {
       valid: true,
     });
     const subMod = await import("../_lib/services/subscription.js");
-    vi.spyOn(subMod, "findSubscriptionsForEmail").mockResolvedValue([]);
+    vi.spyOn(subMod, "subscriptionExists").mockResolvedValue(false);
     const dbMod = await import("../_lib/db.js");
     
     // This spy now works safely against our mock
@@ -99,9 +100,7 @@ describe("Verification API edge cases", () => {
     const req: any = { method: 'POST', body: { email: "a@b.com", zipCode: "12345" } };
     const res = mockRes();
     const subMod = await import("../_lib/services/subscription.js");
-    vi.spyOn(subMod, "findSubscriptionsForEmail").mockResolvedValue([
-      mockSubscription,
-    ]);
+    vi.spyOn(subMod, "subscriptionExists").mockResolvedValue(true);
     await handleStartVerification(req, res);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
@@ -112,7 +111,7 @@ describe("Verification API edge cases", () => {
     const req: any = { method: 'POST', body: { email: "a@b.com", zipCode: "12345" } };
     const res = mockRes();
     const subMod = await import("../_lib/services/subscription.js");
-    vi.spyOn(subMod, "findSubscriptionsForEmail").mockRejectedValue(
+    vi.spyOn(subMod, "subscriptionExists").mockRejectedValue(
       new Error("fail"),
     );
     await handleStartVerification(req, res);

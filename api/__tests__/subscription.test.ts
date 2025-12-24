@@ -136,3 +136,19 @@ describe("sendAirQualityAlerts and token cleanup", () => {
     expect(result).toBe(2);
   });
 });
+
+describe("Subscription Expiration", () => {
+  it("deactivates expired subscriptions", async () => {
+    const mod = await import("../_lib/services/subscription.js");
+    vi.spyOn(mod, "deactivateExpiredSubscriptions").mockResolvedValue(5);
+    const result = await mod.deactivateExpiredSubscriptions();
+    expect(result).toBe(5);
+  });
+
+  it("deactivates no subscriptions when none are expired", async () => {
+    const mod = await import("../_lib/services/subscription.js");
+    vi.spyOn(mod, "deactivateExpiredSubscriptions").mockResolvedValue(0);
+    const result = await mod.deactivateExpiredSubscriptions();
+    expect(result).toBe(0);
+  });
+});

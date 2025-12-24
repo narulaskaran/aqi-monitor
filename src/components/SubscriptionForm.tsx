@@ -25,6 +25,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [retryCount, setRetryCount] = useState(0);
   const [lastZipCode, setLastZipCode] = useState(zipCode);
   const [otp, setOtp] = useState("");
+  const [hasEndDate, setHasEndDate] = useState(false);
+  const [endDate, setEndDate] = useState("");
 
   const verifyButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -38,6 +40,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setError(null);
       setOtp("");
       setRetryCount(0);
+      setHasEndDate(false);
+      setEndDate("");
     }
 
   }, [zipCode, lastZipCode]);
@@ -103,11 +107,25 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       return;
     }
 
+    // Validate end date if provided
+    if (hasEndDate && endDate) {
+      const selectedDate = new Date(endDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (selectedDate < today) {
+        setError("End date must be today or in the future");
+        return;
+      }
+    }
+
     try {
       setError(null);
       setIsLoading(true);
 
-      const result = await verifyCode(email, zipCode, otp);
+      // Pass expiresAt if end date is set
+      const expiresAt = hasEndDate && endDate ? new Date(endDate).toISOString() : undefined;
+      const result = await verifyCode(email, zipCode, otp, expiresAt);
       console.log("Code verification response:", result);
 
       if (result.success && result.valid) {
@@ -186,6 +204,42 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
           />
+
+          {/* Optional end date section */}
+          <div className="space-y-2">
+            <label className="flex items-center space-x-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasEndDate}
+                onChange={(e) => {
+                  setHasEndDate(e.target.checked);
+                  if (!e.target.checked) {
+                    setEndDate("");
+                  }
+                }}
+                disabled={isLoading}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-gray-700">Set an end date for this subscription (optional)</span>
+            </label>
+
+            {hasEndDate && (
+              <div className="ml-6 space-y-1">
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  disabled={isLoading}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500">
+                  Your subscription will automatically end on this date
+                </p>
+              </div>
+            )}
+          </div>
+
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Sending..." : "Sign Up for Alerts"}
           </Button>

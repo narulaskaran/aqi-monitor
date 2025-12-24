@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sendVerificationCode } from "./_lib/services/email.js";
-import { findSubscriptionsForEmail } from "./_lib/services/subscription.js";
+import { subscriptionExists } from "./_lib/services/subscription.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -24,12 +24,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log("REST API verify request:", { email, zipCode });
 
     // Check if subscription already exists
-    const subscriptions = await findSubscriptionsForEmail(email);
-    const existingSubscription = subscriptions.find(
-      (sub) => sub.zipCode === zipCode,
-    );
+    const exists = await subscriptionExists(email, zipCode);
 
-    if (existingSubscription && existingSubscription.active) {
+    if (exists) {
       return res.json({
         success: false,
         error: "This email is already subscribed for this ZIP code",

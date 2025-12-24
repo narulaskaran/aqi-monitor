@@ -80,19 +80,30 @@ This project uses the Vercel CLI for a seamless local development experience.
     ```
     This starts both the frontend (Vite) and the serverless API functions, mimicking the Vercel production environment. The app will be available at `http://localhost:3000`.
 
-### Database Migrations
+### Database Management
 
-To apply database migrations locally:
+When you modify `prisma/schema.prisma`, you need to create a migration file to apply those changes to the database.
+
+**To create a new migration:**
+
+1.  Make your changes to `prisma/schema.prisma`.
+2.  Run the helper script:
+    ```bash
+    npm run db:save -- <migration_name>
+    ```
+    *Example:* `npm run db:save -- add_new_user_field`
+3.  **Commit** the generated folder in `prisma/migrations/` to Git. This is crucial for the changes to be applied during deployment.
+
+**To apply migrations locally:**
 
 ```bash
 npx prisma migrate dev
 ```
 
-To deploy migrations to production (or if you want to just deploy without generating new migration files):
+**To apply migrations in production:**
 
-```bash
-npx prisma migrate deploy
-```
+The project is configured to automatically apply pending migrations during the Vercel build process.
+
 
 ## Project Structure
 
