@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "npx prisma generate && vite build",
     "vercel-build": "npx prisma migrate deploy && npm run build",
+    "db:save": "./scripts/create-migration.sh",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 10",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
