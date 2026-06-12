@@ -41,6 +41,12 @@ vi.mock("../_lib/db.js", () => ({
   },
 }));
 
+// Stub the subscription service so vi.importActual of the airQuality module
+// below doesn't drag in the real Upstash Redis client (which requires env vars)
+vi.mock("../_lib/services/subscription.js", () => ({
+  sendAirQualityAlerts: vi.fn(),
+}));
+
 describe("handleForecast – validation errors", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -250,18 +256,40 @@ describe("handleForecast – horizon clamping", () => {
   });
 });
 
-describe("fetchAirQualityForecast service – day grouping logic", () => {
-  it("getMockForecastData returns entries within the requested range", () => {
+describe("getMockForecastData – real implementation", () => {
+  it("returns one entry per UTC day across the requested range", async () => {
+    // The module validates this env var at import time
+    vi.stubEnv("GOOGLE_AIR_QUALITY_API_KEY", "test-key");
+    const actual = await vi.importActual<typeof airQualityService>(
+      "../_lib/services/airQuality.js",
+    );
+
     const start = new Date("2026-06-12T00:00:00Z");
     const end = new Date("2026-06-14T23:59:59Z");
-    const result = airQualityService.getMockForecastData(start, end);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result.length).toBeLessThanOrEqual(4);
+    const result = actual.getMockForecastData(start, end);
+
+    expect(result.map((d) => d.date)).toEqual([
+      "2026-06-12",
+      "2026-06-13",
+      "2026-06-14",
+    ]);
     for (const day of result) {
-      expect(day).toHaveProperty("date");
-      expect(day).toHaveProperty("maxAqi");
-      expect(day).toHaveProperty("category");
-      expect(day).toHaveProperty("dominantPollutant");
+      expect(day.maxAqi).toBeGreaterThan(0);
+      expect(day.category).toBeTruthy();
+      expect(day.dominantPollutant).toBeTruthy();
     }
+  });
+
+  it("caps the mock forecast at 4 days", async () => {
+    vi.stubEnv("GOOGLE_AIR_QUALITY_API_KEY", "test-key");
+    const actual = await vi.importActual<typeof airQualityService>(
+      "../_lib/services/airQuality.js",
+    );
+
+    const start = new Date("2026-06-12T00:00:00Z");
+    const end = new Date("2026-06-20T23:59:59Z");
+    const result = actual.getMockForecastData(start, end);
+
+    expect(result.length).toBe(4);
   });
 });

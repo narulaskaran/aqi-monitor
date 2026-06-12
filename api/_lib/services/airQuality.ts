@@ -423,6 +423,8 @@ export async function updateAirQualityForAllSubscriptions(): Promise<void> {
 }
 
 // Forecast types
+// NOTE: keep in sync with the frontend copy in src/types/forecast.ts
+// (api/ and src/ build separately, so the type can't be shared directly)
 export interface DailyForecast {
   date: string; // YYYY-MM-DD (UTC)
   maxAqi: number;
@@ -483,7 +485,6 @@ export async function fetchAirQualityForecast(
     }
 
     const data = await response.json();
-    console.log(`Forecast page ${pagesFetched + 1} fetched`);
 
     const hourlyForecasts: any[] = data.hourlyForecasts ?? [];
     for (const hourly of hourlyForecasts) {
