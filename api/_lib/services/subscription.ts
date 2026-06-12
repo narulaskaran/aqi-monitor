@@ -18,6 +18,7 @@ export interface Subscription {
   activatedAt: Date | null;
   updatedAt: Date;
   lastEmailSentAt: Date | null;
+  startsAt: Date | null;
   expiresAt: Date | null;
 }
 
@@ -283,11 +284,12 @@ export async function sendAirQualityAlerts(
   dominantPollutant: string,
 ): Promise<number> {
   try {
-    // Get all active subscriptions for this ZIP code
+    // Get all active subscriptions for this ZIP code whose start date has arrived
     const subscriptions = await prisma.userSubscription.findMany({
       where: {
         zipCode,
         active: true,
+        OR: [{ startsAt: null }, { startsAt: { lte: new Date() } }],
       },
     });
 

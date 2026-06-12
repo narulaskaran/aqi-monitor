@@ -140,7 +140,8 @@ export async function verifyCode(
   email: string,
   zipCode: string,
   code: string,
-  expiresAt?: string
+  expiresAt?: string,
+  startsAt?: string
 ) {
   try {
     const baseUrl = getBaseUrl();
@@ -150,12 +151,18 @@ export async function verifyCode(
       email: string;
       zipCode: string;
       code: string;
+      startsAt?: string;
       expiresAt?: string;
     } = {
       email,
       zipCode,
       code
     };
+
+    // Add startsAt if provided
+    if (startsAt) {
+      body.startsAt = startsAt;
+    }
 
     // Add expiresAt if provided
     if (expiresAt) {

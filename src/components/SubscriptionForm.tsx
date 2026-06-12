@@ -25,7 +25,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [retryCount, setRetryCount] = useState(0);
   const [lastZipCode, setLastZipCode] = useState(zipCode);
   const [otp, setOtp] = useState("");
-  const [hasEndDate, setHasEndDate] = useState(false);
+  const [hasDateRange, setHasDateRange] = useState(false);
+  const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const verifyButtonRef = useRef<HTMLButtonElement>(null);
@@ -40,7 +41,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setError(null);
       setOtp("");
       setRetryCount(0);
-      setHasEndDate(false);
+      setHasDateRange(false);
+      setStartDate("");
       setEndDate("");
     }
 
@@ -107,15 +109,32 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       return;
     }
 
-    // Validate end date if provided
-    if (hasEndDate && endDate) {
-      const selectedDate = new Date(endDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      if (selectedDate < today) {
+    // Validate start date if provided
+    if (hasDateRange && startDate) {
+      const selectedStart = new Date(startDate);
+      if (selectedStart < today) {
+        setError("Start date must be today or in the future");
+        return;
+      }
+    }
+
+    // Validate end date if provided
+    if (hasDateRange && endDate) {
+      const selectedEnd = new Date(endDate);
+      if (selectedEnd < today) {
         setError("End date must be today or in the future");
         return;
+      }
+      // If both set, start must be before end
+      if (startDate) {
+        const selectedStart = new Date(startDate);
+        if (selectedStart >= selectedEnd) {
+          setError("Start date must be before end date");
+          return;
+        }
       }
     }
 
@@ -123,9 +142,10 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setError(null);
       setIsLoading(true);
 
-      // Pass expiresAt if end date is set
-      const expiresAt = hasEndDate && endDate ? new Date(endDate).toISOString() : undefined;
-      const result = await verifyCode(email, zipCode, otp, expiresAt);
+      // Pass startsAt and expiresAt if date range is set
+      const startsAt = hasDateRange && startDate ? new Date(startDate).toISOString() : undefined;
+      const expiresAt = hasDateRange && endDate ? new Date(endDate).toISOString() : undefined;
+      const result = await verifyCode(email, zipCode, otp, expiresAt, startsAt);
       console.log("Code verification response:", result);
 
       if (result.success && result.valid) {
@@ -205,37 +225,58 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             disabled={isLoading}
           />
 
-          {/* Optional end date section */}
+          {/* Optional date range section */}
           <div className="space-y-2">
             <label className="flex items-center space-x-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
-                checked={hasEndDate}
+                checked={hasDateRange}
                 onChange={(e) => {
-                  setHasEndDate(e.target.checked);
+                  setHasDateRange(e.target.checked);
                   if (!e.target.checked) {
+                    setStartDate("");
                     setEndDate("");
                   }
                 }}
                 disabled={isLoading}
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
-              <span className="text-gray-700">Set an end date for this subscription (optional)</span>
+              <span className="text-gray-700">Schedule this subscription (optional)</span>
             </label>
 
-            {hasEndDate && (
-              <div className="ml-6 space-y-1">
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                  disabled={isLoading}
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500">
-                  Your subscription will automatically end on this date
-                </p>
+            {hasDateRange && (
+              <div className="ml-6 space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">
+                    Start date <span className="font-normal text-gray-500">(alerts begin; leave empty to start immediately)</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    disabled={isLoading}
+                    className="w-full"
+                    aria-label="Start date"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">
+                    End date <span className="font-normal text-gray-500">(alerts stop; leave empty to never expire)</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || new Date().toISOString().split("T")[0]}
+                    disabled={isLoading}
+                    className="w-full"
+                    aria-label="End date"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Your subscription will automatically end on this date
+                  </p>
+                </div>
               </div>
             )}
           </div>
