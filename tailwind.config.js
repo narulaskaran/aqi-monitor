@@ -49,6 +49,11 @@ export default {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
+  			},
+  			// Light tint of the EPA "Hazardous" maroon (#7E0023),
+  			// used by getAQIColor for AQI > 300
+  			maroon: {
+  				'100': '#f2dce3'
   			}
   		}
   	}

@@ -13,7 +13,9 @@ import "./App.css";
 import { useState, ChangeEvent, useEffect } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
 import { SubscriptionList } from "./components/SubscriptionList";
+import { ForecastCard } from "./components/ForecastCard";
 import { getAirQuality } from "./lib/api";
+import { getAQIColor } from "./lib/utils";
 import { ThemeToggle } from "./components/ThemeToggle";
 import AuthWidget from "./components/AuthWidget";
 
@@ -27,15 +29,6 @@ function App() {
     dominantPollutant: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const getAQIColor = (index: number): string => {
-    if (index <= 50) return "bg-green-100";
-    if (index <= 100) return "bg-yellow-100";
-    if (index <= 150) return "bg-orange-100";
-    if (index <= 200) return "bg-red-100";
-    if (index <= 300) return "bg-purple-100";
-    return "bg-maroon-100";
-  };
 
   const handleClick = async () => {
     try {
@@ -120,6 +113,7 @@ function App() {
               dominantPollutant={airQuality.dominantPollutant}
             />
             <SubscriptionForm zipCode={currentZipCode} />
+            <ForecastCard zipCode={currentZipCode} />
           </>
         )}
         <SubscriptionList />

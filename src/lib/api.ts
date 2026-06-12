@@ -2,6 +2,7 @@
  * API utilities for client-side requests
  */
 import { AirQualityData } from '../types/air-quality';
+import { DailyForecast } from '../types/forecast';
 
 /**
  * Gets the base URL for API requests based on environment
@@ -61,6 +62,35 @@ export async function getAirQuality(zipCode: string): Promise<AirQualityData> {
       error: 'Failed to fetch air quality data'
     };
   }
+}
+
+/**
+ * Fetches air quality forecast data for a ZIP code and date range
+ */
+export async function getAirQualityForecast(
+  zipCode: string,
+  startDate: string,
+  endDate?: string,
+): Promise<{ success: boolean; zipCode: string; forecasts: DailyForecast[] }> {
+  const baseUrl = getBaseUrl();
+  const params = new URLSearchParams({ zipCode, startDate });
+  if (endDate) params.set('endDate', endDate);
+  const url = `${baseUrl}/api/air-quality-forecast?${params.toString()}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    let message = `Failed to fetch forecast: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
 }
 
 /**

@@ -422,6 +422,139 @@ export async function updateAirQualityForAllSubscriptions(): Promise<void> {
   }
 }
 
+// Forecast types
+// NOTE: keep in sync with the frontend copy in src/types/forecast.ts
+// (api/ and src/ build separately, so the type can't be shared directly)
+export interface DailyForecast {
+  date: string; // YYYY-MM-DD (UTC)
+  maxAqi: number;
+  category: string;
+  dominantPollutant: string;
+}
+
+/**
+ * Fetches air quality forecast data from Google Air Quality API.
+ * Groups hourly forecasts by UTC date and returns the worst-case (max AQI) per day.
+ */
+export async function fetchAirQualityForecast(
+  latitude: number,
+  longitude: number,
+  startTime: Date,
+  endTime: Date,
+): Promise<DailyForecast[]> {
+  // Map to track the max-AQI hour per UTC date
+  const dailyMap = new Map<
+    string,
+    { maxAqi: number; category: string; dominantPollutant: string }
+  >();
+
+  let pageToken: string | undefined;
+  let pagesFetched = 0;
+  const maxPages = 5;
+
+  do {
+    const body: Record<string, unknown> = {
+      location: { latitude, longitude },
+      period: {
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      },
+      universalAqi: true,
+      extraComputations: ["LOCAL_AQI"],
+    };
+
+    if (pageToken) {
+      body.pageToken = pageToken;
+    }
+
+    const response = await fetch(
+      `https://airquality.googleapis.com/v1/forecast:lookup?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Google Forecast API error response:", errorText);
+      throw new Error(
+        `Failed to fetch air quality forecast: ${response.status} ${errorText}`,
+      );
+    }
+
+    const data = await response.json();
+
+    const hourlyForecasts: any[] = data.hourlyForecasts ?? [];
+    for (const hourly of hourlyForecasts) {
+      const dateStr = hourly.dateTime?.substring(0, 10); // "YYYY-MM-DD"
+      if (!dateStr) continue;
+
+      const epaIndex = (hourly.indexes ?? []).find(
+        (idx: any) => idx.code === "usa_epa",
+      );
+      if (!epaIndex) continue;
+
+      const aqi: number = epaIndex.aqi ?? 0;
+      const existing = dailyMap.get(dateStr);
+      if (!existing || aqi > existing.maxAqi) {
+        dailyMap.set(dateStr, {
+          maxAqi: aqi,
+          category: epaIndex.category ?? "Unknown",
+          dominantPollutant: epaIndex.dominantPollutant ?? "Unknown",
+        });
+      }
+    }
+
+    pageToken = data.nextPageToken;
+    pagesFetched++;
+  } while (pageToken && pagesFetched < maxPages);
+
+  // Sort by date ascending
+  return Array.from(dailyMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, { maxAqi, category, dominantPollutant }]) => ({
+      date,
+      maxAqi,
+      category,
+      dominantPollutant,
+    }));
+}
+
+/**
+ * Mocked forecast data for development/testing (no API key required)
+ */
+export function getMockForecastData(
+  startTime: Date,
+  endTime: Date,
+): DailyForecast[] {
+  const results: DailyForecast[] = [];
+  const mockEntries = [
+    { maxAqi: 42, category: "Good", dominantPollutant: "PM2.5" },
+    { maxAqi: 78, category: "Moderate", dominantPollutant: "O3" },
+    { maxAqi: 115, category: "Unhealthy for Sensitive Groups", dominantPollutant: "PM2.5" },
+    { maxAqi: 55, category: "Moderate", dominantPollutant: "NO2" },
+  ];
+
+  // Iterate day by day from startTime to endTime (UTC dates)
+  const cursor = new Date(startTime);
+  cursor.setUTCHours(0, 0, 0, 0);
+  const end = new Date(endTime);
+  end.setUTCHours(0, 0, 0, 0);
+
+  let i = 0;
+  while (cursor <= end && results.length < 4) {
+    const dateStr = cursor.toISOString().substring(0, 10);
+    const entry = mockEntries[i % mockEntries.length];
+    results.push({ date: dateStr, ...entry });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    i++;
+  }
+
+  return results;
+}
+
 /**
  * Gets the latest air quality record for a specific ZIP code
  */

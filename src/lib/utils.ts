@@ -6,6 +6,19 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Returns a Tailwind background color class for a given AQI index value.
+ * Matches the EPA AQI color scale.
+ */
+export function getAQIColor(index: number): string {
+  if (index <= 50) return "bg-green-100";
+  if (index <= 100) return "bg-yellow-100";
+  if (index <= 150) return "bg-orange-100";
+  if (index <= 200) return "bg-red-100";
+  if (index <= 300) return "bg-purple-100";
+  return "bg-maroon-100";
+}
+
+/**
  * Shared helper to handle pasting a 6-digit code into an array of inputs
  * @param e React.ClipboardEvent
  * @param code string[] (current code array)
