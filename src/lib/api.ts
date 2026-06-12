@@ -96,6 +96,44 @@ export async function startVerification(email: string, zipCode: string) {
 }
 
 /**
+ * Fetches all subscriptions for the authenticated user
+ */
+export async function getSubscriptions(token: string) {
+  const response = await fetch(getApiUrl("subscriptions"), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch subscriptions: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Toggles the active status of a subscription
+ */
+export async function updateSubscription(
+  token: string,
+  id: string,
+  active: boolean,
+) {
+  const response = await fetch(getApiUrl("subscriptions"), {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ id, active }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update subscription: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
  * Verifies code sent to email
  */
 export async function verifyCode(

@@ -1,63 +1,23 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { isValidEmail } from "../lib/utils";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "./ui/input-otp";
-
-const AUTH_TOKEN_KEY = "aqi_auth_token";
+import { useAuth } from "../lib/auth";
 
 export default function AuthWidget() {
+  const { isSignedIn, email: authEmail, isValidating, signIn, signOut } = useAuth();
+
   const [email, setEmail] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState<"email" | "code">("email");
-  const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
 
   const verifyButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Restore original useEffect for token validation
-  useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      setIsValidatingToken(false);
-      return;
-    }
-    setIsValidatingToken(true);
-    fetch("/api/validate-token", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Invalid token");
-        return res.json();
-      })
-      .then((data) => {
-        if (data.valid) {
-          setIsSignedIn(true);
-          if (data.email) setEmail(data.email);
-        } else {
-          localStorage.removeItem(AUTH_TOKEN_KEY);
-          setIsSignedIn(false);
-          setEmail("");
-        }
-      })
-      .catch(() => {
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        setIsSignedIn(false);
-        setEmail("");
-      })
-      .finally(() => {
-        setIsValidatingToken(false);
-      });
-  }, []);
 
   const handleSignIn = () => {
     setShowModal(true);
@@ -105,8 +65,7 @@ export default function AuthWidget() {
       const data = await res.json();
       if (!data.success || !data.token)
         throw new Error(data.error || "Invalid code");
-      localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-      setIsSignedIn(true);
+      signIn(data.token, email);
       setShowModal(false);
     } catch (err: unknown) {
       setError((err as Error).message || "Failed to verify code");
@@ -116,15 +75,9 @@ export default function AuthWidget() {
     }
   };
 
-  const handleSignOut = () => {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    setIsSignedIn(false);
-    setEmail("");
-  };
-
   return (
     <div className="flex items-center space-x-2">
-      {isValidatingToken ? (
+      {isValidating ? (
         <span className="text-gray-500 dark:text-gray-400 text-sm">
           Loading...
         </span>
@@ -192,17 +145,6 @@ export default function AuthWidget() {
                         value={otp}
                         onChange={(value) => {
                           setOtp(value);
-                          if (value.length === 6) {
-                            // Use a timeout to allow state update before submission if needed,
-                            // but direct call is usually fine.
-                            // However, verifyButtonRef click is safer to trigger form submission
-                            // naturally or just call the handler.
-                            // Given the UI has a button, let's let the user click or
-                            // auto-submit if desired. The original code auto-submitted.
-                            if (value.length === 6) {
-                                // Optional: auto-submit
-                            }
-                          }
                         }}
                         onComplete={() => verifyButtonRef.current?.click()}
                       >
@@ -258,14 +200,14 @@ export default function AuthWidget() {
             </span>
             <span
               className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight truncate max-w-[120px]"
-              title={email}
+              title={authEmail}
             >
-              {email}
+              {authEmail}
             </span>
           </div>
           <button
             className="ml-2 px-2 py-1 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-            onClick={handleSignOut}
+            onClick={signOut}
             title="Sign Out"
           >
             Sign Out

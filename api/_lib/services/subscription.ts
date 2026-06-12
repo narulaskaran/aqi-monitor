@@ -188,6 +188,34 @@ export async function findSubscriptionsForEmail(
 }
 
 /**
+ * Returns all subscriptions for an email, ordered active-first then most recently updated
+ */
+export async function getSubscriptionsForEmailSorted(
+  email: string,
+): Promise<Subscription[]> {
+  return await prisma.userSubscription.findMany({
+    where: { email },
+    orderBy: [{ active: "desc" }, { updatedAt: "desc" }],
+  });
+}
+
+/**
+ * Updates the active status of a subscription by ID.
+ * When activating, also sets activatedAt to now.
+ */
+export async function setSubscriptionActive(
+  id: string,
+  active: boolean,
+): Promise<Subscription> {
+  return await prisma.userSubscription.update({
+    where: { id },
+    data: active
+      ? { active: true, activatedAt: new Date() }
+      : { active: false },
+  });
+}
+
+/**
  * Checks if a subscription already exists
  */
 export async function subscriptionExists(

@@ -12,6 +12,7 @@ import {
 import "./App.css";
 import { useState, ChangeEvent, useEffect } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
+import { SubscriptionList } from "./components/SubscriptionList";
 import { getAirQuality } from "./lib/api";
 import { ThemeToggle } from "./components/ThemeToggle";
 import AuthWidget from "./components/AuthWidget";
@@ -121,6 +122,7 @@ function App() {
             <SubscriptionForm zipCode={currentZipCode} />
           </>
         )}
+        <SubscriptionList />
       </div>
 
       {/* Move AuthWidget to the bottom, above Admin/Ko-Fi */}
