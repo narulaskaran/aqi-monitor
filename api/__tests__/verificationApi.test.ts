@@ -129,3 +129,84 @@ describe("Verification API edge cases", () => {
     expect(res.status).toHaveBeenCalledWith(500);
   });
 });
+
+describe("Date-range subscription via handleVerifyCode", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("stores startsAt on the created subscription", async () => {
+    const startsAt = "2026-07-01T00:00:00.000Z";
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "123456", startsAt },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({ success: true, valid: true });
+
+    const dbMod = await import("../_lib/db.js");
+    const createSpy = vi.spyOn(dbMod.prisma.userSubscription, "create").mockResolvedValue({
+      id: "id",
+      email: "a@b.com",
+      zipCode: "12345",
+      createdAt: new Date(),
+      active: true,
+      activatedAt: new Date(),
+      updatedAt: new Date(),
+      lastEmailSentAt: null,
+      startsAt: new Date(startsAt),
+      expiresAt: null,
+    } as any);
+
+    await handleVerifyCode(req, res);
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ startsAt: new Date(startsAt) }),
+      })
+    );
+    expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
+  });
+
+  it("returns 400 when startsAt is same as expiresAt", async () => {
+    const date = "2026-07-01T00:00:00.000Z";
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "123456", startsAt: date, expiresAt: date },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({ success: true, valid: true });
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: "Start date must be before end date" })
+    );
+  });
+
+  it("returns 400 when startsAt is after expiresAt", async () => {
+    const req: any = {
+      method: "POST",
+      body: {
+        email: "a@b.com",
+        zipCode: "12345",
+        code: "123456",
+        startsAt: "2026-08-01T00:00:00.000Z",
+        expiresAt: "2026-07-01T00:00:00.000Z",
+      },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({ success: true, valid: true });
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: "Start date must be before end date" })
+    );
+  });
+});

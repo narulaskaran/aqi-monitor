@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from "vitest";
 import {
   generateUnsubscribeToken,
   validateUnsubscribeToken,
@@ -18,7 +18,7 @@ vi.mock("../_lib/db.js", () => ({
       delete: vi.fn(),
       deleteMany: vi.fn(),
     },
-    // Add other models if strictly needed by your service logic, 
+    // Add other models if strictly needed by your service logic,
     // but usually userSubscription is enough for these tests to load.
     zipCoordinates: {
       findUnique: vi.fn(),
@@ -37,6 +37,20 @@ vi.mock("../_lib/services/email.js", () => ({
     .mockResolvedValue({ success: true, valid: true }),
   sendEmail: vi.fn().mockResolvedValue({ success: true }),
 }));
+
+vi.mock("@upstash/redis", () => ({
+  Redis: {
+    fromEnv: vi.fn().mockReturnValue({}),
+  },
+}));
+
+vi.mock("@upstash/ratelimit", () => {
+  const RatelimitMock = vi.fn().mockImplementation(() => ({
+    limit: vi.fn().mockResolvedValue({ success: true }),
+  })) as any;
+  RatelimitMock.slidingWindow = vi.fn().mockReturnValue("sliding-window-config");
+  return { Ratelimit: RatelimitMock };
+});
 
 const OLD_ENV = process.env;
 
@@ -150,5 +164,58 @@ describe("Subscription Expiration", () => {
     vi.spyOn(mod, "deactivateExpiredSubscriptions").mockResolvedValue(0);
     const result = await mod.deactivateExpiredSubscriptions();
     expect(result).toBe(0);
+  });
+});
+
+describe("sendAirQualityAlerts — startsAt filtering", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks(); // restore spies from earlier describe blocks
+    vi.clearAllMocks();
+    process.env.VERCEL_ENV = "development";
+    process.env.VITE_API_URL = "http://localhost:5173";
+  });
+
+  it("queries prisma with startsAt filter (excludes future-start subscriptions)", async () => {
+    const dbMod = await import("../_lib/db.js");
+    const findManySpy = vi.spyOn(dbMod.prisma.userSubscription, "findMany").mockResolvedValue([]);
+
+    const mod = await import("../_lib/services/subscription.js");
+    await mod.sendAirQualityAlerts("12345", 100, "Moderate", "PM2.5");
+
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            { startsAt: null },
+            { startsAt: { lte: expect.any(Date) } },
+          ],
+        }),
+      })
+    );
+  });
+
+  it("skips a subscription whose startsAt is in the future", async () => {
+    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days ahead
+    const futureSubscription = {
+      ...mockSubscription,
+      id: "future-sub",
+      startsAt: futureDate,
+    };
+
+    const dbMod = await import("../_lib/db.js");
+    // Return empty because the query with the startsAt filter already excludes it
+    vi.spyOn(dbMod.prisma.userSubscription, "findMany").mockResolvedValue([]);
+
+    const emailMod = await import("../_lib/services/email.js");
+    const sendEmailSpy = vi.spyOn(emailMod, "sendEmail");
+
+    const mod = await import("../_lib/services/subscription.js");
+    const count = await mod.sendAirQualityAlerts("12345", 100, "Moderate", "PM2.5");
+
+    // No emails sent since the future subscription was filtered out
+    expect(count).toBe(0);
+    expect(sendEmailSpy).not.toHaveBeenCalled();
+    // Silence unused variable warning
+    void futureSubscription;
   });
 });

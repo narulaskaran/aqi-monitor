@@ -85,12 +85,12 @@ describe("SubscriptionForm", () => {
     startVerification.mockResolvedValue({ success: true });
     verifyCode.mockResolvedValue({ success: false, error: "Invalid code" });
     renderWithTheme(<SubscriptionForm zipCode="12345" />);
-    
+
     // Start verification
     const emailInput = screen.getByPlaceholderText(/email/i);
     fireEvent.change(emailInput, { target: { value: "test@example.com" } });
     fireEvent.click(screen.getByRole("button"));
-    
+
     // Wait for code input
     await waitFor(() => {
       expect(screen.getAllByText(/verification code/i).length).toBeGreaterThan(0);
@@ -99,13 +99,75 @@ describe("SubscriptionForm", () => {
     // Enter code
     const otpInput = screen.getByTestId("otp-input");
     fireEvent.change(otpInput, { target: { value: "123456" } });
-    
+
     // Verify
     const verifyBtn = screen.getByRole("button", { name: /verify/i });
     fireEvent.click(verifyBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/invalid code/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows start date and end date inputs when schedule checkbox is ticked", async () => {
+    renderWithTheme(<SubscriptionForm zipCode="12345" />);
+
+    // Date inputs should not be visible initially
+    expect(screen.queryByLabelText(/start date/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/end date/i)).not.toBeInTheDocument();
+
+    // Tick the checkbox
+    const checkbox = screen.getByRole("checkbox");
+    fireEvent.click(checkbox);
+
+    // Both date inputs should now be visible
+    await waitFor(() => {
+      expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/end date/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows validation error for a past start date", async () => {
+    startVerification.mockResolvedValue({ success: true });
+    renderWithTheme(<SubscriptionForm zipCode="12345" />);
+
+    // Fill email
+    const emailInput = screen.getByPlaceholderText(/email/i);
+    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+
+    // Tick the schedule checkbox
+    const checkbox = screen.getByRole("checkbox");
+    fireEvent.click(checkbox);
+
+    // Set start date to yesterday
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText(/start date/i), { target: { value: yesterdayStr } });
+
+    // Submit the form to advance to OTP step
+    const emailInput2 = screen.getByPlaceholderText(/email/i);
+    const form = emailInput2.closest("form")!;
+    fireEvent.submit(form);
+
+    // Wait for OTP step
+    await waitFor(() => {
+      expect(screen.getAllByText(/verification code/i).length).toBeGreaterThan(0);
+    });
+
+    // Enter 6-digit OTP and try to verify — validation fires before network call
+    const otpInput = screen.getByTestId("otp-input");
+    fireEvent.change(otpInput, { target: { value: "123456" } });
+
+    const verifyBtn = screen.getByRole("button", { name: /verify/i });
+    fireEvent.click(verifyBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/start date must be today or in the future/i)).toBeInTheDocument();
     });
   });
 });

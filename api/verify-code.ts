@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { email, zipCode, code, mode, expiresAt } = req.body;
+    const { email, zipCode, code, mode, startsAt, expiresAt } = req.body;
 
     if (!email || !zipCode || !code) {
       return res.status(400).json({
@@ -26,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       zipCode,
       code,
       mode,
+      startsAt,
       expiresAt,
     });
 
@@ -60,6 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             zipCode: string;
             active: boolean;
             activatedAt: Date;
+            startsAt?: Date;
             expiresAt?: Date;
           } = {
             email,
@@ -68,9 +70,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             activatedAt: new Date(),
           };
 
+          // Add startsAt if provided
+          if (startsAt) {
+            subscriptionData.startsAt = new Date(startsAt);
+          }
+
           // Add expiresAt if provided
           if (expiresAt) {
             subscriptionData.expiresAt = new Date(expiresAt);
+          }
+
+          // Validate: startsAt must be strictly before expiresAt
+          if (subscriptionData.startsAt && subscriptionData.expiresAt) {
+            if (subscriptionData.startsAt >= subscriptionData.expiresAt) {
+              return res.status(400).json({
+                success: false,
+                error: "Start date must be before end date",
+              });
+            }
           }
 
           await prisma.userSubscription.create({
