@@ -3,8 +3,10 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
+import { getApiUrl } from "./api";
 
 const AUTH_TOKEN_KEY = "aqi_auth_token";
 
@@ -37,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    fetch("/api/validate-token", {
+    fetch(getApiUrl("validate-token"), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -67,15 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  const signIn = (token: string, email: string) => {
+  const signIn = useCallback((token: string, email: string) => {
     localStorage.setItem(AUTH_TOKEN_KEY, token);
     setState({ isSignedIn: true, email, token, isValidating: false });
-  };
+  }, []);
 
-  const signOut = () => {
+  const signOut = useCallback(() => {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     setState({ isSignedIn: false, email: "", token: null, isValidating: false });
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ ...state, signIn, signOut }}>

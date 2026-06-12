@@ -21,7 +21,7 @@ interface PendingToggle {
 }
 
 export function SubscriptionList() {
-  const { isSignedIn, token } = useAuth();
+  const { isSignedIn, token, signOut } = useAuth();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,11 +36,18 @@ export function SubscriptionList() {
       const data = await getSubscriptions(token);
       setSubscriptions(data.subscriptions ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load subscriptions");
+      const message =
+        err instanceof Error ? err.message : "Failed to load subscriptions";
+      // Expired/invalid session: clear it so the user can sign in again
+      if (message.includes("401")) {
+        signOut();
+        return;
+      }
+      setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, signOut]);
 
   useEffect(() => {
     if (isSignedIn) {
@@ -97,7 +104,7 @@ export function SubscriptionList() {
         </p>
       )}
 
-      {subscriptions.length > 0 && (
+      {!isLoading && subscriptions.length > 0 && (
         <ul className="space-y-2">
           {subscriptions.map((sub) => (
             <li
