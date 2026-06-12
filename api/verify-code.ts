@@ -30,6 +30,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       expiresAt,
     });
 
+    // Parse and validate the optional date range BEFORE consuming the
+    // one-time code, so invalid input doesn't burn the user's OTP.
+    let parsedStartsAt: Date | undefined;
+    let parsedExpiresAt: Date | undefined;
+
+    if (startsAt) {
+      parsedStartsAt = new Date(startsAt);
+      if (isNaN(parsedStartsAt.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid start date",
+        });
+      }
+    }
+
+    if (expiresAt) {
+      parsedExpiresAt = new Date(expiresAt);
+      if (isNaN(parsedExpiresAt.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid end date",
+        });
+      }
+    }
+
+    if (parsedStartsAt && parsedExpiresAt && parsedStartsAt >= parsedExpiresAt) {
+      return res.status(400).json({
+        success: false,
+        error: "Start date must be before end date",
+      });
+    }
+
     // Verify the code
     const result = await checkVerificationCode(email, code);
 
@@ -71,23 +103,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           };
 
           // Add startsAt if provided
-          if (startsAt) {
-            subscriptionData.startsAt = new Date(startsAt);
+          if (parsedStartsAt) {
+            subscriptionData.startsAt = parsedStartsAt;
           }
 
           // Add expiresAt if provided
-          if (expiresAt) {
-            subscriptionData.expiresAt = new Date(expiresAt);
-          }
-
-          // Validate: startsAt must be strictly before expiresAt
-          if (subscriptionData.startsAt && subscriptionData.expiresAt) {
-            if (subscriptionData.startsAt >= subscriptionData.expiresAt) {
-              return res.status(400).json({
-                success: false,
-                error: "Start date must be before end date",
-              });
-            }
+          if (parsedExpiresAt) {
+            subscriptionData.expiresAt = parsedExpiresAt;
           }
 
           await prisma.userSubscription.create({
