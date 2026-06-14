@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import * as api from "./api";
 
 describe("api utils", () => {
@@ -14,10 +15,10 @@ describe("api utils", () => {
 
     it("should throw an error when response is not ok", async () => {
       const mockError = { error: "Invalid or unsupported ZIP code" };
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
-        json: jest.fn().mockResolvedValue(mockError),
+        json: vi.fn().mockResolvedValue(mockError),
       });
 
       await expect(api.getAirQuality("00000")).rejects.toThrow(
@@ -26,10 +27,10 @@ describe("api utils", () => {
     });
 
     it("should throw a generic error when response is not ok and JSON has no error field", async () => {
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
-        json: jest.fn().mockResolvedValue({}),
+        json: vi.fn().mockResolvedValue({}),
       });
 
       await expect(api.getAirQuality("00000")).rejects.toThrow(
@@ -38,10 +39,10 @@ describe("api utils", () => {
     });
 
     it("should throw a generic error when JSON parsing fails on error response", async () => {
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 503,
-        json: jest.fn().mockRejectedValue(new Error("Invalid JSON")),
+        json: vi.fn().mockRejectedValue(new Error("Invalid JSON")),
       });
 
       await expect(api.getAirQuality("00000")).rejects.toThrow(
@@ -55,9 +56,9 @@ describe("api utils", () => {
         category: "Moderate",
         dominantPollutant: "pm2.5",
       };
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: jest.fn().mockResolvedValue(mockData),
+        json: vi.fn().mockResolvedValue(mockData),
       });
 
       const result = await api.getAirQuality("90210");
