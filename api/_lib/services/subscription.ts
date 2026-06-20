@@ -233,6 +233,24 @@ export async function subscriptionExists(
   return count > 0;
 }
 
+/**
+ * Bounded exponential backoff with jitter.
+ *
+ * Returns a delay in milliseconds: min(baseMs * 2^attempt, maxMs) * random(0..1).
+ * The cap keeps waits well under Vercel's function timeout (default 5 s).
+ *
+ * @param attempt  zero-based attempt index (0 = first retry)
+ * @param maxMs    upper bound in ms (default 5000)
+ * @param baseMs   initial delay in ms (default 500)
+ */
+export function backoff(
+  attempt: number,
+  { maxMs = 5000, baseMs = 500 }: { maxMs?: number; baseMs?: number } = {},
+): number {
+  const delay = Math.min(baseMs * 2 ** attempt, maxMs);
+  return delay * Math.random(); // jitter to avoid thundering herd
+}
+
 async function sendWithRetry(
   email: string,
   subject: string,
@@ -249,9 +267,11 @@ async function sendWithRetry(
       if (success) {
         allowed = true;
       } else {
-        // Exponential backoff
+        // Bounded exponential backoff (500 ms → 1 s → 2 s → 4 s → 5 s)
         counter += 1;
-        await new Promise((resolve) => setTimeout(resolve, 100 ** counter));
+        await new Promise((resolve) =>
+          setTimeout(resolve, backoff(counter, { baseMs: 500 })),
+        );
       }
     }
 
@@ -262,9 +282,9 @@ async function sendWithRetry(
     ) {
       attempt++;
       if (attempt < maxRetries) {
-        // Exponential backoff
+        // Bounded exponential backoff (1 s → 2 s → 4 s → 5 s)
         await new Promise((resolve) =>
-          setTimeout(resolve, 1000 ** attempt),
+          setTimeout(resolve, backoff(attempt, { baseMs: 1000 })),
         );
       }
     } else {
