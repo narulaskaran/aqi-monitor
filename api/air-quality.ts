@@ -44,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       !process.env.GOOGLE_AIR_QUALITY_API_KEY
     ) {
       console.log("Using mock air quality data in development mode");
-      return res.json(getMockAirQualityData());
+      return res.json({ ...getMockAirQualityData(), recordedAt: new Date().toISOString() });
     }
 
     try {
@@ -72,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
       }
 
-      return res.json(result);
+      return res.json({ ...result, recordedAt: new Date().toISOString() });
     } catch (err) {
       const error = err as Error;
       console.error(

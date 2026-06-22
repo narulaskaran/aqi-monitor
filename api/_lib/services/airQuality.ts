@@ -562,14 +562,13 @@ export async function getLatestAirQualityForZip(
   zipCode: string,
 ): Promise<(AirQualityData & { recordedAt: string }) | null> {
   try {
-    const oneHourAgo = new Date();
-    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
     const record = await prisma.airQualityRecord.findFirst({
       where: {
         zipCode,
         timestamp: {
-          gte: oneHourAgo,
+          gte: fifteenMinutesAgo,
         },
       },
       orderBy: {

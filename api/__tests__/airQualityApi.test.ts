@@ -79,7 +79,7 @@ describe("handleGetAirQuality", () => {
       mockAirQualityRecord,
     );
     await handleGetAirQuality(req, res);
-    expect(res.json).toHaveBeenCalledWith(mockAirQualityRecord);
+    expect(res.json).toHaveBeenCalledWith({ ...mockAirQualityRecord, recordedAt: expect.any(String) });
     process.env = oldEnv;
   });
 

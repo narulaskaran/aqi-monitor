@@ -30,7 +30,7 @@ function makeRecord(overrides: Partial<{ aqi: number; category: string; dominant
 }
 
 describe("getLatestAirQualityForZip freshness window", () => {
-  it("returns record when it is less than 1 hour old", async () => {
+  it("returns record when it is less than 15 minutes old", async () => {
     vi.doMock("../_lib/db.js", () => ({
       prisma: {
         airQualityRecord: {
@@ -62,7 +62,7 @@ describe("getLatestAirQualityForZip freshness window", () => {
     expect(result!.recordedAt).toBeDefined();
   });
 
-  it("returns null when the latest record is older than 1 hour (prisma finds nothing in window)", async () => {
+  it("returns null when the latest record is older than 15 minutes (prisma finds nothing in window)", async () => {
     vi.doMock("../_lib/db.js", () => ({
       prisma: {
         airQualityRecord: {
@@ -114,7 +114,7 @@ describe("getLatestAirQualityForZip freshness window", () => {
     expect(result).toBeNull();
   });
 
-  it("queries with gte filter for records within the last hour", async () => {
+  it("queries with gte filter for records within the last 15 minutes", async () => {
     const findFirstMock = vi.fn().mockResolvedValue(makeRecord());
     vi.doMock("../_lib/db.js", () => ({
       prisma: {
@@ -144,12 +144,12 @@ describe("getLatestAirQualityForZip freshness window", () => {
     expect(callArgs.where.timestamp).toBeDefined();
     expect(callArgs.where.timestamp.gte).toBeInstanceOf(Date);
 
-    // The gte filter should be roughly 1 hour ago
+    // The gte filter should be roughly 15 minutes ago
     const now = Date.now();
     const gteTime = callArgs.where.timestamp.gte.getTime();
     const diffMs = now - gteTime;
     // Allow some tolerance for test execution time
-    expect(diffMs).toBeGreaterThan(60 * 60 * 1000 - 5000); // within 5 seconds of 1 hour
-    expect(diffMs).toBeLessThan(60 * 60 * 1000 + 5000);
+    expect(diffMs).toBeGreaterThan(15 * 60 * 1000 - 5000); // within 5 seconds of 15 minutes
+    expect(diffMs).toBeLessThan(15 * 60 * 1000 + 5000);
   });
 });
