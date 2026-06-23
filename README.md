@@ -46,7 +46,6 @@ Create a `.env` file in the root directory with the following:
 DATABASE_URL="postgresql://user:password@host/database?sslmode=require"
 
 # Email (for verification and alerts)
-EMAIL_FROM="noreply@yourdomain.com"
 RESEND_API_KEY="your_resend_api_key"
 
 # Google Air Quality API
