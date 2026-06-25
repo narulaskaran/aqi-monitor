@@ -4,11 +4,11 @@ A real-time Air Quality Index (AQI) monitoring application that allows users to 
 
 ## Features
 
-- Real-time air quality data using Google Air Quality API
+- Daily air quality data using Google Air Quality API
 - Color-coded AQI display with category and health recommendations
 - Email alerts for poor air quality conditions
 - ZIP code based monitoring and alerts
-- Hourly air quality data storage
+- Daily air quality data storage
 - Responsive design for desktop and mobile
 - Admin dashboard for managing data
 
