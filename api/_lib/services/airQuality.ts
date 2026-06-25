@@ -560,11 +560,16 @@ export function getMockForecastData(
  */
 export async function getLatestAirQualityForZip(
   zipCode: string,
-): Promise<AirQualityData | null> {
+): Promise<(AirQualityData & { recordedAt: string }) | null> {
   try {
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
     const record = await prisma.airQualityRecord.findFirst({
       where: {
         zipCode,
+        timestamp: {
+          gte: fifteenMinutesAgo,
+        },
       },
       orderBy: {
         timestamp: "desc",
@@ -588,6 +593,7 @@ export async function getLatestAirQualityForZip(
       category: record.category,
       dominantPollutant: record.dominantPollutant,
       pollutants,
+      recordedAt: record.timestamp.toISOString(),
     };
   } catch (error) {
     console.error(
