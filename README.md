@@ -58,9 +58,11 @@ JWT_SECRET="your_jwt_secret"
 
 #### Backend / API
 
+Also add the following to the same `.env` file:
+
 ```env
-# Base URL for unsubscribe links in alert emails
-VITE_API_URL="http://localhost:3000"
+# Base URL for unsubscribe links in alert emails (production only)
+VITE_API_URL="https://your-app.vercel.app"
 ```
 
 ### Installation and Local Development
