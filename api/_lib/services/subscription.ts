@@ -7,6 +7,7 @@ import { airQualityEmail } from "../templates/email/index.js";
 import jwt from "jsonwebtoken";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { backoff } from "../utils.js";
 
 // Subscription types
 export interface Subscription {
@@ -233,24 +234,6 @@ export async function subscriptionExists(
   return count > 0;
 }
 
-/**
- * Bounded exponential backoff with jitter.
- *
- * Returns a delay in milliseconds: min(baseMs * 2^attempt, maxMs) * random(0..1).
- * The cap keeps waits well under Vercel's function timeout (default 5 s).
- *
- * @param attempt  zero-based attempt index (0 = first retry)
- * @param maxMs    upper bound in ms (default 5000)
- * @param baseMs   initial delay in ms (default 500)
- */
-export function backoff(
-  attempt: number,
-  { maxMs = 5000, baseMs = 500 }: { maxMs?: number; baseMs?: number } = {},
-): number {
-  const delay = Math.min(baseMs * 2 ** attempt, maxMs);
-  return delay * Math.random(); // jitter to avoid thundering herd
-}
-
 async function sendWithRetry(
   email: string,
   subject: string,
@@ -268,9 +251,15 @@ async function sendWithRetry(
         allowed = true;
       } else {
         // Bounded exponential backoff (500 ms → 1 s → 2 s → 4 s → 5 s)
-        counter += 1;
         await new Promise((resolve) =>
           setTimeout(resolve, backoff(counter, { baseMs: 500 })),
+        );
+        counter += 1;
+      }
+      // Safety guard: stop retrying if rate-limiter is persistently failing
+      if (!allowed && counter >= 20) {
+        throw new Error(
+          "Rate-limit retry exceeded: Upstash rate limiter did not return success after 20 attempts",
         );
       }
     }
@@ -280,13 +269,13 @@ async function sendWithRetry(
       result.error &&
       result.error.toLowerCase().includes("too many requests")
     ) {
-      attempt++;
       if (attempt < maxRetries) {
         // Bounded exponential backoff (1 s → 2 s → 4 s → 5 s)
         await new Promise((resolve) =>
           setTimeout(resolve, backoff(attempt, { baseMs: 1000 })),
         );
       }
+      attempt++;
     } else {
       return result;
     }

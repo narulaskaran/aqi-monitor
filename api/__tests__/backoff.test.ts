@@ -24,7 +24,7 @@ vi.mock("@upstash/ratelimit", () => {
   return { Ratelimit: RatelimitMock };
 });
 
-import { backoff } from "../_lib/services/subscription.js";
+import { backoff } from "../_lib/utils.js";
 
 describe("backoff", () => {
   it("returns a number between 0 and maxMs", () => {
