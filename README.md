@@ -54,8 +54,12 @@ GOOGLE_AIR_QUALITY_API_KEY="your_google_api_key"
 # Admin access
 CRON_SECRET="your_cron_job_secret"
 JWT_SECRET="your_jwt_secret"
+```
 
-# Frontend
+#### Backend / API
+
+```env
+# Base URL for unsubscribe links in alert emails
 VITE_API_URL="http://localhost:3000"
 ```
 
