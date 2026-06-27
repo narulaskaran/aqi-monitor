@@ -1,10 +1,12 @@
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { getAQICategory } from "../types/air-quality";
+import { HistoryChart } from "./HistoryChart";
 
 interface AQICardProps {
   index: number;
   category: string;
   dominantPollutant: string;
+  zipCode?: string;
 }
 
 const formatPollutant = (pollutant: string): string => {
@@ -19,7 +21,7 @@ const formatPollutant = (pollutant: string): string => {
   return pollutantMap[pollutant] || pollutant;
 };
 
-export function AQICard({ index, category, dominantPollutant }: AQICardProps) {
+export function AQICard({ index, category, dominantPollutant, zipCode }: AQICardProps) {
   const categoryInfo = getAQICategory(category, index);
 
   return (
@@ -46,6 +48,8 @@ export function AQICard({ index, category, dominantPollutant }: AQICardProps) {
         <p className="text-lg">
           Dominant Pollutant: {formatPollutant(dominantPollutant)}
         </p>
+
+        {zipCode && <HistoryChart zipCode={zipCode} />}
       </CardContent>
     </Card>
   );
