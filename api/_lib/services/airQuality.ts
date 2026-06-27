@@ -556,6 +556,71 @@ export function getMockForecastData(
 }
 
 /**
+ * Returns mock historical AQI data for development/testing.
+ * Generates a data point per day for the past N days.
+ */
+export function getMockHistoryData(
+  days: number,
+): { timestamp: string; aqi: number; category: string }[] {
+  const results: { timestamp: string; aqi: number; category: string }[] = [];
+  const mockEntries = [
+    { aqi: 42, category: "Good" },
+    { aqi: 78, category: "Moderate" },
+    { aqi: 55, category: "Moderate" },
+    { aqi: 115, category: "Unhealthy for Sensitive Groups" },
+    { aqi: 90, category: "Moderate" },
+    { aqi: 35, category: "Good" },
+    { aqi: 62, category: "Moderate" },
+  ];
+
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    d.setHours(12, 0, 0, 0); // noon each day
+    const entry = mockEntries[i % mockEntries.length];
+    results.push({
+      timestamp: d.toISOString(),
+      aqi: entry.aqi,
+      category: entry.category,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Gets historical air quality records for a specific ZIP code.
+ */
+export async function getHistoryForZip(
+  zipCode: string,
+  days: number,
+): Promise<{ timestamp: string; aqi: number; category: string }[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  since.setHours(0, 0, 0, 0);
+
+  const records = await prisma.airQualityRecord.findMany({
+    where: {
+      zipCode,
+      timestamp: { gte: since },
+    },
+    orderBy: { timestamp: "asc" },
+    select: {
+      timestamp: true,
+      aqi: true,
+      category: true,
+    },
+  });
+
+  return records.map((r) => ({
+    timestamp: r.timestamp.toISOString(),
+    aqi: r.aqi,
+    category: r.category,
+  }));
+}
+
+/**
  * Gets the latest air quality record for a specific ZIP code
  */
 export async function getLatestAirQualityForZip(

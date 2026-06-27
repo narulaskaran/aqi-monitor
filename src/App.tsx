@@ -111,6 +111,7 @@ function App() {
               index={airQuality.index}
               category={airQuality.category}
               dominantPollutant={airQuality.dominantPollutant}
+              zipCode={currentZipCode}
             />
             <SubscriptionForm zipCode={currentZipCode} />
             <ForecastCard zipCode={currentZipCode} />
