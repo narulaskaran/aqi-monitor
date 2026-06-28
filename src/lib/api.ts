@@ -44,10 +44,14 @@ export async function getAirQuality(zipCode: string): Promise<AirQualityData> {
   );
 
   if (!response.ok) {
-    let message = `Failed to fetch air quality data: ${response.status}`;
+    const defaultMsg = `Unable to fetch air quality data. Please try again later.`;
+    let message = defaultMsg;
     try {
       const body = await response.json();
-      if (body?.error) message = body.error;
+      if (body?.error) {
+        console.warn('[getAirQuality] Server error detail:', body.error);
+        message = defaultMsg;
+      }
     } catch {
       // ignore parse errors
     }
