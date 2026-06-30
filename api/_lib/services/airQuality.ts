@@ -11,23 +11,29 @@ import {
   lookupUsZipCoordinates,
 } from "../zipCode.js";
 
-// Validate environment variables
-const envSchema = z.object({
-  GOOGLE_AIR_QUALITY_API_KEY: z.string().min(1),
-});
+// Lazy API key accessor — validates only when actually needed, not at module load time.
+// This allows importing the module without requiring GOOGLE_AIR_QUALITY_API_KEY to be set
+// (e.g. for dev-mode mock fallbacks that don't call the Google API).
+let _apiKey: string | null = null;
+let _apiKeyValidated = false;
 
-// Parse environment variables
-const env = envSchema.safeParse({
-  GOOGLE_AIR_QUALITY_API_KEY: process.env.GOOGLE_AIR_QUALITY_API_KEY,
-});
-
-if (!env.success) {
-  console.error("❌ Missing Google Air Quality API key:", env.error.format());
-  throw new Error("Missing required Google API environment variables");
+function getApiKey(): string {
+  if (!_apiKeyValidated) {
+    const envSchema = z.object({
+      GOOGLE_AIR_QUALITY_API_KEY: z.string().min(1),
+    });
+    const env = envSchema.safeParse({
+      GOOGLE_AIR_QUALITY_API_KEY: process.env.GOOGLE_AIR_QUALITY_API_KEY,
+    });
+    if (!env.success) {
+      console.error("❌ Missing Google Air Quality API key:", env.error.format());
+      throw new Error("Missing required Google API environment variables");
+    }
+    _apiKey = process.env.GOOGLE_AIR_QUALITY_API_KEY!;
+    _apiKeyValidated = true;
+  }
+  return _apiKey!;
 }
-
-// API key
-const apiKey = process.env.GOOGLE_AIR_QUALITY_API_KEY!;
 
 // Air Quality response types
 export interface AirQualityData {
@@ -227,11 +233,11 @@ export async function fetchAirQuality(
     console.log("Making request to Google Air Quality API with:", {
       latitude,
       longitude,
-      apiKey: apiKey ? "Present" : "Missing",
+      apiKey: getApiKey() ? "Present" : "Missing",
     });
 
     const response = await fetch(
-      `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${apiKey}`,
+      `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${getApiKey()}`,
       {
         method: "POST",
         headers: {
@@ -517,7 +523,7 @@ export async function fetchAirQualityForecast(
     }
 
     const response = await fetch(
-      `https://airquality.googleapis.com/v1/forecast:lookup?key=${apiKey}`,
+      `https://airquality.googleapis.com/v1/forecast:lookup?key=${getApiKey()}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
