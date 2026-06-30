@@ -4,6 +4,7 @@ import { getAirQualityHistory, HistoryPoint } from "../lib/api";
 
 interface HistoryChartProps {
   zipCode: string;
+  days?: number;
 }
 
 /**
@@ -39,7 +40,7 @@ const PADDING = { top: 4, bottom: 16, left: 4, right: 4 };
 const PLOT_W = CHART_WIDTH - PADDING.left - PADDING.right;
 const PLOT_H = CHART_HEIGHT - PADDING.top - PADDING.bottom;
 
-export function HistoryChart({ zipCode }: HistoryChartProps) {
+export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   const [history, setHistory] = useState<HistoryPoint[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +49,11 @@ export function HistoryChart({ zipCode }: HistoryChartProps) {
     if (!zipCode) return;
 
     let cancelled = false;
+    const controller = new AbortController();
     setIsLoading(true);
     setError(null);
 
-    getAirQualityHistory(zipCode, 7)
+    getAirQualityHistory(zipCode, days, controller.signal)
       .then((result) => {
         if (!cancelled) {
           setHistory(result.history);
@@ -67,11 +69,45 @@ export function HistoryChart({ zipCode }: HistoryChartProps) {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [zipCode]);
+  }, [zipCode, days]);
 
-  // Don't render anything when: loading, error, or fewer than 2 data points
-  if (isLoading || error || !history || history.length < 2) {
+  // Loading state: show a minimal placeholder
+  if (isLoading) {
+    return (
+      <Card className="mt-3">
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="text-sm">Last {days} Days AQI Trend</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 pb-3">
+          <div className="flex items-center justify-center h-[70px] text-xs text-gray-400 dark:text-gray-500">
+            Loading chart...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state: show a visible inline indicator
+  if (error) {
+    console.error("HistoryChart: failed to load history:", error);
+    return (
+      <Card className="mt-3">
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="text-sm">Last {days} Days AQI Trend</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 pb-3">
+          <div className="flex items-center justify-center h-[70px] text-xs text-red-400 dark:text-red-500">
+            Unable to load chart data
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No data state: fewer than 2 data points
+  if (!history || history.length < 2) {
     return null;
   }
 
@@ -99,7 +135,7 @@ export function HistoryChart({ zipCode }: HistoryChartProps) {
   return (
     <Card className="mt-3">
       <CardHeader className="pb-2 pt-3">
-        <CardTitle className="text-sm">Last 7 Days AQI Trend</CardTitle>
+        <CardTitle className="text-sm">Last {days} Days AQI Trend</CardTitle>
       </CardHeader>
       <CardContent className="pt-0 pb-3">
         <div className="overflow-x-auto">
@@ -110,13 +146,13 @@ export function HistoryChart({ zipCode }: HistoryChartProps) {
             aria-label="Air Quality Index trend chart"
           >
             <defs>
-              <linearGradient id="aqi-fill" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={`aqi-fill-${zipCode}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={fillColor} stopOpacity="0.35" />
                 <stop offset="100%" stopColor={fillColor} stopOpacity="0.05" />
               </linearGradient>
             </defs>
             {/* Area fill */}
-            <path d={areaD} fill="url(#aqi-fill)" />
+            <path d={areaD} fill={`url(#aqi-fill-${zipCode})`} />
             {/* Line */}
             <path
               d={pathD}
@@ -140,8 +176,8 @@ export function HistoryChart({ zipCode }: HistoryChartProps) {
                 <title>{`${p.category}: AQI ${p.aqi} (${formatShortDate(p.timestamp)})`}</title>
               </circle>
             ))}
-            {/* X-axis labels — show first, middle, last */}
-            {[0, Math.floor(points.length / 2), points.length - 1].map((idx) => (
+            {/* X-axis labels — show first, middle, last (deduplicated for small datasets) */}
+            {[...new Set([0, Math.floor(points.length / 2), points.length - 1])].map((idx) => (
               <text
                 key={idx}
                 x={points[idx].x}

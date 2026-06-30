@@ -76,12 +76,13 @@ export interface HistoryPoint {
 export async function getAirQualityHistory(
   zipCode: string,
   days: number = 7,
+  signal?: AbortSignal,
 ): Promise<{ success: boolean; zipCode: string; history: HistoryPoint[] }> {
   const baseUrl = getBaseUrl();
   const params = new URLSearchParams({ zipCode, days: String(days) });
   const url = `${baseUrl}/api/air-quality-history?${params.toString()}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal });
 
   if (!response.ok) {
     let message = `Failed to fetch history: ${response.status}`;
