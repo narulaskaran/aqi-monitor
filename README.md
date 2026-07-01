@@ -54,9 +54,15 @@ GOOGLE_AIR_QUALITY_API_KEY="your_google_api_key"
 # Admin access
 CRON_SECRET="your_cron_job_secret"
 JWT_SECRET="your_jwt_secret"
+```
 
-# Frontend
-VITE_API_URL="http://localhost:3000"
+#### Backend / API
+
+Also add the following to the same `.env` file:
+
+```env
+# Base URL for unsubscribe links in alert emails (production only)
+VITE_API_URL="https://your-app.vercel.app"
 ```
 
 ### Installation and Local Development
