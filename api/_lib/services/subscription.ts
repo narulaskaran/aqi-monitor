@@ -258,9 +258,11 @@ async function sendWithRetry(
       }
       // Safety guard: stop retrying if rate-limiter is persistently failing
       if (!allowed && counter >= 20) {
-        throw new Error(
-          "Rate-limit retry exceeded: Upstash rate limiter did not return success after 20 attempts",
-        );
+        return {
+          success: false,
+          error:
+            "Rate-limit retry exceeded: Upstash rate limiter did not return success after 20 attempts",
+        };
       }
     }
 

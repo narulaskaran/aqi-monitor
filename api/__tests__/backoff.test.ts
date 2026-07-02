@@ -1,29 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
-
-// Mock db to prevent "Cannot find module '.prisma/client/default'" error
-vi.mock("../_lib/db.js", () => ({
-  prisma: {},
-}));
-
-// Mock email service to prevent Resend initialization
-vi.mock("../_lib/services/email.js", () => ({
-  sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
-  checkVerificationCode: vi.fn().mockResolvedValue({ success: true, valid: true }),
-  sendEmail: vi.fn().mockResolvedValue({ success: true }),
-}));
-
-// Mock Upstash services that are imported in subscription.ts
-vi.mock("@upstash/redis", () => ({
-  Redis: { fromEnv: vi.fn().mockReturnValue({}) },
-}));
-vi.mock("@upstash/ratelimit", () => {
-  const RatelimitMock = vi.fn().mockImplementation(() => ({
-    limit: vi.fn().mockResolvedValue({ success: true }),
-  })) as any;
-  RatelimitMock.slidingWindow = vi.fn().mockReturnValue("sliding-window-config");
-  return { Ratelimit: RatelimitMock };
-});
-
+import { describe, it, expect } from "vitest";
 import { backoff } from "../_lib/utils.js";
 
 describe("backoff", () => {
