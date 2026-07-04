@@ -7,6 +7,7 @@ import { airQualityEmail } from "../templates/email/index.js";
 import jwt from "jsonwebtoken";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { backoff } from "../utils.js";
 
 // Subscription types
 export interface Subscription {
@@ -249,9 +250,19 @@ async function sendWithRetry(
       if (success) {
         allowed = true;
       } else {
-        // Exponential backoff
+        // Bounded exponential backoff (500 ms → 1 s → 2 s → 4 s → 5 s)
+        await new Promise((resolve) =>
+          setTimeout(resolve, backoff(counter, { baseMs: 500 })),
+        );
         counter += 1;
-        await new Promise((resolve) => setTimeout(resolve, 100 ** counter));
+      }
+      // Safety guard: stop retrying if rate-limiter is persistently failing
+      if (!allowed && counter >= 20) {
+        return {
+          success: false,
+          error:
+            "Rate-limit retry exceeded: Upstash rate limiter did not return success after 20 attempts",
+        };
       }
     }
 
@@ -260,13 +271,13 @@ async function sendWithRetry(
       result.error &&
       result.error.toLowerCase().includes("too many requests")
     ) {
-      attempt++;
       if (attempt < maxRetries) {
-        // Exponential backoff
+        // Bounded exponential backoff (1 s → 2 s → 4 s → 5 s)
         await new Promise((resolve) =>
-          setTimeout(resolve, 1000 ** attempt),
+          setTimeout(resolve, backoff(attempt, { baseMs: 1000 })),
         );
       }
+      attempt++;
     } else {
       return result;
     }
