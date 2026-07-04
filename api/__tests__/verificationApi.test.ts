@@ -8,6 +8,7 @@ vi.mock("../_lib/db.js", () => ({
   prisma: {
     userSubscription: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
@@ -208,5 +209,96 @@ describe("Date-range subscription via handleVerifyCode", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ error: "Start date must be before end date" })
     );
+  });
+});
+describe("Re-subscribe and duplicate prevention", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("reactivates an inactive subscription instead of creating a duplicate", async () => {
+    const req: any = {
+      method: "POST",
+      body: { email: "unsubscribed@b.com", zipCode: "12345", code: "123456" },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({
+      success: true,
+      valid: true,
+    });
+
+    const dbMod = await import("../_lib/db.js");
+    const existingInactive = {
+      id: "existing-id",
+      email: "unsubscribed@b.com",
+      zipCode: "12345",
+      createdAt: new Date("2026-01-01"),
+      active: false,
+      activatedAt: null,
+      updatedAt: new Date("2026-06-01"),
+      lastEmailSentAt: null,
+      startsAt: null,
+      expiresAt: null,
+    };
+    vi.spyOn(dbMod.prisma.userSubscription, "findFirst").mockResolvedValue(
+      existingInactive as any,
+    );
+    const updateSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "update")
+      .mockResolvedValue({
+        ...existingInactive,
+        active: true,
+        activatedAt: new Date(),
+      } as any);
+    const createSpy = vi.spyOn(dbMod.prisma.userSubscription, "create");
+
+    await handleVerifyCode(req, res);
+
+    // Should upsert (update), not create a new row
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "existing-id" },
+        data: expect.objectContaining({ active: true }),
+      }),
+    );
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
+  });
+
+  it("creates a new subscription when no prior row exists", async () => {
+    const req: any = {
+      method: "POST",
+      body: { email: "new@b.com", zipCode: "12345", code: "123456" },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({
+      success: true,
+      valid: true,
+    });
+
+    const dbMod = await import("../_lib/db.js");
+    // findFirst returns null — no existing subscription
+    vi.spyOn(dbMod.prisma.userSubscription, "findFirst").mockResolvedValue(null);
+    const createSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "create")
+      .mockResolvedValue({
+        id: "new-id",
+        email: "new@b.com",
+        zipCode: "12345",
+        createdAt: new Date(),
+        active: true,
+        activatedAt: new Date(),
+        updatedAt: new Date(),
+        lastEmailSentAt: null,
+      } as any);
+    const updateSpy = vi.spyOn(dbMod.prisma.userSubscription, "update");
+
+    await handleVerifyCode(req, res);
+
+    expect(createSpy).toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
   });
 });
