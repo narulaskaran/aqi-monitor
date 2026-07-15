@@ -11,6 +11,8 @@ vi.mock("../_lib/middleware/auth.js", () => ({
 vi.mock("../_lib/services/subscription.js", () => ({
   getSubscriptionsForEmailSorted: vi.fn(),
   setSubscriptionActive: vi.fn(),
+  createSubscription: vi.fn(),
+  subscriptionExists: vi.fn(),
 }));
 
 // Mock prisma
@@ -61,6 +63,112 @@ describe("GET /api/subscriptions", () => {
       subscriptions: sorted,
     });
     expect(getSubscriptionsForEmailSorted).toHaveBeenCalledWith("user@example.com");
+  });
+});
+
+describe("POST /api/subscriptions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 when auth fails", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockRejectedValue(new Error("Unauthorized"));
+
+    const req: any = { method: "POST", headers: {}, body: { zipCode: "12345" } };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  it("returns 400 when zipCode is missing", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const req: any = { method: "POST", headers: {}, body: {} };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "zipCode is required" });
+  });
+
+  it("returns 409 when a subscription already exists for the email/zip", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const { subscriptionExists } = await import(
+      "../_lib/services/subscription.js"
+    );
+    (subscriptionExists as any).mockResolvedValue(true);
+
+    const req: any = {
+      method: "POST",
+      headers: {},
+      body: { zipCode: "12345" },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(subscriptionExists).toHaveBeenCalledWith("user@example.com", "12345");
+  });
+
+  it("returns 400 for an invalid date range", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const { subscriptionExists } = await import(
+      "../_lib/services/subscription.js"
+    );
+    (subscriptionExists as any).mockResolvedValue(false);
+
+    const req: any = {
+      method: "POST",
+      headers: {},
+      body: {
+        zipCode: "12345",
+        startsAt: "2026-08-01T00:00:00.000Z",
+        expiresAt: "2026-07-01T00:00:00.000Z",
+      },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Start date must be before end date",
+    });
+  });
+
+  it("creates a subscription for the authenticated user without OTP", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const { subscriptionExists, createSubscription } = await import(
+      "../_lib/services/subscription.js"
+    );
+    (subscriptionExists as any).mockResolvedValue(false);
+    const created = { ...mockSubscription, email: "user@example.com" };
+    (createSubscription as any).mockResolvedValue(created);
+
+    const req: any = {
+      method: "POST",
+      headers: {},
+      body: { zipCode: "12345" },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(createSubscription).toHaveBeenCalledWith(
+      "user@example.com",
+      "12345",
+      undefined,
+      undefined,
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({ success: true, subscription: created });
   });
 });
 
