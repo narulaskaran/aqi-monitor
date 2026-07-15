@@ -15,10 +15,3 @@ export async function authenticate(req: VercelRequest) {
   
   return { email: record.email };
 }
-
-export async function authenticateAdmin(req: VercelRequest) {
-  // For now, we'll reuse the same logic but potentially check against an admin list
-  // or a specific admin token in the future.
-  // The original middleware just checked for a valid token.
-  return authenticate(req);
-}

@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
-import AdminPage from "./pages/AdminPage.tsx";
 import { UnsubscribePage } from "./pages/UnsubscribePage.tsx";
 import { ThemeProvider } from "./lib/theme";
 import { AuthProvider } from "./lib/auth";
@@ -14,10 +13,6 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
-  },
-  {
-    path: "/admin",
-    element: <AdminPage />,
   },
   {
     path: "/unsubscribe",
