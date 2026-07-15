@@ -49,6 +49,8 @@ const HOURS_BETWEEN_EMAILS = 20;
 export async function createSubscription(
   email: string,
   zipCode: string,
+  startsAt?: Date,
+  expiresAt?: Date,
 ): Promise<Subscription> {
   return await prisma.userSubscription.create({
     data: {
@@ -56,6 +58,8 @@ export async function createSubscription(
       zipCode,
       active: true,
       activatedAt: new Date(),
+      ...(startsAt ? { startsAt } : {}),
+      ...(expiresAt ? { expiresAt } : {}),
     },
   });
 }

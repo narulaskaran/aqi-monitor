@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { startVerification, verifyCode } from "../lib/api";
+import { startVerification, verifyCode, createSubscription } from "../lib/api";
 import { isValidEmail } from "../lib/utils";
+import { useAuth } from "../lib/auth";
 import {
   InputOTP,
   InputOTPGroup,
@@ -14,6 +15,7 @@ interface SubscriptionFormProps {
 }
 
 export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
+  const { isSignedIn, email: authEmail, token } = useAuth();
   const [email, setEmail] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +104,74 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
     }
   };
 
+  // Validates the optional date range, returning an error message or null
+  const validateDateRange = (): string | null => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (hasDateRange && startDate) {
+      const selectedStart = new Date(startDate);
+      if (selectedStart < today) {
+        return "Start date must be today or in the future";
+      }
+    }
+
+    if (hasDateRange && endDate) {
+      const selectedEnd = new Date(endDate);
+      if (selectedEnd < today) {
+        return "End date must be today or in the future";
+      }
+      if (startDate) {
+        const selectedStart = new Date(startDate);
+        if (selectedStart >= selectedEnd) {
+          return "Start date must be before end date";
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // Creates a subscription directly for an already-authenticated user,
+  // bypassing the email + OTP flow since their session already proves
+  // ownership of the email address.
+  const handleSubscribeAuthenticated = async () => {
+    if (!zipCode) {
+      setError("ZIP code is required");
+      return;
+    }
+
+    const dateRangeError = validateDateRange();
+    if (dateRangeError) {
+      setError(dateRangeError);
+      return;
+    }
+
+    if (!token) {
+      setError("Your session has expired. Please sign in again.");
+      return;
+    }
+
+    try {
+      setError(null);
+      setIsLoading(true);
+
+      const startsAt = hasDateRange && startDate ? new Date(startDate).toISOString() : undefined;
+      const expiresAt = hasDateRange && endDate ? new Date(endDate).toISOString() : undefined;
+      await createSubscription(token, zipCode, startsAt, expiresAt);
+      setSuccess(true);
+    } catch (err) {
+      console.error("Error creating subscription:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An error occurred. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleVerify = async () => {
     // Validate code format
     if (otp.length !== 6) {
@@ -109,33 +179,10 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       return;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Validate start date if provided
-    if (hasDateRange && startDate) {
-      const selectedStart = new Date(startDate);
-      if (selectedStart < today) {
-        setError("Start date must be today or in the future");
-        return;
-      }
-    }
-
-    // Validate end date if provided
-    if (hasDateRange && endDate) {
-      const selectedEnd = new Date(endDate);
-      if (selectedEnd < today) {
-        setError("End date must be today or in the future");
-        return;
-      }
-      // If both set, start must be before end
-      if (startDate) {
-        const selectedStart = new Date(startDate);
-        if (selectedStart >= selectedEnd) {
-          setError("Start date must be before end date");
-          return;
-        }
-      }
+    const dateRangeError = validateDateRange();
+    if (dateRangeError) {
+      setError(dateRangeError);
+      return;
     }
 
     try {
@@ -195,7 +242,9 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   if (success) {
     return (
       <div className="mt-4 p-4 bg-green-100 rounded-lg text-green-800">
-        <p className="font-semibold">Verification successful! 🎉</p>
+        <p className="font-semibold">
+          {isSignedIn ? "Subscribed! 🎉" : "Verification successful! 🎉"}
+        </p>
         <p className="mt-2">
           You will now receive email alerts about air quality changes for your
           area.
@@ -204,12 +253,87 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
     );
   }
 
+  const dateRangeSection = (
+    <div className="space-y-2">
+      <label className="flex items-center space-x-2 text-sm cursor-pointer">
+        <input
+          type="checkbox"
+          checked={hasDateRange}
+          onChange={(e) => {
+            setHasDateRange(e.target.checked);
+            if (!e.target.checked) {
+              setStartDate("");
+              setEndDate("");
+            }
+          }}
+          disabled={isLoading}
+          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+        />
+        <span className="text-gray-700">Schedule this subscription (optional)</span>
+      </label>
+
+      {hasDateRange && (
+        <div className="ml-6 space-y-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">
+              Start date <span className="font-normal text-gray-500">(alerts begin; leave empty to start immediately)</span>
+            </label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+              disabled={isLoading}
+              className="w-full"
+              aria-label="Start date"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">
+              End date <span className="font-normal text-gray-500">(alerts stop; leave empty to never expire)</span>
+            </label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              min={startDate || new Date().toISOString().split("T")[0]}
+              disabled={isLoading}
+              className="w-full"
+              aria-label="End date"
+            />
+            <p className="text-xs text-gray-500">
+              Your subscription will automatically end on this date
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="mt-4 p-4 border rounded-lg">
       <h3 className="text-lg font-semibold mb-4">
         Get Air Quality Alerts via Email
       </h3>
-      {!isVerifying ? (
+      {isSignedIn ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubscribeAuthenticated();
+          }}
+          className="space-y-4"
+        >
+          <p className="text-sm text-gray-600">
+            Signed in as <strong>{authEmail}</strong>
+          </p>
+
+          {dateRangeSection}
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Subscribing..." : "Sign Up for Alerts"}
+          </Button>
+        </form>
+      ) : !isVerifying ? (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -225,61 +349,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             disabled={isLoading}
           />
 
-          {/* Optional date range section */}
-          <div className="space-y-2">
-            <label className="flex items-center space-x-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hasDateRange}
-                onChange={(e) => {
-                  setHasDateRange(e.target.checked);
-                  if (!e.target.checked) {
-                    setStartDate("");
-                    setEndDate("");
-                  }
-                }}
-                disabled={isLoading}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-gray-700">Schedule this subscription (optional)</span>
-            </label>
-
-            {hasDateRange && (
-              <div className="ml-6 space-y-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">
-                    Start date <span className="font-normal text-gray-500">(alerts begin; leave empty to start immediately)</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    disabled={isLoading}
-                    className="w-full"
-                    aria-label="Start date"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">
-                    End date <span className="font-normal text-gray-500">(alerts stop; leave empty to never expire)</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate || new Date().toISOString().split("T")[0]}
-                    disabled={isLoading}
-                    className="w-full"
-                    aria-label="End date"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Your subscription will automatically end on this date
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          {dateRangeSection}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Sending..." : "Sign Up for Alerts"}

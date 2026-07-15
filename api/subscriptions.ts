@@ -2,8 +2,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { authenticate } from "./_lib/middleware/auth.js";
 import { prisma } from "./_lib/db.js";
 import {
+  createSubscription,
   getSubscriptionsForEmailSorted,
   setSubscriptionActive,
+  subscriptionExists,
 } from "./_lib/services/subscription.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -28,6 +30,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
       console.error("Error fetching subscriptions:", error);
       return res.status(500).json({ error: "Failed to fetch subscriptions" });
+    }
+  }
+
+  // POST /api/subscriptions — create a subscription for the authenticated user
+  if (req.method === "POST") {
+    try {
+      const { zipCode, startsAt, expiresAt } = req.body as {
+        zipCode?: string;
+        startsAt?: string;
+        expiresAt?: string;
+      };
+
+      if (!zipCode) {
+        return res.status(400).json({ error: "zipCode is required" });
+      }
+
+      let parsedStartsAt: Date | undefined;
+      let parsedExpiresAt: Date | undefined;
+
+      if (startsAt) {
+        parsedStartsAt = new Date(startsAt);
+        if (isNaN(parsedStartsAt.getTime())) {
+          return res.status(400).json({ error: "Invalid start date" });
+        }
+      }
+
+      if (expiresAt) {
+        parsedExpiresAt = new Date(expiresAt);
+        if (isNaN(parsedExpiresAt.getTime())) {
+          return res.status(400).json({ error: "Invalid end date" });
+        }
+      }
+
+      if (
+        parsedStartsAt &&
+        parsedExpiresAt &&
+        parsedStartsAt >= parsedExpiresAt
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Start date must be before end date" });
+      }
+
+      const exists = await subscriptionExists(email, zipCode);
+      if (exists) {
+        return res
+          .status(409)
+          .json({ error: "This email is already subscribed for this ZIP code" });
+      }
+
+      const subscription = await createSubscription(
+        email,
+        zipCode,
+        parsedStartsAt,
+        parsedExpiresAt,
+      );
+      return res.status(201).json({ success: true, subscription });
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      return res.status(500).json({ error: "Failed to create subscription" });
     }
   }
 
