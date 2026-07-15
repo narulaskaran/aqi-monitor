@@ -10,7 +10,6 @@ A real-time Air Quality Index (AQI) monitoring application that allows users to 
 - ZIP code based monitoring and alerts
 - Daily air quality data storage
 - Responsive design for desktop and mobile
-- Admin dashboard for managing data
 
 ## Tech Stack
 
@@ -51,7 +50,7 @@ RESEND_API_KEY="your_resend_api_key"
 # Google Air Quality API
 GOOGLE_AIR_QUALITY_API_KEY="your_google_api_key"
 
-# Admin access
+# Cron job auth (used by /api/cron/update-air-quality)
 CRON_SECRET="your_cron_job_secret"
 JWT_SECRET="your_jwt_secret"
 ```
