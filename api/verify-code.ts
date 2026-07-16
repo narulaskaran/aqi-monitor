@@ -86,38 +86,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         return res.json({ ...result, token, expiresAt });
       } else {
-        // Default: create subscription
+        // Default: create or reactivate subscription
+        // Upsert: if an inactive row exists, reactivate it instead of creating a duplicate
         try {
-          const subscriptionData: {
-            email: string;
-            zipCode: string;
-            active: boolean;
-            activatedAt: Date;
-            startsAt?: Date;
-            expiresAt?: Date;
-          } = {
-            email,
-            zipCode,
-            active: true,
-            activatedAt: new Date(),
-          };
-
-          // Add startsAt if provided
-          if (parsedStartsAt) {
-            subscriptionData.startsAt = parsedStartsAt;
-          }
-
-          // Add expiresAt if provided
-          if (parsedExpiresAt) {
-            subscriptionData.expiresAt = parsedExpiresAt;
-          }
-
-          await prisma.userSubscription.create({
-            data: subscriptionData,
+          const existing = await prisma.userSubscription.findFirst({
+            where: { email, zipCode },
+            orderBy: { updatedAt: "desc" },
           });
+
+          if (existing) {
+            // Reactivate the most recent existing subscription
+            await prisma.userSubscription.update({
+              where: { id: existing.id },
+              data: {
+                active: true,
+                activatedAt: new Date(),
+                ...(parsedStartsAt && { startsAt: parsedStartsAt }),
+                ...(parsedExpiresAt && { expiresAt: parsedExpiresAt }),
+              },
+            });
+          } else {
+            // Create a new subscription
+            const subscriptionData: {
+              email: string;
+              zipCode: string;
+              active: boolean;
+              activatedAt: Date;
+              startsAt?: Date;
+              expiresAt?: Date;
+            } = {
+              email,
+              zipCode,
+              active: true,
+              activatedAt: new Date(),
+            };
+
+            // Add startsAt if provided
+            if (parsedStartsAt) {
+              subscriptionData.startsAt = parsedStartsAt;
+            }
+
+            // Add expiresAt if provided
+            if (parsedExpiresAt) {
+              subscriptionData.expiresAt = parsedExpiresAt;
+            }
+
+            await prisma.userSubscription.create({
+              data: subscriptionData,
+            });
+          }
         } catch (dbError) {
           console.error(
-            "Error creating subscription after verification:",
+            "Error creating/reactivating subscription after verification:",
             dbError,
           );
           return res.json({

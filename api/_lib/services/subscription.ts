@@ -218,7 +218,8 @@ export async function setSubscriptionActive(
 }
 
 /**
- * Checks if a subscription already exists
+ * Checks if an active subscription already exists for this email and ZIP code.
+ * Inactive (unsubscribed) rows are ignored so users can re-subscribe.
  */
 export async function subscriptionExists(
   email: string,
@@ -228,6 +229,7 @@ export async function subscriptionExists(
     where: {
       email,
       zipCode,
+      active: true,
     },
   });
 
