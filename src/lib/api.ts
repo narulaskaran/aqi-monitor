@@ -142,6 +142,37 @@ export async function getSubscriptions(token: string) {
 }
 
 /**
+ * Creates a new subscription for the authenticated user (no OTP required)
+ */
+export async function createSubscription(
+  token: string,
+  zipCode: string,
+  startsAt?: string,
+  expiresAt?: string,
+) {
+  const body: { zipCode: string; startsAt?: string; expiresAt?: string } = {
+    zipCode,
+  };
+  if (startsAt) body.startsAt = startsAt;
+  if (expiresAt) body.expiresAt = expiresAt;
+
+  const response = await fetch(getApiUrl("subscriptions"), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || `Failed to create subscription: ${response.status}`);
+  }
+  return data;
+}
+
+/**
  * Toggles the active status of a subscription
  */
 export async function updateSubscription(
