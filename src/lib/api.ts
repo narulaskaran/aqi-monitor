@@ -64,6 +64,40 @@ export async function getAirQuality(zipCode: string): Promise<AirQualityData> {
   }
 }
 
+export interface HistoryPoint {
+  timestamp: string;
+  aqi: number;
+  category: string;
+}
+
+/**
+ * Fetches historical AQI data for a ZIP code and number of days
+ */
+export async function getAirQualityHistory(
+  zipCode: string,
+  days: number = 7,
+  signal?: AbortSignal,
+): Promise<{ success: boolean; zipCode: string; history: HistoryPoint[] }> {
+  const baseUrl = getBaseUrl();
+  const params = new URLSearchParams({ zipCode, days: String(days) });
+  const url = `${baseUrl}/api/air-quality-history?${params.toString()}`;
+
+  const response = await fetch(url, { signal });
+
+  if (!response.ok) {
+    let message = `Failed to fetch history: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
 /**
  * Fetches air quality forecast data for a ZIP code and date range
  */
