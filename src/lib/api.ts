@@ -36,32 +36,31 @@ export const getApiUrl = (path: string) => {
  * Fetches air quality data from REST API using ZIP code
  */
 export async function getAirQuality(zipCode: string): Promise<AirQualityData> {
-  try {
-    const baseUrl = getBaseUrl();
-    console.log(`Fetching air quality data from API: ${baseUrl}/api/air-quality?zipCode=${zipCode}`);
-    
-    const response = await fetch(
-      `${baseUrl}/api/air-quality?zipCode=${zipCode}`
-    );
+  const baseUrl = getBaseUrl();
+  console.log(`Fetching air quality data from API: ${baseUrl}/api/air-quality?zipCode=${zipCode}`);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch air quality data: ${response.status}`);
+  const response = await fetch(
+    `${baseUrl}/api/air-quality?zipCode=${zipCode}`
+  );
+
+  if (!response.ok) {
+    const defaultMsg = `Unable to fetch air quality data. Please try again later.`;
+    let message = defaultMsg;
+    try {
+      const body = await response.json();
+      if (body?.error) {
+        console.warn('[getAirQuality] Server error detail:', body.error);
+        message = defaultMsg;
+      }
+    } catch {
+      // ignore parse errors
     }
-
-    const data = await response.json();
-    console.log('Air quality data received:', data);
-    return data;
-  } catch (error) {
-    console.error('Error fetching air quality data:', error);
-    
-    // Return mock data as last resort
-    return {
-      index: 0,
-      category: 'Unknown',
-      dominantPollutant: 'Unknown',
-      error: 'Failed to fetch air quality data'
-    };
+    throw new Error(message);
   }
+
+  const data = await response.json();
+  console.log('Air quality data received:', data);
+  return data;
 }
 
 /**
