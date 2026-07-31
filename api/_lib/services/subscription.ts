@@ -50,14 +50,7 @@ export async function createSubscription(
   email: string,
   zipCode: string,
 ): Promise<Subscription> {
-  return await prisma.userSubscription.create({
-    data: {
-      email,
-      zipCode,
-      active: true,
-      activatedAt: new Date(),
-    },
-  });
+  return activateSubscription(email, zipCode);
 }
 
 /**
@@ -79,7 +72,7 @@ export async function activateSubscription(
   zipCode: string,
   startsAt?: Date,
   expiresAt?: Date,
-): Promise<Subscription | null> {
+): Promise<Subscription> {
   const data = {
     active: true,
     activatedAt: new Date(),

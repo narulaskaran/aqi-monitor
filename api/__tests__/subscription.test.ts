@@ -12,9 +12,11 @@ vi.mock("../_lib/db.js", () => ({
   prisma: {
     userSubscription: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     },
@@ -122,6 +124,47 @@ describe("Subscription Service", () => {
     );
     expect(result).toBe(true);
     mockExists.mockRestore();
+  });
+
+  it("reactivates an existing subscription and clears stale dates", async () => {
+    const dbMod = await import("../_lib/db.js");
+    const existing = {
+      ...mockSubscription,
+      id: "existing-id",
+      active: false,
+      startsAt: new Date("2026-06-01"),
+      expiresAt: new Date("2026-07-01"),
+    };
+    vi.spyOn(dbMod.prisma.userSubscription, "findFirst").mockResolvedValue(
+      existing as any,
+    );
+    const updateSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "update")
+      .mockResolvedValue(existing as any);
+
+    await subscriptionService.activateSubscription("a@b.com", "12345");
+
+    expect(updateSpy).toHaveBeenCalledWith({
+      where: { id: "existing-id" },
+      data: expect.objectContaining({
+        active: true,
+        startsAt: null,
+        expiresAt: null,
+      }),
+    });
+  });
+
+  it("checks the active flag when determining whether a subscription exists", async () => {
+    const dbMod = await import("../_lib/db.js");
+    const countSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "count")
+      .mockResolvedValue(1);
+
+    await subscriptionService.subscriptionExists("a@b.com", "12345");
+
+    expect(countSpy).toHaveBeenCalledWith({
+      where: { email: "a@b.com", zipCode: "12345", active: true },
+    });
   });
 });
 
