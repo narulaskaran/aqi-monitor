@@ -46,13 +46,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (typeof zipCode !== "string" || !zipCode.trim()) {
         return res.status(400).json({ error: "zipCode is required" });
       }
+      const normalizedZipCode = zipCode.trim();
 
       const dateRange = parseDateRange(startsAt, expiresAt);
       if (dateRange.error) {
         return res.status(400).json({ error: dateRange.error });
       }
 
-      const exists = await subscriptionExists(email, zipCode);
+      const exists = await subscriptionExists(email, normalizedZipCode);
       if (exists) {
         return res
           .status(409)
@@ -61,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const subscription = await createSubscription(
         email,
-        zipCode,
+        normalizedZipCode,
         dateRange.dates?.startsAt,
         dateRange.dates?.expiresAt,
       );

@@ -106,7 +106,7 @@ describe("POST /api/subscriptions", () => {
     const req: any = {
       method: "POST",
       headers: {},
-      body: { zipCode: "12345" },
+      body: { zipCode: " 12345 " },
     };
     const res = mockRes();
     await handler(req, res);
@@ -206,7 +206,7 @@ describe("POST /api/subscriptions", () => {
     const req: any = {
       method: "POST",
       headers: {},
-      body: { zipCode: "12345" },
+      body: { zipCode: " 12345 " },
     };
     const res = mockRes();
     await handler(req, res);
