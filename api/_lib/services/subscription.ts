@@ -44,7 +44,7 @@ const ratelimit = new Ratelimit({
 const HOURS_BETWEEN_EMAILS = 20;
 
 /**
- * Creates a new subscription for the given email and ZIP code
+ * Activates an existing subscription or creates one for the email and ZIP.
  */
 export async function createSubscription(
   email: string,
@@ -65,7 +65,9 @@ export async function getAllSubscriptions(): Promise<Subscription[]> {
 }
 
 /**
- * Activates a subscription after verification
+ * Upserts an active subscription after verification.
+ * Existing rows, including already-active rows, are updated and their
+ * optional date range is replaced with the values supplied by the caller.
  */
 export async function activateSubscription(
   email: string,
