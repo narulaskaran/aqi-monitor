@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import handleStartVerification from "../verify.js";
 import handleVerifyCode from "../verify-code.js";
-import { mockRes, mockSubscription } from "./testUtils.js";
+import { mockRes } from "./testUtils.js";
 
 // --- START FIX ---
 vi.mock("../_lib/db.js", () => ({
@@ -238,12 +238,12 @@ describe("Re-subscribe and duplicate prevention", () => {
       activatedAt: null,
       updatedAt: new Date("2026-06-01"),
       lastEmailSentAt: null,
-      startsAt: null,
-      expiresAt: null,
+      startsAt: new Date("2026-06-01"),
+      expiresAt: new Date("2026-07-01"),
     };
-    vi.spyOn(dbMod.prisma.userSubscription, "findFirst").mockResolvedValue(
-      existingInactive as any,
-    );
+    const findFirstSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "findFirst")
+      .mockResolvedValue(existingInactive as any);
     const updateSpy = vi
       .spyOn(dbMod.prisma.userSubscription, "update")
       .mockResolvedValue({
@@ -255,14 +255,60 @@ describe("Re-subscribe and duplicate prevention", () => {
 
     await handleVerifyCode(req, res);
 
-    // Should upsert (update), not create a new row
+    expect(findFirstSpy).toHaveBeenCalledWith({
+      where: { email: "unsubscribed@b.com", zipCode: "12345" },
+      orderBy: { updatedAt: "desc" },
+    });
     expect(updateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "existing-id" },
-        data: expect.objectContaining({ active: true }),
+        data: expect.objectContaining({
+          active: true,
+          startsAt: null,
+          expiresAt: null,
+        }),
       }),
     );
     expect(createSpy).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
+  });
+
+  it("handles a concurrent create by reactivating the winning row", async () => {
+    const req: any = {
+      method: "POST",
+      body: { email: "racing@b.com", zipCode: "12345", code: "123456" },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({
+      success: true,
+      valid: true,
+    });
+
+    const dbMod = await import("../_lib/db.js");
+    const winningRow = {
+      id: "winning-id",
+      email: "racing@b.com",
+      zipCode: "12345",
+      active: true,
+      startsAt: null,
+      expiresAt: null,
+    };
+    vi.spyOn(dbMod.prisma.userSubscription, "findFirst")
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(winningRow as any);
+    vi.spyOn(dbMod.prisma.userSubscription, "create").mockRejectedValueOnce({
+      code: "P2002",
+    });
+    const updateSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "update")
+      .mockResolvedValue(winningRow as any);
+
+    await handleVerifyCode(req, res);
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "winning-id" } }),
+    );
     expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
   });
 

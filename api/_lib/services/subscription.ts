@@ -77,26 +77,68 @@ export async function getAllSubscriptions(): Promise<Subscription[]> {
 export async function activateSubscription(
   email: string,
   zipCode: string,
+  startsAt?: Date,
+  expiresAt?: Date,
 ): Promise<Subscription | null> {
-  return await prisma.userSubscription
-    .updateMany({
-      where: {
+  const data = {
+    active: true,
+    activatedAt: new Date(),
+    startsAt: startsAt ?? null,
+    expiresAt: expiresAt ?? null,
+  };
+
+  // Prefer reactivating an existing row so a user keeps one subscription
+  // record for an email/ZIP pair instead of accumulating duplicates.
+  const existing = await prisma.userSubscription.findFirst({
+    where: { email, zipCode },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  if (existing) {
+    return prisma.userSubscription.update({
+      where: { id: existing.id },
+      data,
+    });
+  }
+
+  try {
+    return await prisma.userSubscription.create({
+      data: {
         email,
         zipCode,
+        ...data,
       },
-      data: {
-        active: true,
-        activatedAt: new Date(),
-      },
-    })
-    .then(() => {
-      return prisma.userSubscription.findFirst({
-        where: {
-          email,
-          zipCode,
-        },
-      });
     });
+  } catch (error) {
+    // Two verified requests can both observe no existing row. The partial
+    // unique index makes one create win; the loser reactivates that row.
+    if (!isUniqueConstraintError(error)) {
+      throw error;
+    }
+
+    const active = await prisma.userSubscription.findFirst({
+      where: { email, zipCode, active: true },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (!active) {
+      throw error;
+    }
+
+    return prisma.userSubscription.update({
+      where: { id: active.id },
+      data,
+    });
+  }
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  );
 }
 
 /**
