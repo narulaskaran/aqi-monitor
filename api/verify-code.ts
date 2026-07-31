@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { parseDateRange } from "./_lib/dateRange.js";
 import { prisma } from "./_lib/db.js";
 import { checkVerificationCode } from "./_lib/services/email.js";
 
@@ -32,33 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Parse and validate the optional date range BEFORE consuming the
     // one-time code, so invalid input doesn't burn the user's OTP.
-    let parsedStartsAt: Date | undefined;
-    let parsedExpiresAt: Date | undefined;
-
-    if (startsAt) {
-      parsedStartsAt = new Date(startsAt);
-      if (isNaN(parsedStartsAt.getTime())) {
-        return res.status(400).json({
-          success: false,
-          error: "Invalid start date",
-        });
-      }
-    }
-
-    if (expiresAt) {
-      parsedExpiresAt = new Date(expiresAt);
-      if (isNaN(parsedExpiresAt.getTime())) {
-        return res.status(400).json({
-          success: false,
-          error: "Invalid end date",
-        });
-      }
-    }
-
-    if (parsedStartsAt && parsedExpiresAt && parsedStartsAt >= parsedExpiresAt) {
+    const dateRange = parseDateRange(startsAt, expiresAt);
+    if (dateRange.error) {
       return res.status(400).json({
         success: false,
-        error: "Start date must be before end date",
+        error: dateRange.error,
       });
     }
 
@@ -103,13 +82,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           };
 
           // Add startsAt if provided
-          if (parsedStartsAt) {
-            subscriptionData.startsAt = parsedStartsAt;
+          if (dateRange.dates?.startsAt) {
+            subscriptionData.startsAt = dateRange.dates.startsAt;
           }
 
           // Add expiresAt if provided
-          if (parsedExpiresAt) {
-            subscriptionData.expiresAt = parsedExpiresAt;
+          if (dateRange.dates?.expiresAt) {
+            subscriptionData.expiresAt = dateRange.dates.expiresAt;
           }
 
           await prisma.userSubscription.create({

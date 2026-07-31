@@ -142,6 +142,56 @@ describe("POST /api/subscriptions", () => {
     });
   });
 
+  it("returns 400 for malformed dates", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const req: any = {
+      method: "POST",
+      headers: {},
+      body: { zipCode: "12345", startsAt: "not-a-date" },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid start date" });
+  });
+
+  it("returns 400 for a malformed end date", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const req: any = {
+      method: "POST",
+      headers: {},
+      body: { zipCode: "12345", expiresAt: "not-a-date" },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid end date" });
+  });
+
+  it("returns 400 when a date is before today", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const req: any = {
+      method: "POST",
+      headers: {},
+      body: { zipCode: "12345", expiresAt: "2020-01-01T00:00:00.000Z" },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "End date must be today or in the future",
+    });
+  });
+
   it("creates a subscription for the authenticated user without OTP", async () => {
     const { authenticate } = await import("../_lib/middleware/auth.js");
     (authenticate as any).mockResolvedValue({ email: "user@example.com" });

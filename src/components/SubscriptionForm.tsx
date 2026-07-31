@@ -15,7 +15,7 @@ interface SubscriptionFormProps {
 }
 
 export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
-  const { isSignedIn, email: authEmail, token } = useAuth();
+  const { isSignedIn, email: authEmail, token, isValidating } = useAuth();
   const [email, setEmail] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -309,6 +309,14 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       )}
     </div>
   );
+
+  if (isValidating) {
+    return (
+      <div className="mt-4 p-4 border rounded-lg text-sm text-gray-600">
+        Checking sign-in status...
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4 p-4 border rounded-lg">

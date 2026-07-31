@@ -46,6 +46,22 @@ describe("SubscriptionForm (signed in)", () => {
     expect(screen.queryByTestId("otp-input")).not.toBeInTheDocument();
   });
 
+  it("does not show the OTP form while auth is being validated", () => {
+    useAuth.mockReturnValue({
+      isSignedIn: false,
+      email: "",
+      token: null,
+      isValidating: true,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    });
+
+    renderForm();
+
+    expect(screen.getByText(/checking sign-in status/i)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/email/i)).not.toBeInTheDocument();
+  });
+
   it("subscribes directly using the session token without requesting a code", async () => {
     createSubscription.mockResolvedValue({ success: true });
     renderForm("12345");

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import handleStartVerification from "../verify.js";
 import handleVerifyCode from "../verify-code.js";
-import { mockRes, mockSubscription } from "./testUtils.js";
+import { mockRes } from "./testUtils.js";
 
 // --- START FIX ---
 vi.mock("../_lib/db.js", () => ({
@@ -136,7 +136,7 @@ describe("Date-range subscription via handleVerifyCode", () => {
   });
 
   it("stores startsAt on the created subscription", async () => {
-    const startsAt = "2026-07-01T00:00:00.000Z";
+    const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const req: any = {
       method: "POST",
       body: { email: "a@b.com", zipCode: "12345", code: "123456", startsAt },
