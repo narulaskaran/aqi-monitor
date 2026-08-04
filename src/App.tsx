@@ -119,18 +119,11 @@ function App() {
         <SubscriptionList />
       </div>
 
-      {/* Move AuthWidget to the bottom, above Admin/Ko-Fi */}
+      {/* Move AuthWidget to the bottom, above Ko-Fi */}
       <div className="flex justify-center max-w-md mx-auto w-full mb-2">
         <AuthWidget />
       </div>
-      <div className="flex justify-between items-center w-full mt-4">
-        <a
-          href="/admin"
-          className="text-xs text-gray-500 hover:text-gray-700"
-          title="Admin Area"
-        >
-          Admin
-        </a>
+      <div className="flex justify-end items-center w-full mt-4">
         <KofiButton />
       </div>
     </div>

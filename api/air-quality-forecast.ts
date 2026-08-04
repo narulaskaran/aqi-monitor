@@ -56,9 +56,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Google's API rejects a period whose start/end sits exactly on "now" or
+    // the 96-hour horizon: by the time our request reaches Google (after the
+    // coordinates lookup + network latency), its own clock has moved past our
+    // computed `now`/`horizonEnd`, making the boundary invalid ("The specified
+    // time period is not supported"). Pad both edges inward so the period we
+    // actually send stays safely within Google's window.
+    const BOUNDARY_BUFFER_MS = 5 * 60 * 1000;
+    const usableStart = new Date(now.getTime() + BOUNDARY_BUFFER_MS);
+    const usableEnd = new Date(horizonEnd.getTime() - BOUNDARY_BUFFER_MS);
+
     // Clamp requested window to the available horizon
-    const clampedStart = parsedStart < now ? now : parsedStart;
-    const clampedEnd = parsedEnd > horizonEnd ? horizonEnd : parsedEnd;
+    const clampedStart = parsedStart < usableStart ? usableStart : parsedStart;
+    const clampedEndRaw = parsedEnd > usableEnd ? usableEnd : parsedEnd;
+    const clampedEnd = clampedEndRaw < clampedStart ? clampedStart : clampedEndRaw;
 
     console.log(`Forecast request for ZIP: ${zipCode}, ${startDate} – ${endDateStr}`);
 

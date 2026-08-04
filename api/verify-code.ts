@@ -1,7 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { parseDateRange } from "./_lib/dateRange.js";
 import { prisma } from "./_lib/db.js";
+import { authenticate } from "./_lib/middleware/auth.js";
 import { checkVerificationCode } from "./_lib/services/email.js";
-import { activateSubscription } from "./_lib/services/subscription.js";
+import {
+  createSubscription,
+  subscriptionExists,
+} from "./_lib/services/subscription.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -14,18 +19,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { email, zipCode, code, mode, startsAt, expiresAt } = req.body;
+    const hasAuthHeader = Boolean(req.headers?.authorization);
+    let authenticatedEmail: string | undefined;
 
-    if (!email || !zipCode || !code) {
+    if (hasAuthHeader) {
+      try {
+        authenticatedEmail = (await authenticate(req)).email;
+      } catch {
+        return res.status(401).json({
+          success: false,
+          error: "Unauthorized",
+        });
+      }
+    }
+
+    if (!zipCode || (!authenticatedEmail && (!email || !code))) {
       return res.status(400).json({
         success: false,
-        error: "Email, ZIP code, and verification code are required",
+        error: authenticatedEmail
+          ? "ZIP code is required"
+          : "Email, ZIP code, and verification code are required",
       });
     }
 
+    const normalizedZipCode = zipCode.trim();
+    const subscriptionEmail = authenticatedEmail ?? email;
+
     console.log("REST API verify-code request:", {
-      email,
-      zipCode,
-      code,
+      email: subscriptionEmail,
+      zipCode: normalizedZipCode,
+      hasCode: Boolean(code),
       mode,
       startsAt,
       expiresAt,
@@ -33,38 +56,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Parse and validate the optional date range BEFORE consuming the
     // one-time code, so invalid input doesn't burn the user's OTP.
-    let parsedStartsAt: Date | undefined;
-    let parsedExpiresAt: Date | undefined;
-
-    if (startsAt) {
-      parsedStartsAt = new Date(startsAt);
-      if (isNaN(parsedStartsAt.getTime())) {
-        return res.status(400).json({
-          success: false,
-          error: "Invalid start date",
-        });
-      }
-    }
-
-    if (expiresAt) {
-      parsedExpiresAt = new Date(expiresAt);
-      if (isNaN(parsedExpiresAt.getTime())) {
-        return res.status(400).json({
-          success: false,
-          error: "Invalid end date",
-        });
-      }
-    }
-
-    if (parsedStartsAt && parsedExpiresAt && parsedStartsAt >= parsedExpiresAt) {
+    const dateRange = parseDateRange(startsAt, expiresAt);
+    if (dateRange.error) {
       return res.status(400).json({
         success: false,
-        error: "Start date must be before end date",
+        error: dateRange.error,
       });
     }
 
+    // A valid session already proves ownership of the email address, so the
+    // authenticated caller can create the subscription without an OTP.
+    if (authenticatedEmail) {
+      const exists = await subscriptionExists(
+        subscriptionEmail,
+        normalizedZipCode,
+      );
+      if (exists) {
+        return res.status(409).json({
+          success: false,
+          error: "This email is already subscribed for this ZIP code",
+        });
+      }
+
+      try {
+        const subscription = await createSubscription(
+          subscriptionEmail,
+          normalizedZipCode,
+          dateRange.dates?.startsAt,
+          dateRange.dates?.expiresAt,
+        );
+        return res.status(201).json({
+          success: true,
+          valid: true,
+          subscription,
+        });
+      } catch (dbError) {
+        console.error(
+          "Error creating authenticated subscription:",
+          dbError,
+        );
+        return res.status(500).json({
+          success: false,
+          error: "Failed to create subscription",
+        });
+      }
+    }
+
     // Verify the code
-    const result = await checkVerificationCode(email, code);
+    const result = await checkVerificationCode(
+      subscriptionEmail,
+      code,
+    );
 
     // If verification is successful
     if (result.success && result.valid) {
@@ -87,17 +129,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         return res.json({ ...result, token, expiresAt });
       } else {
-        // Default: create or reactivate subscription.
+        // Default: create subscription
         try {
-          await activateSubscription(
-            email,
-            zipCode,
-            parsedStartsAt,
-            parsedExpiresAt,
+          await createSubscription(
+            subscriptionEmail,
+            normalizedZipCode,
+            dateRange.dates?.startsAt,
+            dateRange.dates?.expiresAt,
           );
         } catch (dbError) {
           console.error(
-            "Error creating/reactivating subscription after verification:",
+            "Error creating subscription after verification:",
             dbError,
           );
           return res.json({

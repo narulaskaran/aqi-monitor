@@ -51,8 +51,10 @@ const ACTIVE_SUBSCRIPTION_CONFLICT =
 export async function createSubscription(
   email: string,
   zipCode: string,
+  startsAt?: Date,
+  expiresAt?: Date,
 ): Promise<Subscription> {
-  return activateSubscription(email, zipCode);
+  return activateSubscription(email, zipCode, startsAt, expiresAt);
 }
 
 /**
