@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import handleStartVerification from "../verify.js";
 import handleVerifyCode from "../verify-code.js";
-import { mockRes } from "./testUtils.js";
+import { mockRes, mockSubscription } from "./testUtils.js";
 
 // --- START FIX ---
 vi.mock("../_lib/db.js", () => ({
@@ -17,12 +17,21 @@ vi.mock("../_lib/db.js", () => ({
 }));
 // --- END FIX ---
 
+vi.mock("../_lib/middleware/auth.js", () => ({
+  authenticate: vi.fn(),
+}));
+
 vi.mock("../_lib/services/email.js", () => ({
   sendVerificationCode: vi.fn().mockResolvedValue({ success: true }),
   checkVerificationCode: vi
     .fn()
     .mockResolvedValue({ success: true, valid: true }),
   sendEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+vi.mock("../_lib/services/subscription.js", () => ({
+  createSubscription: vi.fn(),
+  subscriptionExists: vi.fn(),
 }));
 
 describe("Verification API", () => {
@@ -76,22 +85,143 @@ describe("Verification API", () => {
     });
     const subMod = await import("../_lib/services/subscription.js");
     vi.spyOn(subMod, "subscriptionExists").mockResolvedValue(false);
-    const dbMod = await import("../_lib/db.js");
-    
-    // This spy now works safely against our mock
-    vi.spyOn(dbMod.prisma.userSubscription, "create").mockResolvedValue({
-      id: "id",
-      email: "a@b.com",
-      zipCode: "12345",
-      createdAt: new Date(),
-      active: true,
-      activatedAt: new Date(),
-      updatedAt: new Date(),
-      lastEmailSentAt: null,
-    } as any);
+    const createSubscription = (await import(
+      "../_lib/services/subscription.js"
+    )).createSubscription as any;
+    createSubscription.mockResolvedValue(mockSubscription);
     
     await handleVerifyCode(req, res);
     expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
+    expect(createSubscription).toHaveBeenCalledWith(
+      "a@b.com",
+      "12345",
+      undefined,
+      undefined,
+    );
+  });
+
+  it("creates a subscription from the authenticated session without an OTP", async () => {
+    const auth = await import("../_lib/middleware/auth.js");
+    (auth.authenticate as any).mockResolvedValue({ email: "signedin@example.com" });
+
+    const subMod = await import("../_lib/services/subscription.js");
+    (subMod.subscriptionExists as any).mockResolvedValue(false);
+    (subMod.createSubscription as any).mockResolvedValue({
+      ...mockSubscription,
+      email: "signedin@example.com",
+    });
+
+    const req: any = {
+      method: "POST",
+      headers: { authorization: "Bearer session-token" },
+      body: {
+        email: "attacker@example.com",
+        code: "wrong-code",
+        zipCode: " 12345 ",
+      },
+    };
+    const res = mockRes();
+    await handleVerifyCode(req, res);
+
+    expect(auth.authenticate).toHaveBeenCalledWith(req);
+    expect(subMod.subscriptionExists).toHaveBeenCalledWith(
+      "signedin@example.com",
+      "12345",
+    );
+    expect(subMod.createSubscription).toHaveBeenCalledWith(
+      "signedin@example.com",
+      "12345",
+      undefined,
+      undefined,
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      valid: true,
+      subscription: expect.objectContaining({ email: "signedin@example.com" }),
+    });
+
+    const emailMod = await import("../_lib/services/email.js");
+    expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when an authenticated request is missing the ZIP code", async () => {
+    const auth = await import("../_lib/middleware/auth.js");
+    (auth.authenticate as any).mockResolvedValue({ email: "signedin@example.com" });
+
+    const req: any = {
+      method: "POST",
+      headers: { authorization: "Bearer session-token" },
+      body: {},
+    };
+    const res = mockRes();
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "ZIP code is required",
+    });
+  });
+
+  it("returns 409 when an authenticated user is already subscribed", async () => {
+    const auth = await import("../_lib/middleware/auth.js");
+    (auth.authenticate as any).mockResolvedValue({ email: "signedin@example.com" });
+
+    const subMod = await import("../_lib/services/subscription.js");
+    (subMod.subscriptionExists as any).mockResolvedValue(true);
+
+    const req: any = {
+      method: "POST",
+      headers: { authorization: "Bearer session-token" },
+      body: { zipCode: " 12345 " },
+    };
+    const res = mockRes();
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "This email is already subscribed for this ZIP code",
+    });
+  });
+
+  it("validates dates for authenticated subscriptions before creating them", async () => {
+    const auth = await import("../_lib/middleware/auth.js");
+    (auth.authenticate as any).mockResolvedValue({ email: "signedin@example.com" });
+
+    const req: any = {
+      method: "POST",
+      headers: { authorization: "Bearer session-token" },
+      body: { zipCode: "12345", startsAt: "not-a-date" },
+    };
+    const res = mockRes();
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Invalid start date",
+    });
+  });
+
+  it("returns 401 when an authenticated request has an invalid session", async () => {
+    const auth = await import("../_lib/middleware/auth.js");
+    (auth.authenticate as any).mockRejectedValue(new Error("Unauthorized"));
+
+    const req: any = {
+      method: "POST",
+      headers: { authorization: "Bearer expired-token" },
+      body: { zipCode: "12345" },
+    };
+    const res = mockRes();
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Unauthorized",
+    });
   });
 });
 
@@ -145,26 +275,17 @@ describe("Date-range subscription via handleVerifyCode", () => {
     const emailMod = await import("../_lib/services/email.js");
     vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({ success: true, valid: true });
 
-    const dbMod = await import("../_lib/db.js");
-    const createSpy = vi.spyOn(dbMod.prisma.userSubscription, "create").mockResolvedValue({
-      id: "id",
-      email: "a@b.com",
-      zipCode: "12345",
-      createdAt: new Date(),
-      active: true,
-      activatedAt: new Date(),
-      updatedAt: new Date(),
-      lastEmailSentAt: null,
-      startsAt: new Date(startsAt),
-      expiresAt: null,
-    } as any);
+    const subMod = await import("../_lib/services/subscription.js");
+    const createSpy = subMod.createSubscription as any;
+    createSpy.mockResolvedValue(mockSubscription);
 
     await handleVerifyCode(req, res);
 
     expect(createSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ startsAt: new Date(startsAt) }),
-      })
+      "a@b.com",
+      "12345",
+      new Date(startsAt),
+      undefined,
     );
     expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
   });

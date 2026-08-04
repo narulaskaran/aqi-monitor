@@ -2,20 +2,19 @@ import { vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "../../lib/theme";
 import { SubscriptionForm } from "../SubscriptionForm";
-import { createSubscription as realCreateSubscription } from "../../lib/api";
+import { verifyCode as realVerifyCode } from "../../lib/api";
 import { useAuth as realUseAuth } from "../../lib/auth";
 
 vi.mock("../../lib/api", () => ({
   startVerification: vi.fn(),
   verifyCode: vi.fn(),
-  createSubscription: vi.fn(),
 }));
 
 vi.mock("../../lib/auth", () => ({
   useAuth: vi.fn(),
 }));
 
-const createSubscription = realCreateSubscription as unknown as jest.Mock;
+const verifyCode = realVerifyCode as unknown as jest.Mock;
 const useAuth = realUseAuth as unknown as jest.Mock;
 
 const renderForm = (zipCode = "12345") =>
@@ -27,7 +26,7 @@ const renderForm = (zipCode = "12345") =>
 
 describe("SubscriptionForm (signed in)", () => {
   beforeEach(() => {
-    createSubscription.mockReset();
+    verifyCode.mockReset();
     useAuth.mockReturnValue({
       isSignedIn: true,
       email: "signedin@example.com",
@@ -63,17 +62,19 @@ describe("SubscriptionForm (signed in)", () => {
   });
 
   it("subscribes directly using the session token without requesting a code", async () => {
-    createSubscription.mockResolvedValue({ success: true });
+    verifyCode.mockResolvedValue({ success: true, valid: true });
     renderForm("12345");
 
     fireEvent.click(screen.getByRole("button", { name: /sign up for alerts/i }));
 
     await waitFor(() => {
-      expect(createSubscription).toHaveBeenCalledWith(
-        "session-token",
+      expect(verifyCode).toHaveBeenCalledWith(
+        undefined,
         "12345",
         undefined,
-        undefined
+        undefined,
+        undefined,
+        "session-token",
       );
     });
 
@@ -81,7 +82,7 @@ describe("SubscriptionForm (signed in)", () => {
   });
 
   it("shows an error if subscribing fails (e.g. already subscribed)", async () => {
-    createSubscription.mockRejectedValue(
+    verifyCode.mockRejectedValue(
       new Error("This email is already subscribed for this ZIP code")
     );
     renderForm();

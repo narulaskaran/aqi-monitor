@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { startVerification, verifyCode, createSubscription } from "../lib/api";
+import { startVerification, verifyCode } from "../lib/api";
 import { isValidEmail } from "../lib/utils";
 import { useAuth } from "../lib/auth";
 import {
@@ -158,7 +158,17 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
       const startsAt = hasDateRange && startDate ? new Date(startDate).toISOString() : undefined;
       const expiresAt = hasDateRange && endDate ? new Date(endDate).toISOString() : undefined;
-      await createSubscription(token, zipCode, startsAt, expiresAt);
+      const result = await verifyCode(
+        undefined,
+        zipCode,
+        undefined,
+        expiresAt,
+        startsAt,
+        token,
+      );
+      if (!result.success || !result.valid) {
+        throw new Error(result.error || "Failed to create subscription");
+      }
       setSuccess(true);
     } catch (err) {
       console.error("Error creating subscription:", err);

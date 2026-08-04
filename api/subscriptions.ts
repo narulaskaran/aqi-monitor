@@ -1,12 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { parseDateRange } from "./_lib/dateRange.js";
 import { authenticate } from "./_lib/middleware/auth.js";
 import { prisma } from "./_lib/db.js";
 import {
-  createSubscription,
   getSubscriptionsForEmailSorted,
   setSubscriptionActive,
-  subscriptionExists,
 } from "./_lib/services/subscription.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -31,45 +28,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
       console.error("Error fetching subscriptions:", error);
       return res.status(500).json({ error: "Failed to fetch subscriptions" });
-    }
-  }
-
-  // POST /api/subscriptions — create a subscription for the authenticated user
-  if (req.method === "POST") {
-    try {
-      const { zipCode, startsAt, expiresAt } = (req.body ?? {}) as {
-        zipCode?: string;
-        startsAt?: string;
-        expiresAt?: string;
-      };
-
-      if (typeof zipCode !== "string" || !zipCode.trim()) {
-        return res.status(400).json({ error: "zipCode is required" });
-      }
-      const normalizedZipCode = zipCode.trim();
-
-      const dateRange = parseDateRange(startsAt, expiresAt);
-      if (dateRange.error) {
-        return res.status(400).json({ error: dateRange.error });
-      }
-
-      const exists = await subscriptionExists(email, normalizedZipCode);
-      if (exists) {
-        return res
-          .status(409)
-          .json({ error: "This email is already subscribed for this ZIP code" });
-      }
-
-      const subscription = await createSubscription(
-        email,
-        normalizedZipCode,
-        dateRange.dates?.startsAt,
-        dateRange.dates?.expiresAt,
-      );
-      return res.status(201).json({ success: true, subscription });
-    } catch (error) {
-      console.error("Error creating subscription:", error);
-      return res.status(500).json({ error: "Failed to create subscription" });
     }
   }
 

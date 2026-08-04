@@ -142,37 +142,6 @@ export async function getSubscriptions(token: string) {
 }
 
 /**
- * Creates a new subscription for the authenticated user (no OTP required)
- */
-export async function createSubscription(
-  token: string,
-  zipCode: string,
-  startsAt?: string,
-  expiresAt?: string,
-) {
-  const body: { zipCode: string; startsAt?: string; expiresAt?: string } = {
-    zipCode,
-  };
-  if (startsAt) body.startsAt = startsAt;
-  if (expiresAt) body.expiresAt = expiresAt;
-
-  const response = await fetch(getApiUrl("subscriptions"), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || `Failed to create subscription: ${response.status}`);
-  }
-  return data;
-}
-
-/**
  * Toggles the active status of a subscription
  */
 export async function updateSubscription(
@@ -195,30 +164,34 @@ export async function updateSubscription(
 }
 
 /**
- * Verifies code sent to email
+ * Completes a subscription with either an email/OTP pair or an auth token.
  */
 export async function verifyCode(
-  email: string,
+  email: string | undefined,
   zipCode: string,
-  code: string,
+  code: string | undefined,
   expiresAt?: string,
-  startsAt?: string
+  startsAt?: string,
+  token?: string,
 ) {
   try {
     const baseUrl = getBaseUrl();
     console.log(`Verifying code: ${baseUrl}/api/verify-code`);
 
     const body: {
-      email: string;
       zipCode: string;
-      code: string;
+      email?: string;
+      code?: string;
       startsAt?: string;
       expiresAt?: string;
     } = {
-      email,
       zipCode,
-      code
     };
+
+    // Signed-out callers provide email + OTP; signed-in callers provide only
+    // their session token and let the API derive the email from that session.
+    if (email) body.email = email;
+    if (code) body.code = code;
 
     // Add startsAt if provided
     if (startsAt) {
@@ -234,6 +207,7 @@ export async function verifyCode(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body)
     });
