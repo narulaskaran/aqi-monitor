@@ -243,7 +243,8 @@ describe("Re-subscribe and duplicate prevention", () => {
     };
     const findFirstSpy = vi
       .spyOn(dbMod.prisma.userSubscription, "findFirst")
-      .mockResolvedValue(existingInactive as any);
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(existingInactive as any);
     const updateSpy = vi
       .spyOn(dbMod.prisma.userSubscription, "update")
       .mockResolvedValue({
@@ -255,8 +256,12 @@ describe("Re-subscribe and duplicate prevention", () => {
 
     await handleVerifyCode(req, res);
 
-    expect(findFirstSpy).toHaveBeenCalledWith({
-      where: { email: "unsubscribed@b.com", zipCode: "12345" },
+    expect(findFirstSpy).toHaveBeenNthCalledWith(1, {
+      where: { email: "unsubscribed@b.com", zipCode: "12345", active: true },
+      orderBy: { updatedAt: "desc" },
+    });
+    expect(findFirstSpy).toHaveBeenNthCalledWith(2, {
+      where: { email: "unsubscribed@b.com", zipCode: "12345", active: false },
       orderBy: { updatedAt: "desc" },
     });
     expect(updateSpy).toHaveBeenCalledWith(
@@ -296,6 +301,7 @@ describe("Re-subscribe and duplicate prevention", () => {
     };
     vi.spyOn(dbMod.prisma.userSubscription, "findFirst")
       .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(winningRow as any);
     vi.spyOn(dbMod.prisma.userSubscription, "create").mockRejectedValueOnce({
       code: "P2002",
@@ -306,9 +312,7 @@ describe("Re-subscribe and duplicate prevention", () => {
 
     await handleVerifyCode(req, res);
 
-    expect(updateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: "winning-id" } }),
-    );
+    expect(updateSpy).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
   });
 

@@ -158,7 +158,14 @@ export async function updateSubscription(
     body: JSON.stringify({ id, active }),
   });
   if (!response.ok) {
-    throw new Error(`Failed to update subscription: ${response.status}`);
+    let message = `Failed to update subscription: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch {
+      // Keep the status-based fallback when the response is not JSON.
+    }
+    throw new Error(message);
   }
   return response.json();
 }

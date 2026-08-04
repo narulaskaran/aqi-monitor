@@ -42,9 +42,11 @@ const ratelimit = new Ratelimit({
 });
 
 const HOURS_BETWEEN_EMAILS = 20;
+const ACTIVE_SUBSCRIPTION_CONFLICT =
+  "An active subscription already exists for this ZIP code";
 
 /**
- * Activates an existing subscription or creates one for the email and ZIP.
+ * Ensures there is one active subscription for the email and ZIP.
  */
 export async function createSubscription(
   email: string,
@@ -65,9 +67,8 @@ export async function getAllSubscriptions(): Promise<Subscription[]> {
 }
 
 /**
- * Upserts an active subscription after verification.
- * Existing rows, including already-active rows, are updated and their
- * optional date range is replaced with the values supplied by the caller.
+ * Activates an inactive subscription or creates one after verification.
+ * An already-active row is returned unchanged.
  */
 export async function activateSubscription(
   email: string,
@@ -82,18 +83,36 @@ export async function activateSubscription(
     expiresAt: expiresAt ?? null,
   };
 
-  // Prefer reactivating an existing row so a user keeps one subscription
-  // record for an email/ZIP pair instead of accumulating duplicates.
-  const existing = await prisma.userSubscription.findFirst({
-    where: { email, zipCode },
+  // Keep an existing active row unchanged. This makes repeated verification
+  // idempotent and avoids clearing a scheduled date range.
+  const active = await prisma.userSubscription.findFirst({
+    where: { email, zipCode, active: true },
     orderBy: { updatedAt: "desc" },
   });
 
-  if (existing) {
-    return prisma.userSubscription.update({
-      where: { id: existing.id },
-      data,
-    });
+  if (active) {
+    return active;
+  }
+
+  // Reuse an inactive row so a user keeps one subscription record for an
+  // email/ZIP pair instead of accumulating historical duplicates.
+  const inactive = await prisma.userSubscription.findFirst({
+    where: { email, zipCode, active: false },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  if (inactive) {
+    try {
+      return await prisma.userSubscription.update({
+        where: { id: inactive.id },
+        data,
+      });
+    } catch (error) {
+      // Another path may have activated a row after the active lookup.
+      if (!isUniqueConstraintError(error)) {
+        throw error;
+      }
+    }
   }
 
   try {
@@ -111,19 +130,16 @@ export async function activateSubscription(
       throw error;
     }
 
-    const active = await prisma.userSubscription.findFirst({
+    const winningActive = await prisma.userSubscription.findFirst({
       where: { email, zipCode, active: true },
       orderBy: { updatedAt: "desc" },
     });
 
-    if (!active) {
+    if (!winningActive) {
       throw error;
     }
 
-    return prisma.userSubscription.update({
-      where: { id: active.id },
-      data,
-    });
+    return winningActive;
   }
 }
 
@@ -246,12 +262,39 @@ export async function setSubscriptionActive(
   id: string,
   active: boolean,
 ): Promise<Subscription> {
-  return await prisma.userSubscription.update({
-    where: { id },
-    data: active
-      ? { active: true, activatedAt: new Date() }
-      : { active: false },
-  });
+  if (active) {
+    const subscription = await prisma.userSubscription.findUnique({
+      where: { id },
+    });
+
+    if (subscription) {
+      const existingActive = await prisma.userSubscription.findFirst({
+        where: {
+          email: subscription.email,
+          zipCode: subscription.zipCode,
+          active: true,
+        },
+      });
+
+      if (existingActive && existingActive.id !== id) {
+        throw new Error(ACTIVE_SUBSCRIPTION_CONFLICT);
+      }
+    }
+  }
+
+  try {
+    return await prisma.userSubscription.update({
+      where: { id },
+      data: active
+        ? { active: true, activatedAt: new Date() }
+        : { active: false },
+    });
+  } catch (error) {
+    if (active && isUniqueConstraintError(error)) {
+      throw new Error(ACTIVE_SUBSCRIPTION_CONFLICT);
+    }
+    throw error;
+  }
 }
 
 /**

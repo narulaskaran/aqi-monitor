@@ -59,6 +59,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true, subscription: updated });
     } catch (error) {
       console.error("Error updating subscription:", error);
+      if (
+        error instanceof Error &&
+        error.message === "An active subscription already exists for this ZIP code"
+      ) {
+        return res.status(409).json({ error: error.message });
+      }
       return res.status(500).json({ error: "Failed to update subscription" });
     }
   }

@@ -135,15 +135,24 @@ describe("Subscription Service", () => {
       startsAt: new Date("2026-06-01"),
       expiresAt: new Date("2026-07-01"),
     };
-    vi.spyOn(dbMod.prisma.userSubscription, "findFirst").mockResolvedValue(
-      existing as any,
-    );
+    const findFirstSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "findFirst")
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(existing as any);
     const updateSpy = vi
       .spyOn(dbMod.prisma.userSubscription, "update")
       .mockResolvedValue(existing as any);
 
     await subscriptionService.activateSubscription("a@b.com", "12345");
 
+    expect(findFirstSpy).toHaveBeenNthCalledWith(1, {
+      where: { email: "a@b.com", zipCode: "12345", active: true },
+      orderBy: { updatedAt: "desc" },
+    });
+    expect(findFirstSpy).toHaveBeenNthCalledWith(2, {
+      where: { email: "a@b.com", zipCode: "12345", active: false },
+      orderBy: { updatedAt: "desc" },
+    });
     expect(updateSpy).toHaveBeenCalledWith({
       where: { id: "existing-id" },
       data: expect.objectContaining({
@@ -152,6 +161,48 @@ describe("Subscription Service", () => {
         expiresAt: null,
       }),
     });
+  });
+
+  it("leaves an already-active subscription unchanged", async () => {
+    const dbMod = await import("../_lib/db.js");
+    const active = {
+      ...mockSubscription,
+      id: "active-id",
+      startsAt: new Date("2026-08-10"),
+      expiresAt: new Date("2026-08-20"),
+    };
+    const findFirstSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "findFirst")
+      .mockResolvedValue(active as any);
+    const updateSpy = vi.spyOn(dbMod.prisma.userSubscription, "update");
+
+    const result = await subscriptionService.activateSubscription(
+      "a@b.com",
+      "12345",
+    );
+
+    expect(result).toBe(active);
+    expect(findFirstSpy).toHaveBeenCalledWith({
+      where: { email: "a@b.com", zipCode: "12345", active: true },
+      orderBy: { updatedAt: "desc" },
+    });
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects reactivating a historical row when another row is active", async () => {
+    const dbMod = await import("../_lib/db.js");
+    const target = { ...mockSubscription, id: "inactive-id", active: false };
+    const active = { ...mockSubscription, id: "active-id", active: true };
+    vi.spyOn(dbMod.prisma.userSubscription, "findUnique").mockResolvedValue(
+      target as any,
+    );
+    vi.spyOn(dbMod.prisma.userSubscription, "findFirst").mockResolvedValue(
+      active as any,
+    );
+
+    await expect(
+      subscriptionService.setSubscriptionActive("inactive-id", true),
+    ).rejects.toThrow("An active subscription already exists for this ZIP code");
   });
 
   it("checks the active flag when determining whether a subscription exists", async () => {
