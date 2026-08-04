@@ -426,6 +426,11 @@ export async function updateAirQualityForAllSubscriptions(): Promise<void> {
   try {
     console.log("Starting to update air quality data for all subscriptions");
 
+    // Keep cron failures fail-fast when the Google API key is unavailable.
+    // The lazy validation is needed for the history endpoint's dev fallback,
+    // but a production refresh should not mutate subscription state first.
+    getApiKey();
+
     // First, deactivate any expired subscriptions
     const { deactivateExpiredSubscriptions } = await import("./subscription.js");
     const deactivatedCount = await deactivateExpiredSubscriptions();
@@ -652,7 +657,7 @@ export async function getHistoryForZip(
   days: number,
 ): Promise<{ timestamp: string; aqi: number; category: string }[]> {
   const since = new Date();
-  since.setDate(since.getDate() - days);
+  since.setDate(since.getDate() - (days - 1));
   since.setHours(0, 0, 0, 0);
 
   const records = await prisma.airQualityRecord.findMany({
