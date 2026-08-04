@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import handleStartVerification from "../verify.js";
 import handleVerifyCode from "../verify-code.js";
-import { mockRes, mockSubscription } from "./testUtils.js";
+import { mockRes } from "./testUtils.js";
 
 // --- START FIX ---
 vi.mock("../_lib/db.js", () => ({
