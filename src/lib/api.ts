@@ -164,30 +164,34 @@ export async function updateSubscription(
 }
 
 /**
- * Verifies code sent to email
+ * Completes a subscription with either an email/OTP pair or an auth token.
  */
 export async function verifyCode(
-  email: string,
+  email: string | undefined,
   zipCode: string,
-  code: string,
+  code: string | undefined,
   expiresAt?: string,
-  startsAt?: string
+  startsAt?: string,
+  token?: string,
 ) {
   try {
     const baseUrl = getBaseUrl();
     console.log(`Verifying code: ${baseUrl}/api/verify-code`);
 
     const body: {
-      email: string;
       zipCode: string;
-      code: string;
+      email?: string;
+      code?: string;
       startsAt?: string;
       expiresAt?: string;
     } = {
-      email,
       zipCode,
-      code
     };
+
+    // Signed-out callers provide email + OTP; signed-in callers provide only
+    // their session token and let the API derive the email from that session.
+    if (email) body.email = email;
+    if (code) body.code = code;
 
     // Add startsAt if provided
     if (startsAt) {
@@ -203,6 +207,7 @@ export async function verifyCode(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body)
     });
