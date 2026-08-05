@@ -87,10 +87,7 @@ export async function activateSubscription(
 
   // Keep an existing active row unchanged. This makes repeated verification
   // idempotent and avoids clearing a scheduled date range.
-  const active = await prisma.userSubscription.findFirst({
-    where: { email, zipCode, active: true },
-    orderBy: { updatedAt: "desc" },
-  });
+  const active = await findActiveSubscription(email, zipCode);
 
   if (active) {
     return active;
@@ -114,6 +111,13 @@ export async function activateSubscription(
       if (!isUniqueConstraintError(error)) {
         throw error;
       }
+
+      const winningActive = await findActiveSubscription(email, zipCode);
+      if (!winningActive) {
+        throw error;
+      }
+
+      return winningActive;
     }
   }
 
@@ -132,10 +136,7 @@ export async function activateSubscription(
       throw error;
     }
 
-    const winningActive = await prisma.userSubscription.findFirst({
-      where: { email, zipCode, active: true },
-      orderBy: { updatedAt: "desc" },
-    });
+    const winningActive = await findActiveSubscription(email, zipCode);
 
     if (!winningActive) {
       throw error;
@@ -143,6 +144,16 @@ export async function activateSubscription(
 
     return winningActive;
   }
+}
+
+async function findActiveSubscription(
+  email: string,
+  zipCode: string,
+): Promise<Subscription | null> {
+  return prisma.userSubscription.findFirst({
+    where: { email, zipCode, active: true },
+    orderBy: { updatedAt: "desc" },
+  });
 }
 
 function isUniqueConstraintError(error: unknown): boolean {

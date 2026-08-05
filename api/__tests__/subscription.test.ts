@@ -189,6 +189,69 @@ describe("Subscription Service", () => {
     expect(updateSpy).not.toHaveBeenCalled();
   });
 
+  it("returns the active winner when reactivation loses a race", async () => {
+    const dbMod = await import("../_lib/db.js");
+    const inactive = { ...mockSubscription, id: "inactive-id", active: false };
+    const winner = { ...mockSubscription, id: "winner-id", active: true };
+    const findFirstSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "findFirst")
+      .mockReset()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(inactive as any)
+      .mockResolvedValueOnce(winner as any);
+    const updateSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "update")
+      .mockReset()
+      .mockRejectedValueOnce({ code: "P2002" });
+    const createSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "create")
+      .mockReset();
+
+    const result = await subscriptionService.activateSubscription(
+      "a@b.com",
+      "12345",
+    );
+
+    expect(result).toBe(winner);
+    expect(updateSpy).toHaveBeenCalledOnce();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(findFirstSpy).toHaveBeenNthCalledWith(3, {
+      where: { email: "a@b.com", zipCode: "12345", active: true },
+      orderBy: { updatedAt: "desc" },
+    });
+  });
+
+  it("returns the active winner when fresh creation loses a race", async () => {
+    const dbMod = await import("../_lib/db.js");
+    const winner = { ...mockSubscription, id: "winner-id", active: true };
+    const findFirstSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "findFirst")
+      .mockReset()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(winner as any);
+    const updateSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "update")
+      .mockReset();
+    const createSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "create")
+      .mockReset()
+      .mockRejectedValueOnce({ code: "P2002" });
+
+    const result = await subscriptionService.activateSubscription(
+      "a@b.com",
+      "12345",
+    );
+
+    expect(result).toBe(winner);
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(createSpy).toHaveBeenCalledOnce();
+    expect(findFirstSpy).toHaveBeenNthCalledWith(3, {
+      where: { email: "a@b.com", zipCode: "12345", active: true },
+      orderBy: { updatedAt: "desc" },
+    });
+  });
+
   it("rejects reactivating a historical row when another row is active", async () => {
     const dbMod = await import("../_lib/db.js");
     const target = { ...mockSubscription, id: "inactive-id", active: false };
