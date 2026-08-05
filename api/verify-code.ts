@@ -79,6 +79,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       try {
+        // The pre-check gives ordinary duplicate requests a clear 409. If
+        // another authenticated request wins between this check and the
+        // activation write, the service returns that active winner
+        // idempotently rather than creating a duplicate row.
         const subscription = await createSubscription(
           subscriptionEmail,
           normalizedZipCode,

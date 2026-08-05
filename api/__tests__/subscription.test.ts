@@ -132,6 +132,7 @@ describe("Subscription Service", () => {
       ...mockSubscription,
       id: "existing-id",
       active: false,
+      lastEmailSentAt: new Date("2026-05-31"),
       startsAt: new Date("2026-06-01"),
       expiresAt: new Date("2026-07-01"),
     };
@@ -157,6 +158,7 @@ describe("Subscription Service", () => {
       where: { id: "existing-id" },
       data: expect.objectContaining({
         active: true,
+        lastEmailSentAt: null,
         startsAt: null,
         expiresAt: null,
       }),
@@ -179,6 +181,8 @@ describe("Subscription Service", () => {
     const result = await subscriptionService.activateSubscription(
       "a@b.com",
       "12345",
+      new Date("2026-09-01"),
+      new Date("2026-10-01"),
     );
 
     expect(result).toBe(active);

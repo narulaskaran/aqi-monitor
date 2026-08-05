@@ -81,6 +81,7 @@ export async function activateSubscription(
   const data = {
     active: true,
     activatedAt: new Date(),
+    lastEmailSentAt: null,
     startsAt: startsAt ?? null,
     expiresAt: expiresAt ?? null,
   };
@@ -94,7 +95,8 @@ export async function activateSubscription(
   }
 
   // Reuse an inactive row so a user keeps one subscription record for an
-  // email/ZIP pair instead of accumulating historical duplicates.
+  // email/ZIP pair instead of accumulating historical duplicates. Reset the
+  // email cooldown because this starts a new active subscription period.
   const inactive = await prisma.userSubscription.findFirst({
     where: { email, zipCode, active: false },
     orderBy: { updatedAt: "desc" },
