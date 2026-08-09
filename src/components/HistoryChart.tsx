@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { getAirQualityHistory, HistoryPoint } from "../lib/api";
+import { getAirQualityHistory } from "../lib/api";
+import type { HistoryPoint } from "../lib/api";
 
 interface HistoryChartProps {
   zipCode: string;
@@ -192,7 +193,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
           </svg>
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-center">
-          Historical data from hourly air quality snapshots
+          Historical AQI snapshots
         </p>
       </CardContent>
     </Card>
