@@ -1,6 +1,6 @@
 /**
- * US ZIP codes are 5 digits. Cap length before any I/O or logging so
- * oversized / attacker-controlled query values never reach error bodies.
+ * US ZIP codes are 5 digits. The length cap is redundant with the regex but
+ * rejects oversized input before pattern matching.
  */
 export const MAX_ZIP_CODE_LENGTH = 5;
 

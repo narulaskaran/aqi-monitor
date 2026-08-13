@@ -4,6 +4,7 @@ import {
   getCoordinatesForZipCode,
   fetchAirQualityForecast,
 } from './_lib/services/airQuality.js';
+import { isValidZipCode } from './_lib/zipCode.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -21,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!zipCode || typeof zipCode !== 'string') {
       return res.status(400).json({ error: 'ZIP code is required' });
     }
-    if (!/^\d{5}$/.test(zipCode)) {
+    if (!isValidZipCode(zipCode)) {
       return res.status(400).json({ error: 'ZIP code must be a 5-digit number' });
     }
 
@@ -101,7 +102,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error.message?.includes('No locations found')) {
         return res.status(400).json({
-          error: `Invalid or unsupported ZIP code: ${zipCode}. Please try a different ZIP code.`,
+          error:
+            'Invalid or unsupported ZIP code. Please try a different ZIP code.',
         });
       }
 
