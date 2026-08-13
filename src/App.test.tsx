@@ -31,7 +31,15 @@ describe("App accessibility", () => {
     expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
   });
 
-  it("announces AQI results in a live region after lookup", async () => {
+  it("keeps an empty polite live region in the DOM before results exist", () => {
+    renderWithTheme(<App />);
+    const liveRegion = screen.getByRole("status");
+    expect(liveRegion).toHaveAttribute("aria-live", "polite");
+    expect(liveRegion).toHaveAttribute("aria-atomic", "true");
+    expect(liveRegion).toBeEmptyDOMElement();
+  });
+
+  it("renders AQI results into the existing live region after lookup", async () => {
     getAirQuality.mockResolvedValue({
       index: 42,
       category: "Good",
@@ -39,16 +47,18 @@ describe("App accessibility", () => {
     });
 
     renderWithTheme(<App />);
+    const liveRegion = screen.getByRole("status");
+    expect(liveRegion).toBeEmptyDOMElement();
+
     fireEvent.change(screen.getByLabelText(/zip code/i), {
       target: { value: "12345" },
     });
     fireEvent.click(screen.getByRole("button", { name: /get air quality/i }));
 
     await waitFor(() => {
-      const liveRegion = screen.getByRole("status");
-      expect(liveRegion).toHaveAttribute("aria-live", "polite");
-      expect(liveRegion).toHaveAttribute("aria-atomic", "true");
       expect(liveRegion).toHaveTextContent(/aqi: 42/i);
     });
+    expect(liveRegion).toHaveAttribute("aria-live", "polite");
+    expect(liveRegion).toHaveAttribute("aria-atomic", "true");
   });
 });

@@ -111,13 +111,18 @@ function App() {
 
         {error && <div className="text-red-500 mb-4">{error}</div>}
 
-        {airQuality && (
-          <>
+        <div role="status" aria-live="polite" aria-atomic="true">
+          {airQuality && (
             <AQICard
               index={airQuality.index}
               category={airQuality.category}
               dominantPollutant={airQuality.dominantPollutant}
             />
+          )}
+        </div>
+
+        {airQuality && (
+          <>
             <SubscriptionForm zipCode={currentZipCode} />
             <ForecastCard zipCode={currentZipCode} />
           </>

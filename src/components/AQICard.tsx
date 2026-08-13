@@ -23,7 +23,7 @@ export function AQICard({ index, category, dominantPollutant }: AQICardProps) {
   const categoryInfo = getAQICategory(category, index);
 
   return (
-    <Card role="status" aria-live="polite" aria-atomic="true">
+    <Card>
       <CardHeader>
         <CardTitle>Air Quality Information</CardTitle>
       </CardHeader>

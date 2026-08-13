@@ -51,8 +51,8 @@ const InputOTPSlot = React.forwardRef<
         isActive && "z-10 ring-1 ring-ring",
         className
       )}
-      aria-label={`Digit ${index + 1}`}
       {...props}
+      aria-hidden="true"
     >
       {char}
       {hasFakeCaret && (
