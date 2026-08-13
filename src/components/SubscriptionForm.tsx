@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { startVerification, verifyCode } from "../lib/api";
-import { isValidEmail } from "../lib/utils";
+import { isValidEmail, normalizeOtpCode, OTP_LENGTH } from "../lib/utils";
 import { useAuth } from "../lib/auth";
 import {
   InputOTP,
@@ -31,7 +31,12 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const verifyButtonRef = useRef<HTMLButtonElement>(null);
+  // Prevents duplicate / overlapping verify calls (onComplete + form submit,
+  // or onComplete firing more than once while a request is in flight).
+  const verifyingRef = useRef(false);
+  const handleVerifyRef = useRef<(code?: string) => Promise<void>>(
+    async () => undefined
+  );
 
   // Reset form when ZIP code changes
   useEffect(() => {
@@ -46,6 +51,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setHasDateRange(false);
       setStartDate("");
       setEndDate("");
+      verifyingRef.current = false;
     }
 
   }, [zipCode, lastZipCode]);
@@ -182,10 +188,20 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
     }
   };
 
-  const handleVerify = async () => {
-    // Validate code format
-    if (otp.length !== 6) {
-      setError("Please enter a valid 6-digit verification code");
+  const handleVerify = async (codeOverride?: string) => {
+    const code = normalizeOtpCode(codeOverride ?? otp);
+
+    // Never hit the API (or the client-side attempt counter) until all
+    // 6 digits are present. Partial onComplete / Enter submits used to
+    // burn attempts and lock the user out of a still-valid code.
+    if (code.length !== OTP_LENGTH) {
+      if (codeOverride === undefined) {
+        setError("Please enter a valid 6-digit verification code");
+      }
+      return;
+    }
+
+    if (verifyingRef.current || isLoading) {
       return;
     }
 
@@ -195,6 +211,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       return;
     }
 
+    verifyingRef.current = true;
+
     try {
       setError(null);
       setIsLoading(true);
@@ -202,7 +220,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       // Pass startsAt and expiresAt if date range is set
       const startsAt = hasDateRange && startDate ? new Date(startDate).toISOString() : undefined;
       const expiresAt = hasDateRange && endDate ? new Date(endDate).toISOString() : undefined;
-      const result = await verifyCode(email, zipCode, otp, expiresAt, startsAt);
+      const result = await verifyCode(email, zipCode, code, expiresAt, startsAt);
       console.log("Code verification response:", result);
 
       if (result.success && result.valid) {
@@ -235,8 +253,26 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
           : "An error occurred. Please try again."
       );
     } finally {
+      verifyingRef.current = false;
       setIsLoading(false);
     }
+  };
+
+  handleVerifyRef.current = handleVerify;
+
+  // Stable callback so input-otp's onComplete effect does not re-fire
+  // just because the parent re-rendered with a new function identity.
+  const handleOtpComplete = useCallback((value: string) => {
+    const code = normalizeOtpCode(value);
+    if (code.length !== OTP_LENGTH) {
+      return;
+    }
+    void handleVerifyRef.current(code);
+  }, []);
+
+  const handleOtpChange = (value: string) => {
+    setOtp(normalizeOtpCode(value));
+    setError(null);
   };
 
   const handleResendCode = () => {
@@ -244,6 +280,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
     setOtp("");
     setIsVerifying(false);
     setError(null);
+    verifyingRef.current = false;
 
     // Trigger new verification
     handleSubscribe();
@@ -395,12 +432,15 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             </label>
             <div className="flex justify-center w-full">
               <InputOTP
-                maxLength={6}
+                maxLength={OTP_LENGTH}
                 value={otp}
-                onChange={(value) => {
-                  setOtp(value);
-                }}
-                onComplete={() => verifyButtonRef.current?.click()}
+                onChange={handleOtpChange}
+                onComplete={handleOtpComplete}
+                autoFocus
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                disabled={isLoading}
+                aria-label="Verification code"
               >
                 <InputOTPGroup>
                   <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
@@ -419,9 +459,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
               type="submit"
               className="flex-1"
               disabled={
-                isLoading || otp.length !== 6
+                isLoading || otp.length !== OTP_LENGTH
               }
-              ref={verifyButtonRef}
             >
               {isLoading ? "Verifying..." : "Verify Code"}
             </Button>

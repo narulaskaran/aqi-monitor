@@ -10,19 +10,45 @@ import {
   startVerification as realStartVerification,
   verifyCode as realVerifyCode,
 } from "../../lib/api";
+import { OTP_LENGTH } from "../../lib/utils";
 
 // Mock the UI components directly to avoid context issues
 vi.mock("../ui/input-otp", () => ({
-  InputOTP: ({ children, onChange, ...props }: any) => (
-    <div data-testid="input-otp-container">
-      <input
-        data-testid="otp-input"
-        onChange={(e) => onChange(e.target.value)}
-        {...props}
-      />
-      {children}
-    </div>
-  ),
+  InputOTP: ({
+    children,
+    onChange,
+    onComplete,
+    value = "",
+    maxLength = 6,
+    ...props
+  }: any) => {
+    const emit = (raw: string) => {
+      const next = String(raw).replace(/\D/g, "").slice(0, maxLength);
+      onChange?.(next);
+      if (next.length === maxLength) {
+        onComplete?.(next);
+      }
+    };
+    return (
+      <div data-testid="input-otp-container">
+        <input
+          data-testid="otp-input"
+          aria-label={props["aria-label"] || "Verification code"}
+          value={value}
+          maxLength={maxLength}
+          autoComplete={props.autoComplete}
+          inputMode={props.inputMode}
+          disabled={props.disabled}
+          onChange={(e) => emit(e.target.value)}
+          onPaste={(e) => {
+            e.preventDefault();
+            emit(e.clipboardData.getData("text"));
+          }}
+        />
+        {children}
+      </div>
+    );
+  },
   InputOTPGroup: ({ children }: any) => <div>{children}</div>,
   InputOTPSlot: ({ index }: any) => <div data-testid={`otp-slot-${index}`} />,
 }));
@@ -34,6 +60,21 @@ vi.mock("../../lib/api", () => ({
 
 const startVerification = realStartVerification as unknown as jest.Mock;
 const verifyCode = realVerifyCode as unknown as jest.Mock;
+
+async function goToOtpStep(
+  zipCode = "12345",
+  email = "test@example.com",
+) {
+  startVerification.mockResolvedValue({ success: true, status: "pending" });
+  renderWithTheme(<SubscriptionForm zipCode={zipCode} />);
+  const emailInput = screen.getByPlaceholderText(/email/i);
+  fireEvent.change(emailInput, { target: { value: email } });
+  fireEvent.click(screen.getByRole("button", { name: /sign up for alerts/i }));
+  await waitFor(() => {
+    expect(screen.getByTestId("otp-input")).toBeInTheDocument();
+  });
+  return screen.getByTestId("otp-input") as HTMLInputElement;
+}
 
 describe("SubscriptionForm", () => {
   beforeEach(() => {
@@ -169,5 +210,117 @@ describe("SubscriptionForm", () => {
     await waitFor(() => {
       expect(screen.getByText(/start date must be today or in the future/i)).toBeInTheDocument();
     });
+  });
+
+  it("pastes a full code into all 6 OTP boxes", async () => {
+    const otpInput = await goToOtpStep();
+    // Keep verification pending so the OTP field stays mounted for the assertion
+    verifyCode.mockImplementation(() => new Promise(() => {}));
+
+    fireEvent.paste(otpInput, {
+      clipboardData: { getData: () => "847291" },
+    });
+
+    await waitFor(() => {
+      expect(otpInput).toHaveValue("847291");
+    });
+  });
+
+  it("pastes a formatted code by keeping only digits", async () => {
+    const otpInput = await goToOtpStep();
+    verifyCode.mockImplementation(() => new Promise(() => {}));
+
+    fireEvent.paste(otpInput, {
+      clipboardData: { getData: () => "847-291\n" },
+    });
+
+    await waitFor(() => {
+      expect(otpInput).toHaveValue("847291");
+    });
+  });
+
+  it("does not submit verification until all 6 digits are present", async () => {
+    const otpInput = await goToOtpStep();
+    const form = otpInput.closest("form")!;
+
+    for (const partial of ["1", "12", "123", "1234", "12345"]) {
+      fireEvent.change(otpInput, { target: { value: partial } });
+      fireEvent.submit(form);
+      expect(otpInput).toHaveValue(partial);
+    }
+
+    expect(verifyCode).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText(/too many invalid attempts/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not lock out from partial entries; a complete valid code still verifies", async () => {
+    const otpInput = await goToOtpStep();
+    const form = otpInput.closest("form")!;
+    verifyCode.mockResolvedValue({ success: true, valid: true });
+
+    for (const partial of ["1", "12", "123", "1234", "12345"]) {
+      fireEvent.change(otpInput, { target: { value: partial } });
+      fireEvent.submit(form);
+    }
+
+    expect(verifyCode).not.toHaveBeenCalled();
+
+    fireEvent.change(otpInput, { target: { value: "654321" } });
+
+    await waitFor(() => {
+      expect(verifyCode).toHaveBeenCalledTimes(1);
+    });
+    expect(verifyCode).toHaveBeenCalledWith(
+      "test@example.com",
+      "12345",
+      "654321",
+      undefined,
+      undefined,
+    );
+    expect(
+      await screen.findByText(/verification successful/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/too many invalid attempts/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("submits a pasted 6-digit code once", async () => {
+    const otpInput = await goToOtpStep();
+    verifyCode.mockResolvedValue({ success: true, valid: true });
+
+    fireEvent.paste(otpInput, {
+      clipboardData: { getData: () => "123456" },
+    });
+
+    await waitFor(() => {
+      expect(verifyCode).toHaveBeenCalledTimes(1);
+    });
+    expect(verifyCode).toHaveBeenCalledWith(
+      "test@example.com",
+      "12345",
+      "123456",
+      undefined,
+      undefined,
+    );
+  });
+
+  it("does not treat a short onComplete value as an invalid attempt", async () => {
+    const otpInput = await goToOtpStep();
+    const form = otpInput.closest("form")!;
+
+    fireEvent.change(otpInput, { target: { value: "12" } });
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(verifyCode).not.toHaveBeenCalled();
+    expect(otpInput).toHaveValue("12");
+    expect(
+      screen.queryByText(/too many invalid attempts/i)
+    ).not.toBeInTheDocument();
+    expect(OTP_LENGTH).toBe(6);
   });
 });
