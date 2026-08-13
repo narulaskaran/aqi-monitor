@@ -68,6 +68,57 @@ describe("handleGetAirQuality", () => {
     expect(res.json).toHaveBeenCalledWith({ error: "ZIP code is required" });
   });
 
+  it("returns a generic 400 and does not echo HTML/script-like zipCode values", async () => {
+    const payload = "<script>alert(1)</script>";
+    const req: any = { query: { zipCode: payload }, method: "GET" };
+    const res = mockRes();
+    await handleGetAirQuality(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid ZIP code" });
+    const body = JSON.stringify(res.json.mock.calls[0][0]);
+    expect(body).not.toContain(payload);
+    expect(body).not.toContain("<script>");
+  });
+
+  it("returns a generic 400 and does not echo very long zipCode values", async () => {
+    const payload = "9".repeat(5000);
+    const req: any = { query: { zipCode: payload }, method: "GET" };
+    const res = mockRes();
+    await handleGetAirQuality(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid ZIP code" });
+    const body = JSON.stringify(res.json.mock.calls[0][0]);
+    expect(body).not.toContain(payload);
+    expect(body.length).toBeLessThan(200);
+  });
+
+  it("returns a generic 400 when geocoding finds no location and does not echo zipCode", async () => {
+    const zipCode = "99999";
+    const req: any = { query: { zipCode }, method: "GET" };
+    const res = mockRes();
+    const previousApiKey = process.env.GOOGLE_AIR_QUALITY_API_KEY;
+    process.env.GOOGLE_AIR_QUALITY_API_KEY = "test-key";
+    vi.mocked(airQualityService.getCoordinatesForZipCode).mockRejectedValueOnce(
+      new Error("No locations found for this ZIP code"),
+    );
+    try {
+      await handleGetAirQuality(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error:
+          "Invalid or unsupported ZIP code. Please try a different ZIP code.",
+      });
+      const body = JSON.stringify(res.json.mock.calls[0][0]);
+      expect(body).not.toContain(zipCode);
+    } finally {
+      if (previousApiKey === undefined) {
+        delete process.env.GOOGLE_AIR_QUALITY_API_KEY;
+      } else {
+        process.env.GOOGLE_AIR_QUALITY_API_KEY = previousApiKey;
+      }
+    }
+  });
+
   it("returns 200 with mock data in dev mode and no API key", async () => {
     const req: any = { query: { zipCode: "12345" }, method: 'GET' };
     const res = mockRes();
