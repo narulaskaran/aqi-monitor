@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { getAirQualityForecast } from "../lib/api";
 import { getAQIColor } from "../lib/utils";
 import { DailyForecast } from "../types/forecast";
+import { maxForecastUtcDate } from "../../api/_lib/forecastWindow";
 
 interface ForecastCardProps {
   zipCode: string;
@@ -31,18 +32,10 @@ function todayUTC(): string {
   return new Date().toISOString().substring(0, 10);
 }
 
-/**
- * Returns today + n days as YYYY-MM-DD in UTC.
- */
-function offsetDaysUTC(days: number): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().substring(0, 10);
-}
-
 export function ForecastCard({ zipCode }: ForecastCardProps) {
   const today = todayUTC();
-  const maxDate = offsetDaysUTC(4);
+  // Match the API's hour-aligned horizon, not a naive today+4 calendar date.
+  const maxDate = maxForecastUtcDate();
 
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(maxDate);

@@ -4,6 +4,7 @@ import {
   nextUtcHour,
   getUsableForecastWindow,
   clampToForecastWindow,
+  maxForecastUtcDate,
 } from "../_lib/forecastWindow.js";
 
 /** Production repro clock from issue #79 (2026-08-13 ~02:22 UTC). */
@@ -72,6 +73,19 @@ describe("forecast window helpers", () => {
     );
 
     expect(clamped).toBeNull();
+  });
+
+  it("maxForecastUtcDate just after UTC midnight is today+3, not today+4", () => {
+    const justAfterMidnight = new Date("2026-08-13T00:30:00.000Z");
+    // Naive today+4 would be 2026-08-17; usable.end is 2026-08-16T23:00Z.
+    expect(maxForecastUtcDate(justAfterMidnight)).toBe("2026-08-16");
+    expect(getUsableForecastWindow(justAfterMidnight).end.toISOString()).toBe(
+      "2026-08-16T23:00:00.000Z",
+    );
+  });
+
+  it("maxForecastUtcDate later in the day includes today+4", () => {
+    expect(maxForecastUtcDate(REPRO_NOW)).toBe("2026-08-17");
   });
 
   it("leaves a fully-future in-horizon range on hour boundaries", () => {

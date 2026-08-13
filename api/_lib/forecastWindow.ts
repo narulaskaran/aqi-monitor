@@ -34,6 +34,15 @@ export function getUsableForecastWindow(now: Date): { start: Date; end: Date } {
 }
 
 /**
+ * Last UTC calendar date that still has at least one hour inside the
+ * usable Google window. `today + 4` calendar days can sit an hour past
+ * usable.end just after UTC midnight (00:00–00:59Z).
+ */
+export function maxForecastUtcDate(now: Date = new Date()): string {
+  return getUsableForecastWindow(now).end.toISOString().substring(0, 10);
+}
+
+/**
  * Clamp a requested [start, end] range to the usable Google forecast window.
  * Returns null when no hourly slot remains (e.g. "today only" late in the UTC day).
  */

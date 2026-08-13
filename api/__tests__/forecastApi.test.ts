@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import handleForecast from "../air-quality-forecast.js";
 import * as airQualityService from "../_lib/services/airQuality.js";
 import { mockRes } from "./testUtils.js";
+import { maxForecastUtcDate } from "../_lib/forecastWindow.js";
 
 vi.mock("../_lib/services/airQuality.js", () => ({
   getCoordinatesForZipCode: vi
@@ -397,6 +398,50 @@ describe("handleForecast – horizon clamping", () => {
       vi.useRealTimers();
     }
   });
+
+  it("accepts the UI max date just after UTC midnight, but not naive today+4", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-13T00:30:00.000Z"));
+
+    const fetchSpy = vi
+      .spyOn(airQualityService, "fetchAirQualityForecast")
+      .mockResolvedValue([]);
+
+    try {
+      const naivePlus4 = "2026-08-17";
+      const resTooFar = mockRes();
+      await handleForecast(
+        {
+          method: "GET",
+          query: {
+            zipCode: "10001",
+            startDate: naivePlus4,
+            endDate: naivePlus4,
+          },
+        } as any,
+        resTooFar,
+      );
+      expect(resTooFar.status).toHaveBeenCalledWith(400);
+      expect(fetchSpy).not.toHaveBeenCalled();
+
+      const maxDate = maxForecastUtcDate();
+      expect(maxDate).toBe("2026-08-16");
+      const resOk = mockRes();
+      await handleForecast(
+        {
+          method: "GET",
+          query: { zipCode: "10001", startDate: maxDate, endDate: maxDate },
+        } as any,
+        resOk,
+      );
+      expect(fetchSpy).toHaveBeenCalled();
+      expect(resOk.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("handleForecast – upstream errors", () => {
@@ -404,10 +449,18 @@ describe("handleForecast – upstream errors", () => {
     vi.clearAllMocks();
     (process.env as any).GOOGLE_AIR_QUALITY_API_KEY = "fake-key";
     (process.env as any).NODE_ENV = "production";
+    // Midday so a today-only range still overlaps the usable window.
+    // Between 23:00–24:00 UTC, nextUtcHour rolls to tomorrow and the
+    // overlap check 400s before the mocked upstream is called.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-13T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("returns 400 (not 503) when Google rejects the time period", async () => {
-    const today = new Date().toISOString().substring(0, 10);
     vi.spyOn(airQualityService, "fetchAirQualityForecast").mockRejectedValue(
       new Error(
         'Failed to fetch air quality forecast: 400 {"error":{"code":400,"message":"The specified time period is not supported."}}',
@@ -416,7 +469,7 @@ describe("handleForecast – upstream errors", () => {
 
     const req: any = {
       method: "GET",
-      query: { zipCode: "10001", startDate: today },
+      query: { zipCode: "10001", startDate: "2026-08-13" },
     };
     const res = mockRes();
     await handleForecast(req, res);
@@ -430,14 +483,13 @@ describe("handleForecast – upstream errors", () => {
   });
 
   it("returns 503 when the forecast upstream is actually unavailable", async () => {
-    const today = new Date().toISOString().substring(0, 10);
     vi.spyOn(airQualityService, "fetchAirQualityForecast").mockRejectedValue(
       new Error("Failed to fetch air quality forecast: 503 backend error"),
     );
 
     const req: any = {
       method: "GET",
-      query: { zipCode: "10001", startDate: today },
+      query: { zipCode: "10001", startDate: "2026-08-13" },
     };
     const res = mockRes();
     await handleForecast(req, res);

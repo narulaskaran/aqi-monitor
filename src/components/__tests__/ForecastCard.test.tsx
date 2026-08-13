@@ -144,4 +144,22 @@ describe("ForecastCard", () => {
     });
     expect(getAirQualityForecast).not.toHaveBeenCalled();
   });
+
+  it("caps the date picker at the API horizon just after UTC midnight", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-13T00:30:00.000Z"));
+
+    try {
+      renderWithTheme(<ForecastCard zipCode="94102" />);
+
+      const start = screen.getByLabelText(/start date/i);
+      const end = screen.getByLabelText(/end date/i);
+      // Naive today+4 is 2026-08-17, which is past usable.end (Aug 16 23:00Z).
+      expect(start).toHaveAttribute("max", "2026-08-16");
+      expect(end).toHaveAttribute("max", "2026-08-16");
+      expect(end).toHaveValue("2026-08-16");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
