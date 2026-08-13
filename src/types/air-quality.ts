@@ -62,7 +62,7 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     name: 'Very Unhealthy',
     range: [201, 300],
     description: 'Health warnings of emergency conditions. The entire population is more likely to be affected.',
-    color: '#99004C',
+    color: '#8F3F97',
     textColor: '#FFFFFF',
     advice: 'Active children and adults, and people with respiratory disease, such as asthma, should avoid all outdoor exertion; everyone else should limit outdoor exertion.'
   },
@@ -86,14 +86,16 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
 
 /**
  * Normalizes an AQI category label from the API into a comparable key.
- * Handles casing, underscores, and optional "air quality" suffixes.
+ * Handles casing, underscores, and Google usa_epa "air quality" phrasing
+ * (suffix or mid-label, e.g. "Unhealthy air quality for sensitive groups").
  */
 function normalizeCategoryName(name: string): string {
   return name
     .trim()
     .replace(/_/g, ' ')
-    .replace(/\s+air quality$/i, '')
+    .replace(/\bair quality\b/gi, '')
     .replace(/\s+/g, ' ')
+    .trim()
     .toLowerCase();
 }
 

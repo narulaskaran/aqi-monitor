@@ -48,6 +48,30 @@ describe("getAQICategory", () => {
     );
   });
 
+  it("maps Google usa_epa category strings, including mid-label air quality", () => {
+    const googleLabels: Array<[string, string]> = [
+      ["Good air quality", "Good"],
+      ["Moderate air quality", "Moderate"],
+      ["Unhealthy air quality for sensitive groups", "Unhealthy for Sensitive Groups"],
+      ["Unhealthy air quality", "Unhealthy"],
+      ["Very unhealthy air quality", "Very Unhealthy"],
+      ["Hazardous air quality", "Hazardous"],
+    ];
+
+    for (const [label, expectedName] of googleLabels) {
+      // Index 0 would otherwise resolve to Good; name matching must win.
+      expect(getAQICategory(label, 0).name).toBe(expectedName);
+    }
+
+    expect(getAQICategory("Unhealthy air quality for sensitive groups", 0)).toEqual(
+      AQI_CATEGORIES["Unhealthy for Sensitive Groups"],
+    );
+  });
+
+  it("uses the EPA purple for Very Unhealthy", () => {
+    expect(AQI_CATEGORIES["Very Unhealthy"].color).toBe("#8F3F97");
+  });
+
   it("prefers an explicit category name over a conflicting index", () => {
     const result = getAQICategory("Hazardous", 40);
     expect(result).toEqual(AQI_CATEGORIES.Hazardous);
