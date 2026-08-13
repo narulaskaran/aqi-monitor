@@ -44,6 +44,14 @@ describe("AuthWidget", () => {
     ).toBeInTheDocument();
   });
 
+  it("associates the sign-in email input with a visible label", () => {
+    renderWithTheme(<AuthWidget />);
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    expect(
+      screen.getByRole("textbox", { name: /email address/i })
+    ).toBeInTheDocument();
+  });
+
   it("allows typing in the email field after clicking Sign In", () => {
     renderWithTheme(<AuthWidget />);
     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));

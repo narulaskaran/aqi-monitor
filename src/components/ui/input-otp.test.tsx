@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { useState } from "react";
+import { renderWithTheme } from "../../lib/test-utils";
 import {
   InputOTP,
   InputOTPGroup,
@@ -83,5 +84,19 @@ describe("InputOTP", () => {
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
     expect(onComplete).toHaveBeenCalledWith("123456");
+  });
+
+  it("labels the OTP input when no labelledby is provided", () => {
+    renderWithTheme(
+      <InputOTP maxLength={6}>
+        <InputOTPGroup>
+          <InputOTPSlot index={0} />
+        </InputOTPGroup>
+      </InputOTP>
+    );
+
+    expect(
+      screen.getByRole("textbox", { name: /verification code/i })
+    ).toBeInTheDocument();
   });
 });

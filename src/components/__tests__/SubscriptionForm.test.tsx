@@ -88,6 +88,13 @@ describe("SubscriptionForm", () => {
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
+  it("associates the email input with a visible label", () => {
+    renderWithTheme(<SubscriptionForm zipCode="12345" />);
+    expect(
+      screen.getByRole("textbox", { name: /email address/i })
+    ).toBeInTheDocument();
+  });
+
   it("shows error for invalid email", async () => {
     renderWithTheme(<SubscriptionForm zipCode="12345" />);
     const emailInput = screen.getByPlaceholderText(/email/i);

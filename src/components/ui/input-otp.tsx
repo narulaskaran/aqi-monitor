@@ -20,6 +20,10 @@ const InputOTP = React.forwardRef<
     )}
     className={cn("disabled:cursor-not-allowed", className)}
     {...props}
+    aria-label={
+      props["aria-label"] ??
+      (props["aria-labelledby"] ? undefined : "Verification code")
+    }
   />
 ))
 InputOTP.displayName = "InputOTP"
@@ -47,6 +51,7 @@ const InputOTPSlot = React.forwardRef<
         isActive && "z-10 ring-1 ring-ring",
         className
       )}
+      aria-label={`Digit ${index + 1}`}
       {...props}
     >
       {char}

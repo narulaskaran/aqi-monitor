@@ -49,4 +49,14 @@ describe("AQICard", () => {
     });
     expect(screen.getByText(unhealthy.advice)).toBeInTheDocument();
   });
+
+  it("announces results in a polite live region", () => {
+    renderWithTheme(
+      <AQICard index={42} category="Good" dominantPollutant="O3" />
+    );
+    const liveRegion = screen.getByRole("status");
+    expect(liveRegion).toHaveAttribute("aria-live", "polite");
+    expect(liveRegion).toHaveAttribute("aria-atomic", "true");
+    expect(liveRegion).toHaveTextContent(/aqi: 42/i);
+  });
 });
