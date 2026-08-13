@@ -35,7 +35,7 @@ export default function AuthWidget() {
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, zipCode: "00000" }), // zipCode required by API, dummy for sign-in
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to send code");

@@ -7,6 +7,7 @@ import {
   createSubscription,
   subscriptionExists,
 } from "./_lib/services/subscription.js";
+import { validateUsZipCode } from "./_lib/zipCode.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -44,6 +45,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const normalizedZipCode = zipCode.trim();
     const subscriptionEmail = authenticatedEmail ?? email;
+
+    // Sign-in reuses this endpoint with a dummy ZIP and must not create a
+    // subscription. Validate deliverability only when we are about to subscribe.
+    if (mode !== "signin") {
+      const parsedZip = validateUsZipCode(normalizedZipCode);
+      if (!parsedZip.ok) {
+        return res.status(400).json({
+          success: false,
+          error: parsedZip.error,
+        });
+      }
+    }
 
     console.log("REST API verify-code request:", {
       email: subscriptionEmail,

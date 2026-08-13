@@ -442,13 +442,23 @@ export async function updateAirQualityForAllSubscriptions(): Promise<void> {
       `Found ${subscriptions.length} unique ZIP codes with active subscriptions`,
     );
 
-    // Process each ZIP code
-    const promises = subscriptions.map(({ zipCode }) =>
-      fetchAndStoreAirQualityForZip(zipCode, true),
+    // Process each ZIP independently so one leftover invalid subscription
+    // (e.g. 00000) cannot abort the rest of the batch.
+    const results = await Promise.allSettled(
+      subscriptions.map(({ zipCode }) =>
+        fetchAndStoreAirQualityForZip(zipCode, true),
+      ),
     );
 
-    // Wait for all promises to resolve
-    await Promise.all(promises);
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "rejected") {
+        console.error(
+          `Failed to update air quality for ZIP code ${subscriptions[i].zipCode}:`,
+          result.reason,
+        );
+      }
+    }
 
     console.log("Finished updating air quality data for all subscriptions");
   } catch (error) {
