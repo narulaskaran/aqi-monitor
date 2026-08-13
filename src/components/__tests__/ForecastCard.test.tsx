@@ -121,4 +121,27 @@ describe("ForecastCard", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("does not fetch when End date is cleared", async () => {
+    renderWithTheme(<ForecastCard zipCode="94102" />);
+
+    fireEvent.change(screen.getByLabelText(/end date/i), {
+      target: { value: "" },
+    });
+
+    expect(
+      screen.getByRole("button", { name: /get forecast/i }),
+    ).toBeDisabled();
+
+    const form = screen
+      .getByRole("button", { name: /get forecast/i })
+      .closest("form");
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
+
+    await waitFor(() => {
+      expect(screen.getByText(/end date is required/i)).toBeInTheDocument();
+    });
+    expect(getAirQualityForecast).not.toHaveBeenCalled();
+  });
 });

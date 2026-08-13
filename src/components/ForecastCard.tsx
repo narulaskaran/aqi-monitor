@@ -45,13 +45,21 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
   const maxDate = offsetDaysUTC(4);
 
   const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState("");
+  const [endDate, setEndDate] = useState(maxDate);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forecasts, setForecasts] = useState<DailyForecast[] | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!endDate) {
+      setError("End date is required");
+      return;
+    }
+    if (endDate < startDate) {
+      setError("End date must be on or after the start date");
+      return;
+    }
     setError(null);
     setForecasts(null);
     setIsLoading(true);
@@ -60,7 +68,7 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
       const result = await getAirQualityForecast(
         zipCode,
         startDate,
-        endDate || undefined,
+        endDate,
       );
       setForecasts(result.forecasts);
     } catch (err) {
@@ -94,7 +102,13 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
               value={startDate}
               min={today}
               max={maxDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setStartDate(next);
+                if (endDate && next > endDate) {
+                  setEndDate(next);
+                }
+              }}
               className="flex-1"
               required
             />
@@ -114,10 +128,10 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
               max={maxDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="flex-1"
-              placeholder="Optional"
+              required
             />
           </div>
-          <Button type="submit" disabled={isLoading || !startDate}>
+          <Button type="submit" disabled={isLoading || !startDate || !endDate}>
             {isLoading ? "Loading…" : "Get Forecast"}
           </Button>
         </form>

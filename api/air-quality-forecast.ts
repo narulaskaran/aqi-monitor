@@ -5,6 +5,10 @@ import {
   fetchAirQualityForecast,
 } from './_lib/services/airQuality.js';
 import { validateUsZipCode } from './_lib/zipCode.js';
+import {
+  clampToForecastWindow,
+  getUsableForecastWindow,
+} from './_lib/forecastWindow.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -44,31 +48,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'startDate must be on or before endDate' });
     }
 
-    // Forecast horizon: [now, now + 96 hours]
     const now = new Date();
-    const horizonEnd = new Date(now.getTime() + 96 * 60 * 60 * 1000);
+    const usable = getUsableForecastWindow(now);
 
     // Check that the requested range overlaps the available horizon
-    if (parsedStart > horizonEnd || parsedEnd < now) {
+    if (parsedStart > usable.end || parsedEnd < usable.start) {
       return res.status(400).json({
         error: 'Forecasts are only available up to 4 days ahead. Please choose a date range within the next 4 days.',
       });
     }
 
-    // Google's API rejects a period whose start/end sits exactly on "now" or
-    // the 96-hour horizon: by the time our request reaches Google (after the
-    // coordinates lookup + network latency), its own clock has moved past our
-    // computed `now`/`horizonEnd`, making the boundary invalid ("The specified
-    // time period is not supported"). Pad both edges inward so the period we
-    // actually send stays safely within Google's window.
-    const BOUNDARY_BUFFER_MS = 5 * 60 * 1000;
-    const usableStart = new Date(now.getTime() + BOUNDARY_BUFFER_MS);
-    const usableEnd = new Date(horizonEnd.getTime() - BOUNDARY_BUFFER_MS);
-
-    // Clamp requested window to the available horizon
-    const clampedStart = parsedStart < usableStart ? usableStart : parsedStart;
-    const clampedEndRaw = parsedEnd > usableEnd ? usableEnd : parsedEnd;
-    const clampedEnd = clampedEndRaw < clampedStart ? clampedStart : clampedEndRaw;
+    // Google rounds period timestamps down to the previous exact hour and
+    // rejects a start in the current (already-started) hour. A 5-minute pad
+    // still lands in that hour and 503s every "today" request. Clamp to the
+    // next UTC hour through a conservative hour-aligned 96h end instead.
+    const clamped = clampToForecastWindow(parsedStart, parsedEnd, now);
+    if (!clamped) {
+      return res.status(400).json({
+        error: 'No forecast hours remain in the selected date range. Please choose a later end date.',
+      });
+    }
+    const { start: clampedStart, end: clampedEnd } = clamped;
 
     console.log(`Forecast request for ZIP: ${zipCode}, ${startDate} – ${endDateStr}`);
 
@@ -118,6 +118,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (error.message?.includes('Failed to fetch air quality forecast')) {
+        // Google 400s an invalid period; that is a client/window issue, not an
+        // outage. Keep 503 for genuine upstream failures (5xx / network).
+        if (
+          error.message.includes(': 400 ') ||
+          error.message.includes('time period is not supported')
+        ) {
+          return res.status(400).json({
+            error: 'Forecasts are only available up to 4 days ahead. Please choose a date range within the next 4 days.',
+          });
+        }
         return res.status(503).json({
           error: 'Forecast service temporarily unavailable. Please try again later.',
         });
