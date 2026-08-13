@@ -23,7 +23,7 @@ A real-time Air Quality Index (AQI) monitoring application that allows users to 
   - Vercel Serverless Functions (Node.js)
   - Prisma ORM (v7) with Neon Serverless Driver
   - PostgreSQL database (Neon / Vercel Postgres)
-  - OpenStreetMap Nominatim API for geocoding
+  - Local US ZIP dataset (`zipcodes-us`) for deliverability checks, with OpenStreetMap Nominatim for USPS territory geocoding
   - Scheduled cron jobs for data updates
 
 ## Getting Started

@@ -74,7 +74,9 @@ describe("handleGetAirQuality", () => {
     const res = mockRes();
     await handleGetAirQuality(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: "Invalid ZIP code" });
+    expect(res.json).toHaveBeenCalledWith({
+      error: "ZIP code must be a 5-digit number",
+    });
     const body = JSON.stringify(res.json.mock.calls[0][0]);
     expect(body).not.toContain(payload);
     expect(body).not.toContain("<script>");
@@ -86,14 +88,51 @@ describe("handleGetAirQuality", () => {
     const res = mockRes();
     await handleGetAirQuality(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: "Invalid ZIP code" });
+    expect(res.json).toHaveBeenCalledWith({
+      error: "ZIP code must be a 5-digit number",
+    });
     const body = JSON.stringify(res.json.mock.calls[0][0]);
     expect(body).not.toContain(payload);
     expect(body.length).toBeLessThan(200);
   });
 
+  it("returns 400 for non-5-digit junk without looking up AQI", async () => {
+    const mod = await import("../_lib/services/airQuality.js");
+    for (const zipCode of ["10001;DROP", "<script>", "123"]) {
+      vi.clearAllMocks();
+      const req: any = { query: { zipCode }, method: "GET" };
+      const res = mockRes();
+      await handleGetAirQuality(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "ZIP code must be a 5-digit number",
+      });
+      expect(mod.getLatestAirQualityForZip).not.toHaveBeenCalled();
+      expect(mod.getCoordinatesForZipCode).not.toHaveBeenCalled();
+    }
+  });
+
+  it("returns 400 for non-existent ZIPs 00000 and 99999 without returning AQI", async () => {
+    const mod = await import("../_lib/services/airQuality.js");
+    for (const zipCode of ["00000", "99999"]) {
+      vi.clearAllMocks();
+      const req: any = { query: { zipCode }, method: "GET" };
+      const res = mockRes();
+      await handleGetAirQuality(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error:
+          "Invalid or unsupported ZIP code. Please try a different ZIP code.",
+      });
+      const body = JSON.stringify(res.json.mock.calls[0][0]);
+      expect(body).not.toContain(zipCode);
+      expect(mod.getLatestAirQualityForZip).not.toHaveBeenCalled();
+      expect(mod.fetchAirQuality).not.toHaveBeenCalled();
+    }
+  });
+
   it("returns a generic 400 when geocoding finds no location and does not echo zipCode", async () => {
-    const zipCode = "99999";
+    const zipCode = "94102";
     const req: any = { query: { zipCode }, method: "GET" };
     const res = mockRes();
     const previousApiKey = process.env.GOOGLE_AIR_QUALITY_API_KEY;

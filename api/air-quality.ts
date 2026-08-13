@@ -6,7 +6,7 @@ import {
   fetchAirQuality,
   fetchAndStoreAirQualityForZip,
 } from './_lib/services/airQuality.js';
-import { isValidZipCode } from './_lib/zipCode.js';
+import { validateUsZipCode } from './_lib/zipCode.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS (optional, usually handled by Vercel config or middleware wrapper)
@@ -19,16 +19,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { zipCode } = req.query;
-
-    // We now require zipCode for all requests
-    if (!zipCode || typeof zipCode !== 'string') {
-      return res.status(400).json({ error: "ZIP code is required" });
+    const parsedZip = validateUsZipCode(req.query.zipCode);
+    if (!parsedZip.ok) {
+      return res.status(400).json({ error: parsedZip.error });
     }
-
-    if (!isValidZipCode(zipCode)) {
-      return res.status(400).json({ error: "Invalid ZIP code" });
-    }
+    const { zipCode } = parsedZip;
 
     console.log(`Air quality request for ZIP code: ${zipCode}`);
 
