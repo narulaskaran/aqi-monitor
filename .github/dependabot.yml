@@ -1,0 +1,39 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+    groups:
+      prisma:
+        patterns:
+          - prisma
+          - "@prisma/*"
+
+      vite-toolchain:
+        patterns:
+          - vite
+          - "@vitejs/*"
+          - vitest
+          - "@vitest/*"
+          - rollup
+          - esbuild
+
+      eslint-toolchain:
+        patterns:
+          - eslint
+          - eslint-*
+          - "@eslint/*"
+          - typescript-eslint
+          - "@typescript-eslint/*"
+
+    ignore:
+      # eslint is on v8 while typescript-eslint is on v8; keep majors manual/lockstep.
+      - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "@eslint/js"
+        update-types:
+          - version-update:semver-major
