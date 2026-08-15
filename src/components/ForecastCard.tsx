@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { getAirQualityForecast } from "../lib/api";
 import { getAQIColor } from "../lib/utils";
 import { DailyForecast } from "../types/forecast";
-import { maxForecastUtcDate } from "../../api/_lib/forecastWindow";
+import { maxForecastUtcDate } from "../lib/forecastWindow";
 
 interface ForecastCardProps {
   zipCode: string;

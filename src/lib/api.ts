@@ -3,6 +3,7 @@
  */
 import { AirQualityData } from '../types/air-quality';
 import { DailyForecast } from '../types/forecast';
+import { throwIfNotOk } from './parseApiError';
 
 /**
  * Gets the base URL for API requests based on environment
@@ -44,16 +45,10 @@ export async function getAirQuality(zipCode: string): Promise<AirQualityData> {
     `${baseUrl}/api/air-quality?${params.toString()}`
   );
 
-  if (!response.ok) {
-    let message = `Failed to fetch air quality data: ${response.status}`;
-    try {
-      const body = await response.json();
-      if (body?.error) message = body.error;
-    } catch {
-      // ignore parse errors
-    }
-    throw new Error(message);
-  }
+  await throwIfNotOk(
+    response,
+    `Failed to fetch air quality data: ${response.status}`,
+  );
 
   const data = await response.json();
   console.log('Air quality data received:', data);
@@ -80,16 +75,10 @@ export async function getAirQualityHistory(
 
   const response = await fetch(url, { signal });
 
-  if (!response.ok) {
-    let message = `Failed to fetch history: ${response.status}`;
-    try {
-      const body = await response.json();
-      if (body?.error) message = body.error;
-    } catch {
-      // ignore parse errors
-    }
-    throw new Error(message);
-  }
+  await throwIfNotOk(
+    response,
+    `Failed to fetch history: ${response.status}`,
+  );
 
   return response.json();
 }
@@ -109,16 +98,10 @@ export async function getAirQualityForecast(
 
   const response = await fetch(url);
 
-  if (!response.ok) {
-    let message = `Failed to fetch forecast: ${response.status}`;
-    try {
-      const body = await response.json();
-      if (body?.error) message = body.error;
-    } catch {
-      // ignore parse errors
-    }
-    throw new Error(message);
-  }
+  await throwIfNotOk(
+    response,
+    `Failed to fetch forecast: ${response.status}`,
+  );
 
   return response.json();
 }
@@ -165,9 +148,10 @@ export async function getSubscriptions(token: string) {
       "Content-Type": "application/json",
     },
   });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch subscriptions: ${response.status}`);
-  }
+  await throwIfNotOk(
+    response,
+    `Failed to fetch subscriptions: ${response.status}`,
+  );
   return response.json();
 }
 
@@ -187,16 +171,10 @@ export async function updateSubscription(
     },
     body: JSON.stringify({ id, active }),
   });
-  if (!response.ok) {
-    let message = `Failed to update subscription: ${response.status}`;
-    try {
-      const body = await response.json();
-      if (body?.error) message = body.error;
-    } catch {
-      // Keep the status-based fallback when the response is not JSON.
-    }
-    throw new Error(message);
-  }
+  await throwIfNotOk(
+    response,
+    `Failed to update subscription: ${response.status}`,
+  );
   return response.json();
 }
 

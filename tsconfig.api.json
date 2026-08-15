@@ -10,5 +10,5 @@
     "noEmit": true,
     "baseUrl": "."
   },
-  "include": ["api/**/*.ts", "prisma/**/*.ts"]
+  "include": ["api/**/*.ts", "prisma/**/*.ts", "src/lib/forecastWindow.ts"]
 }

@@ -5,7 +5,7 @@ import {
   getUsableForecastWindow,
   clampToForecastWindow,
   maxForecastUtcDate,
-} from "../_lib/forecastWindow.js";
+} from "./forecastWindow";
 
 /** Production repro clock from issue #79 (2026-08-13 ~02:22 UTC). */
 const REPRO_NOW = new Date("2026-08-13T02:22:00.000Z");

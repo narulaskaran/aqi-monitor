@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import handleForecast from "../air-quality-forecast.js";
 import * as airQualityService from "../_lib/services/airQuality.js";
 import { mockRes } from "./testUtils.js";
-import { maxForecastUtcDate } from "../_lib/forecastWindow.js";
+import { maxForecastUtcDate } from "../../src/lib/forecastWindow.js";
 
 vi.mock("../_lib/services/airQuality.js", () => ({
   getCoordinatesForZipCode: vi
