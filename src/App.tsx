@@ -15,7 +15,6 @@ import { SubscriptionForm } from "./components/SubscriptionForm";
 import { SubscriptionList } from "./components/SubscriptionList";
 import { ForecastCard } from "./components/ForecastCard";
 import { getAirQuality } from "./lib/api";
-import { getAQIColor } from "./lib/utils";
 import { ThemeToggle } from "./components/ThemeToggle";
 import AuthWidget from "./components/AuthWidget";
 
@@ -25,7 +24,6 @@ function App() {
   const [airQuality, setAirQuality] = useState<{
     index: number;
     category: string;
-    color: string;
     dominantPollutant: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +46,6 @@ function App() {
       setAirQuality({
         index: data.index,
         category: data.category,
-        color: getAQIColor(data.index),
         dominantPollutant: data.dominantPollutant,
       });
     } catch (error) {

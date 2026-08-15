@@ -62,7 +62,7 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     name: 'Very Unhealthy',
     range: [201, 300],
     description: 'Health warnings of emergency conditions. The entire population is more likely to be affected.',
-    color: '#99004C',
+    color: '#8F3F97',
     textColor: '#FFFFFF',
     advice: 'Active children and adults, and people with respiratory disease, such as asthma, should avoid all outdoor exertion; everyone else should limit outdoor exertion.'
   },
@@ -83,3 +83,51 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     advice: 'Unable to determine air quality. Please try again later.'
   }
 };
+
+/**
+ * Normalizes an AQI category label from the API into a comparable key.
+ * Handles casing, underscores, and Google usa_epa "air quality" phrasing
+ * (suffix or mid-label, e.g. "Unhealthy air quality for sensitive groups").
+ */
+function normalizeCategoryName(name: string): string {
+  return name
+    .trim()
+    .replace(/_/g, ' ')
+    .replace(/\bair quality\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Resolves EPA AQI category display data (official color, description, and
+ * health recommendation). Prefers a matching category name, then falls back
+ * to the numeric AQI band.
+ */
+export function getAQICategory(category: string, index: number): AQICategory {
+  if (category) {
+    const exact = AQI_CATEGORIES[category];
+    if (exact) {
+      return exact;
+    }
+
+    const normalized = normalizeCategoryName(category);
+    const byName = Object.values(AQI_CATEGORIES).find(
+      (entry) => normalizeCategoryName(entry.name) === normalized,
+    );
+    if (byName) {
+      return byName;
+    }
+  }
+
+  if (Number.isFinite(index) && index >= 0) {
+    if (index <= 50) return AQI_CATEGORIES.Good;
+    if (index <= 100) return AQI_CATEGORIES.Moderate;
+    if (index <= 150) return AQI_CATEGORIES['Unhealthy for Sensitive Groups'];
+    if (index <= 200) return AQI_CATEGORIES.Unhealthy;
+    if (index <= 300) return AQI_CATEGORIES['Very Unhealthy'];
+    return AQI_CATEGORIES.Hazardous;
+  }
+
+  return AQI_CATEGORIES.Unknown;
+}

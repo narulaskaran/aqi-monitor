@@ -1,4 +1,5 @@
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
+import { getAQICategory } from "../types/air-quality";
 
 interface AQICardProps {
   index: number;
@@ -19,14 +20,29 @@ const formatPollutant = (pollutant: string): string => {
 };
 
 export function AQICard({ index, category, dominantPollutant }: AQICardProps) {
+  const categoryInfo = getAQICategory(category, index);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Air Quality Information</CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className="text-lg">AQI: {index}</p>
-        <p className="text-lg">Category: {category}</p>
+      <CardContent className="space-y-3">
+        <div
+          data-testid="aqi-category-band"
+          className="rounded-lg px-4 py-4"
+          style={{
+            backgroundColor: categoryInfo.color,
+            color: categoryInfo.textColor,
+          }}
+        >
+          <p className="text-lg font-medium">AQI: {index}</p>
+          <p className="text-lg font-semibold">Category: {categoryInfo.name}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium">Health recommendation</p>
+          <p className="text-sm">{categoryInfo.advice}</p>
+        </div>
         <p className="text-lg">
           Dominant Pollutant: {formatPollutant(dominantPollutant)}
         </p>
