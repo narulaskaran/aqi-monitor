@@ -75,7 +75,8 @@ describe("Verification API", () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        error: `Invalid or unsupported ZIP code: ${zipCode}. Please try a different ZIP code.`,
+        error:
+          "Invalid or unsupported ZIP code. Please try a different ZIP code.",
       });
       expect(subMod.subscriptionExists).not.toHaveBeenCalled();
       expect(emailMod.sendVerificationCode).not.toHaveBeenCalled();
@@ -163,7 +164,8 @@ describe("Verification API", () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        error: `Invalid or unsupported ZIP code: ${zipCode}. Please try a different ZIP code.`,
+        error:
+          "Invalid or unsupported ZIP code. Please try a different ZIP code.",
       });
       expect(subMod.createSubscription).not.toHaveBeenCalled();
       expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
@@ -319,7 +321,7 @@ describe("Verification API", () => {
     expect(res.json).toHaveBeenCalledWith({
       success: false,
       error:
-        "Invalid or unsupported ZIP code: 00000. Please try a different ZIP code.",
+        "Invalid or unsupported ZIP code. Please try a different ZIP code.",
     });
     expect(subMod.createSubscription).not.toHaveBeenCalled();
   });
