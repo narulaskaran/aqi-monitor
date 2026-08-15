@@ -13,6 +13,9 @@ vi.mock("../_lib/db.js", () => ({
       update: vi.fn(),
       count: vi.fn(),
     },
+    authentication: {
+      create: vi.fn().mockResolvedValue({ token: "tok" }),
+    },
   },
 }));
 // --- END FIX ---
@@ -61,6 +64,53 @@ describe("Verification API", () => {
     expect(res.json).toHaveBeenCalledWith({ success: true });
   });
 
+  it("handleStartVerification returns 400 for non-existent ZIPs 00000 and 99999", async () => {
+    const subMod = await import("../_lib/services/subscription.js");
+    const emailMod = await import("../_lib/services/email.js");
+    for (const zipCode of ["00000", "99999"]) {
+      vi.clearAllMocks();
+      const req: any = { method: "POST", body: { email: "a@b.com", zipCode } };
+      const res = mockRes();
+      await handleStartVerification(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        error:
+          "Invalid or unsupported ZIP code. Please try a different ZIP code.",
+      });
+      expect(subMod.subscriptionExists).not.toHaveBeenCalled();
+      expect(emailMod.sendVerificationCode).not.toHaveBeenCalled();
+    }
+  });
+
+  it("handleStartVerification returns 400 for non-5-digit junk", async () => {
+    const subMod = await import("../_lib/services/subscription.js");
+    for (const zipCode of ["10001;DROP", "<script>", "123"]) {
+      vi.clearAllMocks();
+      const req: any = { method: "POST", body: { email: "a@b.com", zipCode } };
+      const res = mockRes();
+      await handleStartVerification(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        error: "ZIP code must be a 5-digit number",
+      });
+      expect(subMod.subscriptionExists).not.toHaveBeenCalled();
+    }
+  });
+
+  it("handleStartVerification allows sign-in without a ZIP code", async () => {
+    const req: any = { method: "POST", body: { email: "a@b.com" } };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "sendVerificationCode").mockResolvedValue({ success: true });
+    const subMod = await import("../_lib/services/subscription.js");
+    await handleStartVerification(req, res);
+    expect(subMod.subscriptionExists).not.toHaveBeenCalled();
+    expect(emailMod.sendVerificationCode).toHaveBeenCalledWith("a@b.com");
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
   it("handleVerifyCode returns 400 if missing fields", async () => {
     const req: any = { method: 'POST', body: {} };
     const res = mockRes();
@@ -97,6 +147,74 @@ describe("Verification API", () => {
       "12345",
       undefined,
       undefined,
+    );
+  });
+
+  it("handleVerifyCode returns 400 for non-existent ZIPs and does not create a subscription", async () => {
+    const subMod = await import("../_lib/services/subscription.js");
+    const emailMod = await import("../_lib/services/email.js");
+    for (const zipCode of ["00000", "99999"]) {
+      vi.clearAllMocks();
+      const req: any = {
+        method: "POST",
+        body: { email: "a@b.com", zipCode, code: "123456" },
+      };
+      const res = mockRes();
+      await handleVerifyCode(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        error:
+          "Invalid or unsupported ZIP code. Please try a different ZIP code.",
+      });
+      expect(subMod.createSubscription).not.toHaveBeenCalled();
+      expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
+    }
+  });
+
+  it("handleVerifyCode returns 400 for non-5-digit junk", async () => {
+    const subMod = await import("../_lib/services/subscription.js");
+    for (const zipCode of ["10001;DROP", "<script>"]) {
+      vi.clearAllMocks();
+      const req: any = {
+        method: "POST",
+        body: { email: "a@b.com", zipCode, code: "123456" },
+      };
+      const res = mockRes();
+      await handleVerifyCode(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        error: "ZIP code must be a 5-digit number",
+      });
+      expect(subMod.createSubscription).not.toHaveBeenCalled();
+    }
+  });
+
+  it("handleVerifyCode still allows sign-in with a dummy ZIP", async () => {
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({
+      success: true,
+      valid: true,
+    });
+    const subMod = await import("../_lib/services/subscription.js");
+
+    const req: any = {
+      method: "POST",
+      body: {
+        email: "a@b.com",
+        zipCode: "00000",
+        code: "123456",
+        mode: "signin",
+      },
+    };
+    const res = mockRes();
+    await handleVerifyCode(req, res);
+
+    expect(subMod.createSubscription).not.toHaveBeenCalled();
+    expect(emailMod.checkVerificationCode).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, valid: true, token: expect.any(String) }),
     );
   });
 
@@ -184,6 +302,28 @@ describe("Verification API", () => {
       success: false,
       error: "This email is already subscribed for this ZIP code",
     });
+  });
+
+  it("returns 400 when an authenticated request uses a non-existent ZIP", async () => {
+    const auth = await import("../_lib/middleware/auth.js");
+    (auth.authenticate as any).mockResolvedValue({ email: "signedin@example.com" });
+    const subMod = await import("../_lib/services/subscription.js");
+
+    const req: any = {
+      method: "POST",
+      headers: { authorization: "Bearer session-token" },
+      body: { zipCode: "00000" },
+    };
+    const res = mockRes();
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error:
+        "Invalid or unsupported ZIP code. Please try a different ZIP code.",
+    });
+    expect(subMod.createSubscription).not.toHaveBeenCalled();
   });
 
   it("validates dates for authenticated subscriptions before creating them", async () => {

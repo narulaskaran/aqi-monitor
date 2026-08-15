@@ -82,8 +82,43 @@ describe("handleForecast – validation errors", () => {
     );
   });
 
+  it("returns 400 for non-5-digit junk", async () => {
+    for (const zipCode of ["10001;DROP", "<script>"]) {
+      const req: any = {
+        method: "GET",
+        query: { zipCode, startDate: "2026-06-12" },
+      };
+      const res = mockRes();
+      await handleForecast(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "ZIP code must be a 5-digit number",
+      });
+      const body = JSON.stringify(res.json.mock.calls[0][0]);
+      expect(body).not.toContain(zipCode);
+    }
+  });
+
+  it("returns 400 for non-existent ZIPs 00000 and 99999 without echoing them", async () => {
+    for (const zipCode of ["00000", "99999"]) {
+      const req: any = {
+        method: "GET",
+        query: { zipCode, startDate: "2026-06-12" },
+      };
+      const res = mockRes();
+      await handleForecast(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error:
+          "Invalid or unsupported ZIP code. Please try a different ZIP code.",
+      });
+      const body = JSON.stringify(res.json.mock.calls[0][0]);
+      expect(body).not.toContain(zipCode);
+    }
+  });
+
   it("returns a generic 400 when geocoding finds no location and does not echo zipCode", async () => {
-    const zipCode = "99999";
+    const zipCode = "94102";
     const today = new Date().toISOString().substring(0, 10);
     const req: any = {
       method: "GET",

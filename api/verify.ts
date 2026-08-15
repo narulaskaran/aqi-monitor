@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sendVerificationCode } from "./_lib/services/email.js";
 import { subscriptionExists } from "./_lib/services/subscription.js";
+import { validateUsZipCode } from "./_lib/zipCode.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -14,23 +15,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { email, zipCode } = req.body;
 
-    if (!email || !zipCode) {
+    if (!email) {
       return res.status(400).json({
         success: false,
         error: "Email and ZIP code are required",
       });
     }
 
-    console.log("REST API verify request:", { email, zipCode });
+    // zipCode is required for subscription signup, but omitted for sign-in
+    // (AuthWidget only needs an email OTP). Validate when present so fake
+    // ZIPs never start a subscription flow.
+    let normalizedZipCode: string | undefined;
+    if (zipCode) {
+      const parsedZip = validateUsZipCode(
+        typeof zipCode === "string" ? zipCode.trim() : zipCode,
+      );
+      if (!parsedZip.ok) {
+        return res.status(400).json({
+          success: false,
+          error: parsedZip.error,
+        });
+      }
+      normalizedZipCode = parsedZip.zipCode;
+    }
 
-    // Check if subscription already exists
-    const exists = await subscriptionExists(email, zipCode);
+    console.log("REST API verify request:", { email, zipCode: normalizedZipCode });
 
-    if (exists) {
-      return res.json({
-        success: false,
-        error: "This email is already subscribed for this ZIP code",
-      });
+    if (normalizedZipCode) {
+      const exists = await subscriptionExists(email, normalizedZipCode);
+      if (exists) {
+        return res.json({
+          success: false,
+          error: "This email is already subscribed for this ZIP code",
+        });
+      }
     }
 
     // Send verification code

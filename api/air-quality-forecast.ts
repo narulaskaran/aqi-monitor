@@ -4,7 +4,7 @@ import {
   getCoordinatesForZipCode,
   fetchAirQualityForecast,
 } from './_lib/services/airQuality.js';
-import { isValidZipCode } from './_lib/zipCode.js';
+import { validateUsZipCode } from './_lib/zipCode.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -16,15 +16,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { zipCode, startDate, endDate } = req.query;
+    const { startDate, endDate } = req.query;
 
-    // Validate zipCode
-    if (!zipCode || typeof zipCode !== 'string') {
-      return res.status(400).json({ error: 'ZIP code is required' });
+    const parsedZip = validateUsZipCode(req.query.zipCode);
+    if (!parsedZip.ok) {
+      return res.status(400).json({ error: parsedZip.error });
     }
-    if (!isValidZipCode(zipCode)) {
-      return res.status(400).json({ error: 'ZIP code must be a 5-digit number' });
-    }
+    const { zipCode } = parsedZip;
 
     // Validate startDate
     if (!startDate || typeof startDate !== 'string') {

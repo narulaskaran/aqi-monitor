@@ -5,6 +5,11 @@
 import { prisma } from "../db.js";
 import { z } from "zod";
 import { sendAirQualityAlerts } from "./subscription.js";
+import {
+  isFiveDigitZipCode,
+  isUsTerritoryZipCode,
+  lookupUsZipCoordinates,
+} from "../zipCode.js";
 
 // Validate environment variables
 const envSchema = z.object({
@@ -38,10 +43,38 @@ export interface AirQualityData {
   >;
 }
 
+function isMatchingUsPostalCode(location: any, zipCode: string): boolean {
+  const rawPostcode = String(
+    location.address?.postcode ?? location.name ?? "",
+  );
+  const postcode = rawPostcode.split("-")[0];
+  const isPostcode =
+    location.addresstype === "postcode" || location.type === "postcode";
+  const isUs =
+    location.address?.country_code === "us" ||
+    String(location.display_name ?? "").endsWith(", United States");
+  return isUs && isPostcode && postcode === zipCode;
+}
+
 // Zip code to coordinates mapping function with database caching
 export async function getCoordinatesForZipCode(
   zipCode: string,
 ): Promise<{ latitude: number; longitude: number }> {
+  if (!isFiveDigitZipCode(zipCode)) {
+    throw new Error("No locations found for this ZIP code");
+  }
+
+  // Known 50-state / DC ZIPs: local dataset, no Nominatim free-text fallback.
+  // This rejects OSM's fake 99999 postcode and bus-stop matches for 00000.
+  const localCoordinates = lookupUsZipCoordinates(zipCode);
+  if (localCoordinates) {
+    return localCoordinates;
+  }
+
+  if (!isUsTerritoryZipCode(zipCode)) {
+    throw new Error("No locations found for this ZIP code");
+  }
+
   // Check if we have this ZIP code in our database cache
   const cachedCoordinates = await prisma.zipCoordinates.findUnique({
     where: { zipCode },
@@ -135,7 +168,7 @@ async function fetchCoordinatesFromAPI(
 async function fetchFromNominatimAPI(
   zipCode: string,
 ): Promise<{ latitude: number; longitude: number }> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${zipCode}`;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&postalcode=${encodeURIComponent(zipCode)}&country=us&addressdetails=1`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
@@ -155,10 +188,12 @@ async function fetchFromNominatimAPI(
 
     const data = await response.json();
 
-    // Check if we got any results
-    if (data && data.length > 0) {
+    // Structured postal-code search: require an actual US postcode that matches
+    // the requested ZIP. Free-text `q=` previously matched bus stops and OSM's
+    // bogus 99999 postcode in Ohio.
+    if (Array.isArray(data) && data.length > 0) {
       const usLocation = data.find((location: any) =>
-        location.display_name.endsWith(", United States"),
+        isMatchingUsPostalCode(location, zipCode),
       );
 
       if (usLocation) {
@@ -407,13 +442,23 @@ export async function updateAirQualityForAllSubscriptions(): Promise<void> {
       `Found ${subscriptions.length} unique ZIP codes with active subscriptions`,
     );
 
-    // Process each ZIP code
-    const promises = subscriptions.map(({ zipCode }) =>
-      fetchAndStoreAirQualityForZip(zipCode, true),
+    // Process each ZIP independently so one leftover invalid subscription
+    // (e.g. 00000) cannot abort the rest of the batch.
+    const results = await Promise.allSettled(
+      subscriptions.map(({ zipCode }) =>
+        fetchAndStoreAirQualityForZip(zipCode, true),
+      ),
     );
 
-    // Wait for all promises to resolve
-    await Promise.all(promises);
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "rejected") {
+        console.error(
+          `Failed to update air quality for ZIP code ${subscriptions[i].zipCode}:`,
+          result.reason,
+        );
+      }
+    }
 
     console.log("Finished updating air quality data for all subscriptions");
   } catch (error) {
