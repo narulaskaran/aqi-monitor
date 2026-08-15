@@ -18,6 +18,7 @@ vi.mock("../_lib/db.js", () => ({
   prisma: {
     userSubscription: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
     },
   },
 }));
@@ -150,6 +151,40 @@ describe("PATCH /api/subscriptions", () => {
       subscription: updatedSub,
     });
     expect(setSubscriptionActive).toHaveBeenCalledWith(mockSubscription.id, false);
+  });
+
+  it("returns 409 when reactivating a duplicate historical row", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const db = await import("../_lib/db.js");
+    (db.prisma.userSubscription.findUnique as any).mockResolvedValue({
+      ...mockSubscription,
+      id: "inactive-old",
+      email: "user@example.com",
+      zipCode: "12345",
+      active: false,
+    });
+
+    const { setSubscriptionActive } = await import(
+      "../_lib/services/subscription.js"
+    );
+    (setSubscriptionActive as any).mockRejectedValue(
+      new Error("An active subscription already exists for this ZIP code"),
+    );
+
+    const req: any = {
+      method: "PATCH",
+      headers: {},
+      body: { id: "inactive-old", active: true },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "An active subscription already exists for this ZIP code",
+    });
   });
 });
 

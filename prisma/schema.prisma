@@ -20,6 +20,9 @@ model UserSubscription {
   startsAt        DateTime? // Optional start date for the subscription (null = start immediately)
   expiresAt       DateTime? // Optional expiration date for the subscription
 
+  // Prisma does not represent partial unique indexes in the schema. The
+  // migration creates UserSubscription_active_email_zipCode_key on
+  // (email, zipCode) WHERE active = true; keep it in sync with this model.
   @@index([email, zipCode]) // Add index for common query pattern
 }
 
