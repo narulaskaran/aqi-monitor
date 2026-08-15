@@ -29,6 +29,14 @@ updates:
           - typescript-eslint
           - "@typescript-eslint/*"
 
+      # Keep react / react-dom / types on one PR so npm ci can resolve peers.
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+
     ignore:
       # Keep ESLint majors manual/lockstep with the rest of the toolchain.
       - dependency-name: eslint
