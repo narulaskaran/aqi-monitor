@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 
 // Node 22+ exposes a global `localStorage` whose methods throw (or are
 // missing) unless Node is started with --localstorage-file. That global

@@ -8,7 +8,7 @@ import { validateUsZipCode } from './_lib/zipCode.js';
 import {
   clampToForecastWindow,
   getUsableForecastWindow,
-} from './_lib/forecastWindow.js';
+} from '../src/lib/forecastWindow.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
