@@ -82,6 +82,37 @@ describe("handleForecast – validation errors", () => {
     );
   });
 
+  it("returns a generic 400 when geocoding finds no location and does not echo zipCode", async () => {
+    const zipCode = "99999";
+    const today = new Date().toISOString().substring(0, 10);
+    const req: any = {
+      method: "GET",
+      query: { zipCode, startDate: today },
+    };
+    const res = mockRes();
+    const previousApiKey = process.env.GOOGLE_AIR_QUALITY_API_KEY;
+    process.env.GOOGLE_AIR_QUALITY_API_KEY = "test-key";
+    vi.mocked(airQualityService.getCoordinatesForZipCode).mockRejectedValueOnce(
+      new Error("No locations found for this ZIP code"),
+    );
+    try {
+      await handleForecast(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error:
+          "Invalid or unsupported ZIP code. Please try a different ZIP code.",
+      });
+      const body = JSON.stringify(res.json.mock.calls[0][0]);
+      expect(body).not.toContain(zipCode);
+    } finally {
+      if (previousApiKey === undefined) {
+        delete process.env.GOOGLE_AIR_QUALITY_API_KEY;
+      } else {
+        process.env.GOOGLE_AIR_QUALITY_API_KEY = previousApiKey;
+      }
+    }
+  });
+
   it("returns 400 if startDate is missing", async () => {
     const req: any = { method: "GET", query: { zipCode: "94102" } };
     const res = mockRes();
