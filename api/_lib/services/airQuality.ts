@@ -11,23 +11,29 @@ import {
   lookupUsZipCoordinates,
 } from "../zipCode.js";
 
-// Validate environment variables
-const envSchema = z.object({
-  GOOGLE_AIR_QUALITY_API_KEY: z.string().min(1),
-});
+// Lazy API key accessor — validates only when actually needed, not at module load time.
+// This allows importing the module without requiring GOOGLE_AIR_QUALITY_API_KEY to be set
+// (e.g. for dev-mode mock fallbacks that don't call the Google API).
+let _apiKey: string | null = null;
+let _apiKeyValidated = false;
 
-// Parse environment variables
-const env = envSchema.safeParse({
-  GOOGLE_AIR_QUALITY_API_KEY: process.env.GOOGLE_AIR_QUALITY_API_KEY,
-});
-
-if (!env.success) {
-  console.error("❌ Missing Google Air Quality API key:", env.error.format());
-  throw new Error("Missing required Google API environment variables");
+function getApiKey(): string {
+  if (!_apiKeyValidated) {
+    const envSchema = z.object({
+      GOOGLE_AIR_QUALITY_API_KEY: z.string().min(1),
+    });
+    const env = envSchema.safeParse({
+      GOOGLE_AIR_QUALITY_API_KEY: process.env.GOOGLE_AIR_QUALITY_API_KEY,
+    });
+    if (!env.success) {
+      console.error("❌ Missing Google Air Quality API key:", env.error.format());
+      throw new Error("Missing required Google API environment variables");
+    }
+    _apiKey = process.env.GOOGLE_AIR_QUALITY_API_KEY!;
+    _apiKeyValidated = true;
+  }
+  return _apiKey!;
 }
-
-// API key
-const apiKey = process.env.GOOGLE_AIR_QUALITY_API_KEY!;
 
 // Air Quality response types
 export interface AirQualityData {
@@ -227,11 +233,11 @@ export async function fetchAirQuality(
     console.log("Making request to Google Air Quality API with:", {
       latitude,
       longitude,
-      apiKey: apiKey ? "Present" : "Missing",
+      apiKey: getApiKey() ? "Present" : "Missing",
     });
 
     const response = await fetch(
-      `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${apiKey}`,
+      `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${getApiKey()}`,
       {
         method: "POST",
         headers: {
@@ -420,6 +426,11 @@ export async function updateAirQualityForAllSubscriptions(): Promise<void> {
   try {
     console.log("Starting to update air quality data for all subscriptions");
 
+    // Keep cron failures fail-fast when the Google API key is unavailable.
+    // The lazy validation is needed for the history endpoint's dev fallback,
+    // but a production refresh should not mutate subscription state first.
+    getApiKey();
+
     // First, deactivate any expired subscriptions
     const { deactivateExpiredSubscriptions } = await import("./subscription.js");
     const deactivatedCount = await deactivateExpiredSubscriptions();
@@ -517,7 +528,7 @@ export async function fetchAirQualityForecast(
     }
 
     const response = await fetch(
-      `https://airquality.googleapis.com/v1/forecast:lookup?key=${apiKey}`,
+      `https://airquality.googleapis.com/v1/forecast:lookup?key=${getApiKey()}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -602,6 +613,76 @@ export function getMockForecastData(
   }
 
   return results;
+}
+
+/**
+ * Returns mock historical AQI data for development/testing.
+ * Generates a data point per day for the past N days.
+ */
+export function getMockHistoryData(
+  days: number,
+): { timestamp: string; aqi: number; category: string }[] {
+  const results: { timestamp: string; aqi: number; category: string }[] = [];
+  const mockEntries = [
+    { aqi: 42, category: "Good" },
+    { aqi: 78, category: "Moderate" },
+    { aqi: 55, category: "Moderate" },
+    { aqi: 115, category: "Unhealthy for Sensitive Groups" },
+    { aqi: 90, category: "Moderate" },
+    { aqi: 35, category: "Good" },
+    { aqi: 62, category: "Moderate" },
+  ];
+
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    d.setHours(12, 0, 0, 0); // noon each day
+    const entry = mockEntries[i % mockEntries.length];
+    results.push({
+      timestamp: d.toISOString(),
+      aqi: entry.aqi,
+      category: entry.category,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Gets historical air quality records for a specific ZIP code.
+ */
+export async function getHistoryForZip(
+  zipCode: string,
+  days: number,
+): Promise<{ timestamp: string; aqi: number; category: string }[]> {
+  const now = new Date();
+  const since = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - (days - 1),
+    ),
+  );
+
+  const records = await prisma.airQualityRecord.findMany({
+    where: {
+      zipCode,
+      timestamp: { gte: since },
+    },
+    orderBy: { timestamp: "asc" },
+    select: {
+      timestamp: true,
+      aqi: true,
+      category: true,
+    },
+  });
+
+  return records.map((r) => ({
+    timestamp: r.timestamp.toISOString(),
+    aqi: r.aqi,
+    category: r.category,
+  }));
 }
 
 /**
