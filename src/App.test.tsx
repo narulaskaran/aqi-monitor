@@ -11,6 +11,11 @@ import { getAirQuality as realGetAirQuality } from "./lib/api";
 vi.mock("./lib/api", () => ({
   getAirQuality: vi.fn(),
   getAirQualityForecast: vi.fn(),
+  getAirQualityHistory: vi.fn().mockResolvedValue({
+    success: true,
+    zipCode: "12345",
+    history: [],
+  }),
   getSubscriptions: vi.fn(),
   startVerification: vi.fn(),
   verifyCode: vi.fn(),

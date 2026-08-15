@@ -27,11 +27,14 @@ describe("getHistoryForZip", () => {
       where: { timestamp: { gte: Date } };
     };
     const since = query.where.timestamp.gte;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    const now = new Date();
+    const todayUtc = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+    );
     const daysBeforeToday = Math.round(
-      (today.getTime() - since.getTime()) / (24 * 60 * 60 * 1000),
+      (todayUtc - since.getTime()) / (24 * 60 * 60 * 1000),
     );
     expect(daysBeforeToday).toBe(6);
   });

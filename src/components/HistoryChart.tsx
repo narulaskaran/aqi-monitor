@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { getAQICategory } from "../types/air-quality";
 import { getAirQualityHistory } from "../lib/api";
 import type { HistoryPoint } from "../lib/api";
 
@@ -13,12 +14,7 @@ interface HistoryChartProps {
  * Matches the EPA AQI color scale.
  */
 function aqiColorHex(aqi: number): string {
-  if (aqi <= 50) return "#00E400";
-  if (aqi <= 100) return "#FFFF00";
-  if (aqi <= 150) return "#FF7E00";
-  if (aqi <= 200) return "#FF0000";
-  if (aqi <= 300) return "#99004C";
-  return "#7E0023";
+  return getAQICategory("", aqi).color;
 }
 
 /**
@@ -43,7 +39,7 @@ const PLOT_H = CHART_HEIGHT - PADDING.top - PADDING.bottom;
 
 export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   const [history, setHistory] = useState<HistoryPoint[] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -117,8 +113,14 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   const maxAqi = Math.max(...aqiValues);
   const range = Math.max(maxAqi - minAqi, 1);
 
-  const points = history.map((h, i) => {
-    const x = PADDING.left + (i / Math.max(history.length - 1, 1)) * PLOT_W;
+  const times = history.map((h) => new Date(h.timestamp).getTime());
+  const minT = Math.min(...times);
+  const maxT = Math.max(...times);
+  const tRange = Math.max(maxT - minT, 1);
+
+  const points = history.map((h) => {
+    const t = new Date(h.timestamp).getTime();
+    const x = PADDING.left + ((t - minT) / tRange) * PLOT_W;
     const y = PADDING.top + PLOT_H - ((h.aqi - minAqi) / range) * PLOT_H;
     return { x, y, aqi: h.aqi, category: h.category, timestamp: h.timestamp };
   });

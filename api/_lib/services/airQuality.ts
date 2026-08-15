@@ -656,9 +656,14 @@ export async function getHistoryForZip(
   zipCode: string,
   days: number,
 ): Promise<{ timestamp: string; aqi: number; category: string }[]> {
-  const since = new Date();
-  since.setDate(since.getDate() - (days - 1));
-  since.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const since = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - (days - 1),
+    ),
+  );
 
   const records = await prisma.airQualityRecord.findMany({
     where: {

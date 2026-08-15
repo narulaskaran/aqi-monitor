@@ -3,6 +3,7 @@ import {
   getMockHistoryData,
   getHistoryForZip,
 } from './_lib/services/airQuality.js';
+import { validateUsZipCode } from './_lib/zipCode.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -14,15 +15,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { zipCode, days } = req.query;
+    const parsedZip = validateUsZipCode(req.query.zipCode);
+    if (!parsedZip.ok) {
+      return res.status(400).json({ error: parsedZip.error });
+    }
+    const { zipCode } = parsedZip;
 
-    // Validate zipCode
-    if (!zipCode || typeof zipCode !== 'string') {
-      return res.status(400).json({ error: 'ZIP code is required' });
-    }
-    if (!/^\d{5}$/.test(zipCode)) {
-      return res.status(400).json({ error: 'ZIP code must be a 5-digit number' });
-    }
+    const { days } = req.query;
 
     // Validate days (optional, default 7)
     let daysNum = 7;
@@ -38,18 +37,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`History request for ZIP: ${zipCode}, days: ${daysNum}`);
 
-    // Use mock data in development mode if no API key is available
+    const history = await getHistoryForZip(zipCode, daysNum);
     if (
+      history.length === 0 &&
       process.env.NODE_ENV !== 'production' &&
       !process.env.GOOGLE_AIR_QUALITY_API_KEY
     ) {
       console.log('Using mock history data in development mode');
-      const history = getMockHistoryData(daysNum);
-      return res.status(200).json({ success: true, zipCode, history });
+      return res.status(200).json({
+        success: true,
+        zipCode,
+        history: getMockHistoryData(daysNum),
+      });
     }
 
-    // Real data from the database
-    const history = await getHistoryForZip(zipCode, daysNum);
     return res.status(200).json({ success: true, zipCode, history });
   } catch (error) {
     console.error('Error in air quality history API:', error);

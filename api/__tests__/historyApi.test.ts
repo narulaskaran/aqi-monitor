@@ -118,13 +118,14 @@ describe("handleHistory – happy path", () => {
     vi.clearAllMocks();
   });
 
-  it("returns mock data in dev mode without API key", async () => {
+  it("returns stored history when the database has points", async () => {
     const req: any = {
       method: "GET",
       query: { zipCode: "94102", days: "7" },
     };
     const res = mockRes();
     await handleHistory(req, res);
+    expect(airQualityService.getHistoryForZip).toHaveBeenCalledWith("94102", 7);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
@@ -144,6 +145,7 @@ describe("handleHistory – happy path", () => {
     };
     const res = mockRes();
     await handleHistory(req, res);
+    expect(airQualityService.getHistoryForZip).toHaveBeenCalledWith("94102", 7);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -154,20 +156,32 @@ describe("handleHistory – happy path", () => {
     );
   });
 
-  it("returns empty history array when no data exists", async () => {
+  it("falls back to mock history in dev when the database is empty", async () => {
+    vi.mocked(airQualityService.getHistoryForZip).mockResolvedValueOnce([]);
     vi.mocked(airQualityService.getMockHistoryData).mockReturnValueOnce([]);
 
     const req: any = {
       method: "GET",
-      query: { zipCode: "99999", days: "7" },
+      query: { zipCode: "94102", days: "7" },
     };
     const res = mockRes();
     await handleHistory(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
-      zipCode: "99999",
+      zipCode: "94102",
       history: [],
     });
+  });
+
+  it("rejects non-existent ZIPs before looking up history", async () => {
+    const req: any = {
+      method: "GET",
+      query: { zipCode: "00000", days: "7" },
+    };
+    const res = mockRes();
+    await handleHistory(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(airQualityService.getHistoryForZip).not.toHaveBeenCalled();
   });
 });
