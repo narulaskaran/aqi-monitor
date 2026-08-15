@@ -83,7 +83,7 @@ describe("getAirQuality", () => {
     );
 
     await expect(getAirQuality("10001")).rejects.toThrow(
-      "Unable to fetch air quality data. Please try again later.",
+      "Failed to fetch air quality data: 503",
     );
   });
 
