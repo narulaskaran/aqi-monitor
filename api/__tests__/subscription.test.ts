@@ -47,9 +47,9 @@ vi.mock("@upstash/redis", () => ({
 }));
 
 vi.mock("@upstash/ratelimit", () => {
-  const RatelimitMock = vi.fn().mockImplementation(() => ({
-    limit: vi.fn().mockResolvedValue({ success: true }),
-  })) as any;
+  const RatelimitMock = vi.fn().mockImplementation(function RatelimitMock() {
+    this.limit = vi.fn().mockResolvedValue({ success: true });
+  }) as any;
   RatelimitMock.slidingWindow = vi.fn().mockReturnValue("sliding-window-config");
   return { Ratelimit: RatelimitMock };
 });
@@ -176,7 +176,9 @@ describe("Subscription Service", () => {
     const findFirstSpy = vi
       .spyOn(dbMod.prisma.userSubscription, "findFirst")
       .mockResolvedValue(active as any);
-    const updateSpy = vi.spyOn(dbMod.prisma.userSubscription, "update");
+    const updateSpy = vi
+      .spyOn(dbMod.prisma.userSubscription, "update")
+      .mockReset();
 
     const result = await subscriptionService.activateSubscription(
       "a@b.com",
