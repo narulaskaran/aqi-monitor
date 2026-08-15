@@ -1,15 +1,19 @@
 import * as React from "react"
-import { OTPInput, OTPInputContext } from "input-otp"
+import { OTPInput, OTPInputContext, REGEXP_ONLY_DIGITS } from "input-otp"
 import { Minus } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn, normalizeOtpCode } from "@/lib/utils"
 
 const InputOTP = React.forwardRef<
   React.ElementRef<typeof OTPInput>,
   React.ComponentPropsWithoutRef<typeof OTPInput>
->(({ className, containerClassName, ...props }, ref) => (
+>(({ className, containerClassName, pasteTransformer, pattern, ...props }, ref) => (
   <OTPInput
     ref={ref}
+    // Digit-only by default so a paste like "123-456" or "123456\n" fills
+    // all six slots instead of being rejected or truncated with punctuation.
+    pattern={pattern ?? REGEXP_ONLY_DIGITS}
+    pasteTransformer={pasteTransformer ?? normalizeOtpCode}
     containerClassName={cn(
       "flex items-center gap-2 has-[:disabled]:opacity-50",
       containerClassName
@@ -33,7 +37,7 @@ const InputOTPSlot = React.forwardRef<
   React.ComponentPropsWithoutRef<"div"> & { index: number }
 >(({ index, className, ...props }, ref) => {
   const inputOTPContext = React.useContext(OTPInputContext)
-  const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index]
+  const { char, hasFakeCaret, isActive } = inputOTPContext.slots?.[index] ?? {}
 
   return (
     <div

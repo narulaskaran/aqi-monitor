@@ -18,6 +18,18 @@ export function getAQIColor(index: number): string {
   return "bg-maroon-100";
 }
 
+/** Length of email verification OTP codes. */
+export const OTP_LENGTH = 6;
+
+/**
+ * Keep only the leading digits of an OTP, capped at {@link OTP_LENGTH}.
+ * Strips spaces, dashes, and other characters that email clients insert
+ * when a user copies a code.
+ */
+export function normalizeOtpCode(value: string): string {
+  return value.replace(/\D/g, "").slice(0, OTP_LENGTH);
+}
+
 /**
  * Shared helper to handle pasting a 6-digit code into an array of inputs
  * @param e React.ClipboardEvent
@@ -32,17 +44,16 @@ export function handlePasteCode(
   inputRefs: React.RefObject<HTMLInputElement>[]
 ) {
   e.preventDefault();
-  const pastedData = e.clipboardData.getData("text");
-  const digits = pastedData.replace(/\D/g, "").slice(0, 6);
+  const digits = normalizeOtpCode(e.clipboardData.getData("text"));
   if (digits.length > 0) {
     const newCode = [...code];
     digits.split("").forEach((digit, index) => {
-      if (index < 6) {
+      if (index < OTP_LENGTH) {
         newCode[index] = digit;
       }
     });
     setCode(newCode);
-    if (digits.length < 6 && inputRefs[digits.length]) {
+    if (digits.length < OTP_LENGTH && inputRefs[digits.length]) {
       inputRefs[digits.length].current?.focus();
     }
   }
