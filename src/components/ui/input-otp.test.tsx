@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { useState } from "react";
 import { renderWithTheme } from "../../lib/test-utils";
@@ -44,6 +44,11 @@ function ControlledOtp({
 }
 
 describe("InputOTP", () => {
+  afterEach(async () => {
+    cleanup();
+    // input-otp schedules 0/10/50ms timeouts; flush them before jsdom is torn down.
+    await new Promise((resolve) => setTimeout(resolve, 60));
+  });
   it("pastes a full 6-digit code into the hidden input", async () => {
     render(<ControlledOtp />);
     const input = screen.getByRole("textbox", { name: /verification code/i });
