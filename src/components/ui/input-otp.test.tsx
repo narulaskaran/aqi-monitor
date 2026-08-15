@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { useState } from "react";
+import { renderWithTheme } from "../../lib/test-utils";
 import {
   InputOTP,
   InputOTPGroup,
@@ -83,5 +84,38 @@ describe("InputOTP", () => {
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
     expect(onComplete).toHaveBeenCalledWith("123456");
+  });
+
+  it("hides decorative OTP slots from assistive technology", () => {
+    const { container } = renderWithTheme(
+      <InputOTP maxLength={6}>
+        <InputOTPGroup>
+          <InputOTPSlot index={0} />
+          <InputOTPSlot index={1} />
+          <InputOTPSlot index={2} />
+          <InputOTPSlot index={3} />
+          <InputOTPSlot index={4} />
+          <InputOTPSlot index={5} />
+        </InputOTPGroup>
+      </InputOTP>
+    );
+
+    const slots = container.querySelectorAll("[aria-hidden='true']");
+    expect(slots).toHaveLength(6);
+    expect(screen.queryByLabelText(/digit/i)).not.toBeInTheDocument();
+  });
+
+  it("labels the OTP input when no labelledby is provided", () => {
+    renderWithTheme(
+      <InputOTP maxLength={6}>
+        <InputOTPGroup>
+          <InputOTPSlot index={0} />
+        </InputOTPGroup>
+      </InputOTP>
+    );
+
+    expect(
+      screen.getByRole("textbox", { name: /verification code/i })
+    ).toBeInTheDocument();
   });
 });

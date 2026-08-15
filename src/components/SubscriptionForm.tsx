@@ -396,13 +396,22 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
           }}
           className="space-y-4"
         >
-          <Input
-            type="email"
-            placeholder="Enter your email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isLoading}
-          />
+          <div className="space-y-1">
+            <label
+              htmlFor="alert-email"
+              className="text-sm font-medium text-gray-600"
+            >
+              Email address
+            </label>
+            <Input
+              id="alert-email"
+              type="email"
+              placeholder="Enter your email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
 
           {dateRangeSection}
 
@@ -427,7 +436,10 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
           {/* Verification code input */}
           <div className="flex flex-col items-center space-y-3">
-            <label className="text-sm font-medium text-gray-600">
+            <label
+              id="verification-code-label"
+              className="text-sm font-medium text-gray-600"
+            >
               Enter verification code
             </label>
             <div className="flex justify-center w-full">
@@ -440,7 +452,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
                 autoComplete="one-time-code"
                 inputMode="numeric"
                 disabled={isLoading}
-                aria-label="Verification code"
+                aria-labelledby="verification-code-label"
               >
                 <InputOTPGroup>
                   <InputOTPSlot index={0} className="w-10 h-12 text-lg" />

@@ -77,38 +77,52 @@ function App() {
             e.preventDefault();
             handleClick();
           }}
-          className="flex gap-2 mb-4"
+          className="mb-4"
         >
-          <Input
-            type="text"
-            placeholder="Zip code"
-            value={zipCode}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setZipCode(e.target.value)
-            }
-            className="flex-1"
-          />
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button type="submit">Get Air Quality</Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>US codes only at this time</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <label
+            htmlFor="zip-code"
+            className="block text-sm font-medium mb-1 dark:text-gray-300"
+          >
+            ZIP code
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="zip-code"
+              type="text"
+              placeholder="Zip code"
+              value={zipCode}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setZipCode(e.target.value)
+              }
+              className="flex-1"
+            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="submit">Get Air Quality</Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>US codes only at this time</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </form>
 
         {error && <div className="text-red-500 mb-4">{error}</div>}
 
-        {airQuality && (
-          <>
+        <div role="status" aria-live="polite" aria-atomic="true">
+          {airQuality && (
             <AQICard
               index={airQuality.index}
               category={airQuality.category}
               dominantPollutant={airQuality.dominantPollutant}
             />
+          )}
+        </div>
+
+        {airQuality && (
+          <>
             <SubscriptionForm zipCode={currentZipCode} />
             <ForecastCard zipCode={currentZipCode} />
           </>

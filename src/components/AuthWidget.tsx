@@ -107,15 +107,24 @@ export default function AuthWidget() {
                     className="space-y-4"
                   >
                     <h3 className="text-lg font-semibold">Sign In</h3>
-                    <input
-                      type="email"
-                      className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      disabled={isLoading}
-                    />
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="signin-email"
+                        className="block text-sm font-medium"
+                      >
+                        Email address
+                      </label>
+                      <input
+                        id="signin-email"
+                        type="email"
+                        className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={isLoading}
+                      />
+                    </div>
                     <button
                       type="submit"
                       className="w-full bg-blue-600 text-white rounded py-2 hover:bg-blue-700 focus:outline-none"
@@ -136,7 +145,7 @@ export default function AuthWidget() {
                     }}
                     className="space-y-4"
                   >
-                    <h3 className="text-lg font-semibold">
+                    <h3 id="signin-otp-heading" className="text-lg font-semibold">
                       Enter Verification Code
                     </h3>
                     <div className="flex justify-center">
@@ -147,6 +156,7 @@ export default function AuthWidget() {
                           setOtp(value);
                         }}
                         onComplete={() => verifyButtonRef.current?.click()}
+                        aria-labelledby="signin-otp-heading"
                       >
                         <InputOTPGroup>
                           <InputOTPSlot index={0} className="w-10 h-12 text-lg" />

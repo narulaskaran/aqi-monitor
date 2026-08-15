@@ -20,6 +20,10 @@ const InputOTP = React.forwardRef<
     )}
     className={cn("disabled:cursor-not-allowed", className)}
     {...props}
+    aria-label={
+      props["aria-label"] ??
+      (props["aria-labelledby"] ? undefined : "Verification code")
+    }
   />
 ))
 InputOTP.displayName = "InputOTP"
@@ -48,6 +52,7 @@ const InputOTPSlot = React.forwardRef<
         className
       )}
       {...props}
+      aria-hidden="true"
     >
       {char}
       {hasFakeCaret && (
