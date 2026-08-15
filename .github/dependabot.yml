@@ -30,10 +30,15 @@ updates:
           - "@typescript-eslint/*"
 
     ignore:
-      # eslint is on v8 while typescript-eslint is on v8; keep majors manual/lockstep.
+      # Keep ESLint majors manual/lockstep with the rest of the toolchain.
       - dependency-name: eslint
         update-types:
           - version-update:semver-major
       - dependency-name: "@eslint/js"
+        update-types:
+          - version-update:semver-major
+      # v7 pulls zod 4 via the React Compiler ruleset; stay on v5 until the
+      # app is ready to upgrade zod.
+      - dependency-name: eslint-plugin-react-hooks
         update-types:
           - version-update:semver-major
