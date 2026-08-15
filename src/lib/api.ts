@@ -148,9 +148,10 @@ export async function getSubscriptions(token: string) {
       "Content-Type": "application/json",
     },
   });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch subscriptions: ${response.status}`);
-  }
+  await throwIfNotOk(
+    response,
+    `Failed to fetch subscriptions: ${response.status}`,
+  );
   return response.json();
 }
 
