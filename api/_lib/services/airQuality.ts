@@ -480,6 +480,10 @@ export interface DailyForecast {
 /**
  * Fetches air quality forecast data from Google Air Quality API.
  * Groups hourly forecasts by UTC date and returns the worst-case (max AQI) per day.
+ *
+ * `startTime` / `endTime` must already be hour-aligned and inside Google's
+ * window (next hour through ~96h). Google rounds timestamps down to the
+ * previous hour and rejects a start in the current hour.
  */
 export async function fetchAirQualityForecast(
   latitude: number,

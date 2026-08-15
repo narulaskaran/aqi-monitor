@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import handleForecast from "../air-quality-forecast.js";
 import * as airQualityService from "../_lib/services/airQuality.js";
 import { mockRes } from "./testUtils.js";
+import { maxForecastUtcDate } from "../_lib/forecastWindow.js";
 
 vi.mock("../_lib/services/airQuality.js", () => ({
   getCoordinatesForZipCode: vi
@@ -289,6 +290,12 @@ describe("handleForecast – happy path", () => {
 });
 
 describe("handleForecast – horizon clamping", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (process.env as any).GOOGLE_AIR_QUALITY_API_KEY = "fake-key";
+    (process.env as any).NODE_ENV = "production";
+  });
+
   it("clamps endDate to the 96-hour horizon when endDate extends beyond it", async () => {
     // Start today, end in 10 days — should clamp to horizon end
     const today = new Date().toISOString().substring(0, 10);
@@ -306,18 +313,192 @@ describe("handleForecast – horizon clamping", () => {
       .spyOn(airQualityService, "fetchAirQualityForecast")
       .mockResolvedValue([]);
 
-    (process.env as any).GOOGLE_AIR_QUALITY_API_KEY = "fake-key";
-    (process.env as any).NODE_ENV = "production";
-
+    const beforeMs = Date.now();
     await handleForecast(req, res);
 
-    // fetchAirQualityForecast should have been called with an endTime at most 96h from now
     expect(fetchSpy).toHaveBeenCalled();
-    const [, , , calledEndTime] = fetchSpy.mock.calls[0];
-    const now = new Date();
-    const maxHorizon = new Date(now.getTime() + 96 * 60 * 60 * 1000 + 5000); // small buffer
-    expect((calledEndTime as Date).getTime()).toBeLessThanOrEqual(
-      maxHorizon.getTime(),
+    const [, , calledStartTime, calledEndTime] = fetchSpy.mock.calls[0];
+    const start = calledStartTime as Date;
+    const end = calledEndTime as Date;
+
+    // Hour-aligned: Google rounds down to the previous exact hour, so a
+    // now+5min start would still fall in the current hour and 503.
+    expect(start.getUTCMinutes()).toBe(0);
+    expect(start.getUTCSeconds()).toBe(0);
+    expect(start.getUTCMilliseconds()).toBe(0);
+    expect(end.getUTCMinutes()).toBe(0);
+    expect(end.getUTCSeconds()).toBe(0);
+
+    const currentHour = beforeMs - (beforeMs % (60 * 60 * 1000));
+    const nextHour = currentHour + 60 * 60 * 1000;
+    expect(start.getTime()).toBeGreaterThanOrEqual(nextHour);
+    expect(end.getTime()).toBeLessThanOrEqual(
+      currentHour + 95 * 60 * 60 * 1000,
+    );
+  });
+
+  it("sends the next UTC hour as start when the requested start is today", async () => {
+    const today = new Date().toISOString().substring(0, 10);
+    const end = new Date();
+    end.setUTCDate(end.getUTCDate() + 2);
+    const endStr = end.toISOString().substring(0, 10);
+
+    const fetchSpy = vi
+      .spyOn(airQualityService, "fetchAirQualityForecast")
+      .mockResolvedValue([]);
+
+    const req: any = {
+      method: "GET",
+      query: { zipCode: "10001", startDate: today, endDate: endStr },
+    };
+    const res = mockRes();
+
+    const beforeMs = Date.now();
+    await handleForecast(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true }),
+    );
+    expect(fetchSpy).toHaveBeenCalled();
+    const [, , calledStartTime] = fetchSpy.mock.calls[0];
+    const start = calledStartTime as Date;
+    const currentHour = beforeMs - (beforeMs % (60 * 60 * 1000));
+    expect(start.getTime()).toBeGreaterThanOrEqual(currentHour + 60 * 60 * 1000);
+    expect(start.getTime() % (60 * 60 * 1000)).toBe(0);
+  });
+
+  it("returns 400 without calling Google when no forecast hours remain", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-13T23:50:00.000Z"));
+
+    const fetchSpy = vi
+      .spyOn(airQualityService, "fetchAirQualityForecast")
+      .mockResolvedValue([]);
+
+    const req: any = {
+      method: "GET",
+      query: {
+        zipCode: "10001",
+        startDate: "2026-08-13",
+        endDate: "2026-08-13",
+      },
+    };
+    const res = mockRes();
+
+    try {
+      await handleForecast(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.stringMatching(/No forecast hours remain|4 days/),
+        }),
+      );
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("accepts the UI max date just after UTC midnight, but not naive today+4", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-13T00:30:00.000Z"));
+
+    const fetchSpy = vi
+      .spyOn(airQualityService, "fetchAirQualityForecast")
+      .mockResolvedValue([]);
+
+    try {
+      const naivePlus4 = "2026-08-17";
+      const resTooFar = mockRes();
+      await handleForecast(
+        {
+          method: "GET",
+          query: {
+            zipCode: "10001",
+            startDate: naivePlus4,
+            endDate: naivePlus4,
+          },
+        } as any,
+        resTooFar,
+      );
+      expect(resTooFar.status).toHaveBeenCalledWith(400);
+      expect(fetchSpy).not.toHaveBeenCalled();
+
+      const maxDate = maxForecastUtcDate();
+      expect(maxDate).toBe("2026-08-16");
+      const resOk = mockRes();
+      await handleForecast(
+        {
+          method: "GET",
+          query: { zipCode: "10001", startDate: maxDate, endDate: maxDate },
+        } as any,
+        resOk,
+      );
+      expect(fetchSpy).toHaveBeenCalled();
+      expect(resOk.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("handleForecast – upstream errors", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (process.env as any).GOOGLE_AIR_QUALITY_API_KEY = "fake-key";
+    (process.env as any).NODE_ENV = "production";
+    // Midday so a today-only range still overlaps the usable window.
+    // Between 23:00–24:00 UTC, nextUtcHour rolls to tomorrow and the
+    // overlap check 400s before the mocked upstream is called.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-13T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns 400 (not 503) when Google rejects the time period", async () => {
+    vi.spyOn(airQualityService, "fetchAirQualityForecast").mockRejectedValue(
+      new Error(
+        'Failed to fetch air quality forecast: 400 {"error":{"code":400,"message":"The specified time period is not supported."}}',
+      ),
+    );
+
+    const req: any = {
+      method: "GET",
+      query: { zipCode: "10001", startDate: "2026-08-13" },
+    };
+    const res = mockRes();
+    await handleForecast(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.stringContaining("4 days"),
+      }),
+    );
+  });
+
+  it("returns 503 when the forecast upstream is actually unavailable", async () => {
+    vi.spyOn(airQualityService, "fetchAirQualityForecast").mockRejectedValue(
+      new Error("Failed to fetch air quality forecast: 503 backend error"),
+    );
+
+    const req: any = {
+      method: "GET",
+      query: { zipCode: "10001", startDate: "2026-08-13" },
+    };
+    const res = mockRes();
+    await handleForecast(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.stringContaining("temporarily unavailable"),
+      }),
     );
   });
 });

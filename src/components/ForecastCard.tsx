@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { getAirQualityForecast } from "../lib/api";
 import { getAQIColor } from "../lib/utils";
 import { DailyForecast } from "../types/forecast";
+import { maxForecastUtcDate } from "../../api/_lib/forecastWindow";
 
 interface ForecastCardProps {
   zipCode: string;
@@ -31,27 +32,27 @@ function todayUTC(): string {
   return new Date().toISOString().substring(0, 10);
 }
 
-/**
- * Returns today + n days as YYYY-MM-DD in UTC.
- */
-function offsetDaysUTC(days: number): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().substring(0, 10);
-}
-
 export function ForecastCard({ zipCode }: ForecastCardProps) {
   const today = todayUTC();
-  const maxDate = offsetDaysUTC(4);
+  // Match the API's hour-aligned horizon, not a naive today+4 calendar date.
+  const maxDate = maxForecastUtcDate();
 
   const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState("");
+  const [endDate, setEndDate] = useState(maxDate);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forecasts, setForecasts] = useState<DailyForecast[] | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!endDate) {
+      setError("End date is required");
+      return;
+    }
+    if (endDate < startDate) {
+      setError("End date must be on or after the start date");
+      return;
+    }
     setError(null);
     setForecasts(null);
     setIsLoading(true);
@@ -60,7 +61,7 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
       const result = await getAirQualityForecast(
         zipCode,
         startDate,
-        endDate || undefined,
+        endDate,
       );
       setForecasts(result.forecasts);
     } catch (err) {
@@ -94,7 +95,13 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
               value={startDate}
               min={today}
               max={maxDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setStartDate(next);
+                if (endDate && next > endDate) {
+                  setEndDate(next);
+                }
+              }}
               className="flex-1"
               required
             />
@@ -114,10 +121,10 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
               max={maxDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="flex-1"
-              placeholder="Optional"
+              required
             />
           </div>
-          <Button type="submit" disabled={isLoading || !startDate}>
+          <Button type="submit" disabled={isLoading || !startDate || !endDate}>
             {isLoading ? "Loading…" : "Get Forecast"}
           </Button>
         </form>
