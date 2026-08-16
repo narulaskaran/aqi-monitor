@@ -90,7 +90,7 @@ export default function AuthWidget() {
             Sign In
           </button>
           {showModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
               <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg shadow-lg p-6 w-80 relative">
                 <button
                   className="absolute top-2 right-2 text-gray-400 dark:text-gray-500"

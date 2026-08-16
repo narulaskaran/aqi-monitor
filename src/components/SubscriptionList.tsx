@@ -139,7 +139,7 @@ export function SubscriptionList() {
 
       {/* Confirmation modal */}
       {pendingToggle && pendingSub && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg shadow-lg p-6 w-80 relative">
             <h3 className="text-lg font-semibold mb-3">Confirm</h3>
             <p className="text-sm mb-5">

@@ -30,7 +30,7 @@ A real-time Air Quality Index (AQI) monitoring application that allows users to 
 
 ### Prerequisites
 
-- Node.js (v20+)
+- Node.js (v22+)
 - npm
 - PostgreSQL database (e.g., Neon)
 - Google Maps Platform API key with Air Quality API enabled
