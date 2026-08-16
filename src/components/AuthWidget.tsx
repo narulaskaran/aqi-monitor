@@ -5,6 +5,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "./ui/input-otp";
+import { Modal } from "./ui/modal";
 import { useAuth } from "../lib/auth";
 
 export default function AuthWidget() {
@@ -90,99 +91,91 @@ export default function AuthWidget() {
             Sign In
           </button>
           {showModal && (
-            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg shadow-lg p-6 w-80 relative">
-                <button
-                  className="absolute top-2 right-2 text-gray-400 dark:text-gray-500"
-                  onClick={() => setShowModal(false)}
+            <Modal onClose={() => setShowModal(false)}>
+              {step === "email" && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendCode();
+                  }}
+                  className="space-y-4"
                 >
-                  &times;
-                </button>
-                {step === "email" && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleSendCode();
-                    }}
-                    className="space-y-4"
-                  >
-                    <h3 className="text-lg font-semibold">Sign In</h3>
-                    <div className="space-y-1">
-                      <label
-                        htmlFor="signin-email"
-                        className="block text-sm font-medium"
-                      >
-                        Email address
-                      </label>
-                      <input
-                        id="signin-email"
-                        type="email"
-                        className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="w-full bg-blue-600 text-white rounded py-2 hover:bg-blue-700 focus:outline-none"
+                  <h3 className="text-lg font-semibold">Sign In</h3>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="signin-email"
+                      className="block text-sm font-medium"
+                    >
+                      Email address
+                    </label>
+                    <input
+                      id="signin-email"
+                      type="email"
+                      className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
                       disabled={isLoading}
-                    >
-                      {isLoading ? "Sending..." : "Send Code"}
-                    </button>
-                    {error && (
-                      <div className="text-red-500 text-sm">{error}</div>
-                    )}
-                  </form>
-                )}
-                {step === "code" && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleVerifyCode();
-                    }}
-                    className="space-y-4"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white rounded py-2 hover:bg-blue-700 focus:outline-none"
+                    disabled={isLoading}
                   >
-                    <h3 id="signin-otp-heading" className="text-lg font-semibold">
-                      Enter Verification Code
-                    </h3>
-                    <div className="flex justify-center">
-                      <InputOTP
-                        maxLength={6}
-                        value={otp}
-                        onChange={(value) => {
-                          setOtp(value);
-                        }}
-                        onComplete={() => verifyButtonRef.current?.click()}
-                        aria-labelledby="signin-otp-heading"
-                      >
-                        <InputOTPGroup>
-                          <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
-                          <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
-                          <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
-                          <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
-                          <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
-                          <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
-                        </InputOTPGroup>
-                      </InputOTP>
-                    </div>
-                    <button
-                      type="submit"
-                      className="w-full bg-blue-600 text-white rounded py-2"
-                      disabled={isLoading || otp.length !== 6}
-                      ref={verifyButtonRef}
+                    {isLoading ? "Sending..." : "Send Code"}
+                  </button>
+                  {error && (
+                    <div className="text-red-500 text-sm">{error}</div>
+                  )}
+                </form>
+              )}
+              {step === "code" && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleVerifyCode();
+                  }}
+                  className="space-y-4"
+                >
+                  <h3 id="signin-otp-heading" className="text-lg font-semibold">
+                    Enter Verification Code
+                  </h3>
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={otp}
+                      onChange={(value) => {
+                        setOtp(value);
+                      }}
+                      onComplete={() => verifyButtonRef.current?.click()}
+                      aria-labelledby="signin-otp-heading"
                     >
-                      {isLoading ? "Verifying..." : "Verify Code"}
-                    </button>
-                    {error && (
-                      <div className="text-red-500 text-sm">{error}</div>
-                    )}
-                  </form>
-                )}
-              </div>
-            </div>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white rounded py-2"
+                    disabled={isLoading || otp.length !== 6}
+                    ref={verifyButtonRef}
+                  >
+                    {isLoading ? "Verifying..." : "Verify Code"}
+                  </button>
+                  {error && (
+                    <div className="text-red-500 text-sm">{error}</div>
+                  )}
+                </form>
+              )}
+            </Modal>
           )}
         </>
       ) : (
