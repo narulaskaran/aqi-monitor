@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../lib/auth";
 import { getSubscriptions, updateSubscription } from "../lib/api";
 import { Button } from "./ui/button";
+import { Modal } from "./ui/modal";
 
 interface Subscription {
   id: string;
@@ -139,29 +140,27 @@ export function SubscriptionList() {
 
       {/* Confirmation modal */}
       {pendingToggle && pendingSub && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg shadow-lg p-6 w-80 relative">
-            <h3 className="text-lg font-semibold mb-3">Confirm</h3>
-            <p className="text-sm mb-5">
-              {pendingSub.active
-                ? `Deactivate subscription for ZIP code ${pendingSub.zipCode}?`
-                : `Reactivate subscription for ZIP code ${pendingSub.zipCode}?`}
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" size="sm" onClick={handleCancel} disabled={isUpdating}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                variant={pendingSub.active ? "destructive" : "default"}
-                onClick={handleConfirm}
-                disabled={isUpdating}
-              >
-                {isUpdating ? "Saving..." : "Confirm"}
-              </Button>
-            </div>
+        <Modal>
+          <h3 className="text-lg font-semibold mb-3">Confirm</h3>
+          <p className="text-sm mb-5">
+            {pendingSub.active
+              ? `Deactivate subscription for ZIP code ${pendingSub.zipCode}?`
+              : `Reactivate subscription for ZIP code ${pendingSub.zipCode}?`}
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" size="sm" onClick={handleCancel} disabled={isUpdating}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant={pendingSub.active ? "destructive" : "default"}
+              onClick={handleConfirm}
+              disabled={isUpdating}
+            >
+              {isUpdating ? "Saving..." : "Confirm"}
+            </Button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
