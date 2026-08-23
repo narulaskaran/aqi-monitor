@@ -74,4 +74,12 @@ describe("verifyAttempts", () => {
       "verify-code:attempts:a@b.com",
     );
   });
+
+  it("propagates Redis failures (fail closed)", async () => {
+    redisClient.set.mockRejectedValue(new Error("Redis connection refused"));
+    await expect(consumeVerifyAttempt("a@b.com")).rejects.toThrow(
+      "Redis connection refused",
+    );
+    expect(redisClient.incr).not.toHaveBeenCalled();
+  });
 });

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi, beforeEach } from "vitest";
 import {
   generateUnsubscribeToken,
   validateUnsubscribeToken,
@@ -74,6 +74,26 @@ describe("Unsubscribe Token", () => {
   it("returns null for an invalid token", () => {
     const result = validateUnsubscribeToken("invalid.token.here");
     expect(result).toBeNull();
+  });
+});
+
+describe("JWT_SECRET hard-fail", () => {
+  const originalSecret = process.env.JWT_SECRET;
+
+  afterEach(() => {
+    process.env.JWT_SECRET = originalSecret;
+  });
+
+  it("throws when JWT_SECRET is missing", () => {
+    delete process.env.JWT_SECRET;
+    expect(() => generateUnsubscribeToken("sub-123")).toThrow(/JWT_SECRET/);
+    expect(() => validateUnsubscribeToken("a.b.c")).toThrow(/JWT_SECRET/);
+  });
+
+  it("throws when JWT_SECRET is blank", () => {
+    process.env.JWT_SECRET = "   ";
+    expect(() => generateUnsubscribeToken("sub-123")).toThrow(/JWT_SECRET/);
+    expect(() => validateUnsubscribeToken("a.b.c")).toThrow(/JWT_SECRET/);
   });
 });
 

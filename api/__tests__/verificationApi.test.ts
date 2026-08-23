@@ -515,6 +515,27 @@ describe("verify-code OTP attempt limiting", () => {
     expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
   });
 
+  it("fails closed with a 500 when Redis errors during attempt limiting", async () => {
+    (consumeVerifyAttempt as any).mockRejectedValue(
+      new Error("Redis connection refused"),
+    );
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "123456" },
+    };
+    const res = mockRes();
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false }),
+    );
+    // The code must NOT be accepted when Redis is unavailable.
+    const emailMod = await import("../_lib/services/email.js");
+    expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
+  });
+
   it("records an attempt per submission keyed by the submitted email", async () => {
     (consumeVerifyAttempt as any).mockResolvedValue({
       allowed: true,
