@@ -1,6 +1,7 @@
 /**
  * Email service for sending verification codes and notifications via Resend
  */
+import { randomInt } from "node:crypto";
 import { Resend } from "resend";
 import { z } from "zod";
 import { prisma } from "../db.js";
@@ -39,7 +40,9 @@ export interface VerificationCheckResult extends VerificationResult {
  * Generate a random 6-digit verification code
  */
 function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Cryptographically secure RNG (same class of fix as the session token):
+  // Math.random is not safe for security-sensitive values like OTPs.
+  return randomInt(0, 1000000).toString().padStart(6, "0");
 }
 
 /**
