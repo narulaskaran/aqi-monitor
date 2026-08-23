@@ -508,8 +508,7 @@ describe("verify-code OTP attempt limiting", () => {
     expect(res.status).toHaveBeenCalledWith(429);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      error:
-        "Too many verification attempts. Please request a new verification code.",
+      error: "Too many verification attempts. Try again in 10 minutes.",
     });
     const emailMod = await import("../_lib/services/email.js");
     expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();

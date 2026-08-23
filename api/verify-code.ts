@@ -130,8 +130,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!attempt.allowed) {
       return res.status(429).json({
         success: false,
-        error:
-          "Too many verification attempts. Please request a new verification code.",
+        error: "Too many verification attempts. Try again in 10 minutes.",
       });
     }
 
