@@ -1,8 +1,13 @@
+import { randomBytes } from "node:crypto";
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parseDateRange } from "./_lib/dateRange.js";
 import { prisma } from "./_lib/db.js";
 import { authenticate } from "./_lib/middleware/auth.js";
 import { checkVerificationCode } from "./_lib/services/email.js";
+import {
+  consumeVerifyAttempt,
+  clearVerifyAttempts,
+} from "./_lib/services/verifyAttempts.js";
 import {
   createSubscription,
   subscriptionExists,
@@ -119,6 +124,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Per-email OTP attempt limiting: cap code submissions within the
+    // 10-minute validity window so the 6-digit code cannot be brute-forced.
+    const attempt = await consumeVerifyAttempt(subscriptionEmail);
+    if (!attempt.allowed) {
+      return res.status(429).json({
+        success: false,
+        error:
+          "Too many verification attempts. Please request a new verification code.",
+      });
+    }
+
     // Verify the code
     const result = await checkVerificationCode(
       subscriptionEmail,
@@ -127,12 +143,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // If verification is successful
     if (result.success && result.valid) {
+      // The code was used successfully, so reset the attempt counter.
+      await clearVerifyAttempts(subscriptionEmail);
+
       // If mode is 'signin', issue an auth token
       if (mode === "signin") {
-        // Generate a random token
-        const token = [...Array(48)]
-          .map(() => Math.random().toString(36)[2])
-          .join("");
+        // Generate a cryptographically secure random session token
+        // (256 bits of entropy, URL-safe).
+        const token = randomBytes(32).toString("base64url");
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
         

@@ -42,6 +42,23 @@ const ratelimit = new Ratelimit({
 });
 
 const HOURS_BETWEEN_EMAILS = 20;
+
+/**
+ * Returns the JWT signing secret for unsubscribe tokens.
+ *
+ * Missing or empty JWT_SECRET is a hard failure: silently falling back to an
+ * insecure default would let anyone forge unsubscribe tokens, so we refuse to
+ * issue or validate tokens until the secret is configured.
+ */
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.trim().length === 0) {
+    throw new Error(
+      "JWT_SECRET environment variable must be set; refusing to sign or validate unsubscribe tokens with an insecure fallback",
+    );
+  }
+  return secret;
+}
 const ACTIVE_SUBSCRIPTION_CONFLICT =
   "An active subscription already exists for this ZIP code";
 
@@ -174,7 +191,7 @@ export function generateUnsubscribeToken(subscriptionId: string): string {
   // Create a JWT token with the subscription ID
   const token = jwt.sign(
     { subscriptionId },
-    process.env.JWT_SECRET || "your-secret-key",
+    getJwtSecret(),
     { expiresIn: "1y" }, // Token expires in 1 year
   );
   return token;
@@ -184,11 +201,14 @@ export function generateUnsubscribeToken(subscriptionId: string): string {
  * Validates an unsubscribe token and returns the subscription ID
  */
 export function validateUnsubscribeToken(token: string): string | null {
+  // Resolve the secret before the try/catch so a missing JWT_SECRET fails
+  // hard (500) instead of being swallowed as an "invalid token" result.
+  const secret = getJwtSecret();
   try {
     console.log("Validating unsubscribe token");
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || "your-secret-key",
+      secret,
     ) as { subscriptionId: string };
     console.log("Token validated successfully:", {
       subscriptionId: decoded.subscriptionId,
