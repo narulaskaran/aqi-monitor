@@ -8,6 +8,14 @@ import {
 } from "./testUtils.js";
 import * as subscriptionService from "../_lib/services/subscription.js";
 
+vi.mock("../_lib/services/subscription.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../_lib/services/subscription.js")>();
+  return {
+    ...actual,
+    deleteExpiredAuthTokens: vi.fn().mockResolvedValue(0),
+  };
+});
+
 vi.mock("../_lib/services/airQuality.js", () => ({
   getCoordinatesForZipCode: vi
     .fn()
