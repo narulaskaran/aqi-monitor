@@ -12,7 +12,7 @@ import { Redis } from "@upstash/redis";
 export const MAX_VERIFY_ATTEMPTS = 5;
 
 // Matches the 10-minute OTP validity window set in sendVerificationCode.
-const ATTEMPT_WINDOW_SECONDS = 600;
+export const ATTEMPT_WINDOW_SECONDS = 600;
 
 let redisClient: Redis | null = null;
 
@@ -44,10 +44,10 @@ export async function consumeVerifyAttempt(
 ): Promise<AttemptCheck> {
   const redis = getRedis();
   const key = attemptsKey(email);
+  // Create the counter WITH its TTL atomically (SET NX EX) so an interrupted
+  // sequence can never leave a permanent, non-expiring lockout key.
+  await redis.set(key, 0, { ex: ATTEMPT_WINDOW_SECONDS, nx: true });
   const attemptsUsed = await redis.incr(key);
-  if (attemptsUsed === 1) {
-    await redis.expire(key, ATTEMPT_WINDOW_SECONDS);
-  }
   return {
     allowed: attemptsUsed <= MAX_VERIFY_ATTEMPTS,
     attemptsUsed,

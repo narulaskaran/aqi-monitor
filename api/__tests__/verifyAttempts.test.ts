@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const redisClient = {
+  set: vi.fn(),
   incr: vi.fn(),
-  expire: vi.fn(),
   del: vi.fn(),
 };
 
@@ -14,6 +14,7 @@ vi.mock("@upstash/redis", () => {
 
 import {
   MAX_VERIFY_ATTEMPTS,
+  ATTEMPT_WINDOW_SECONDS,
   consumeVerifyAttempt,
   clearVerifyAttempts,
 } from "../_lib/services/verifyAttempts.js";
@@ -21,12 +22,12 @@ import {
 describe("verifyAttempts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    redisClient.set.mockResolvedValue("OK");
     redisClient.incr.mockResolvedValue(1);
-    redisClient.expire.mockResolvedValue(1);
     redisClient.del.mockResolvedValue(1);
   });
 
-  it("allows the first attempt and sets the expiry window once", async () => {
+  it("allows the first attempt and creates the counter with an atomic TTL", async () => {
     redisClient.incr.mockResolvedValue(1);
 
     const result = await consumeVerifyAttempt("a@b.com");
@@ -36,13 +37,16 @@ describe("verifyAttempts", () => {
       attemptsUsed: 1,
       maxAttempts: MAX_VERIFY_ATTEMPTS,
     });
+    // TTL must be set atomically with creation (SET NX EX) so an interrupted
+    // sequence can never leave a permanent, non-expiring lockout key.
+    expect(redisClient.set).toHaveBeenCalledWith(
+      "verify-code:attempts:a@b.com",
+      0,
+      { ex: ATTEMPT_WINDOW_SECONDS, nx: true },
+    );
+    expect(ATTEMPT_WINDOW_SECONDS).toBe(600); // matches the 10-min OTP window
     expect(redisClient.incr).toHaveBeenCalledWith(
       "verify-code:attempts:a@b.com",
-    );
-    expect(redisClient.expire).toHaveBeenCalledTimes(1);
-    expect(redisClient.expire).toHaveBeenCalledWith(
-      "verify-code:attempts:a@b.com",
-      600, // matches the 10-minute OTP validity window
     );
   });
 
@@ -55,8 +59,6 @@ describe("verifyAttempts", () => {
     const blocked = await consumeVerifyAttempt("a@b.com");
     expect(blocked.allowed).toBe(false);
     expect(blocked.attemptsUsed).toBe(MAX_VERIFY_ATTEMPTS + 1);
-    // No second expiry set on subsequent increments
-    expect(redisClient.expire).not.toHaveBeenCalled();
   });
 
   it("normalizes the email into a single counter key", async () => {
