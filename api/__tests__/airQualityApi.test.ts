@@ -8,6 +8,9 @@ import {
 } from "./testUtils.js";
 import * as subscriptionService from "../_lib/services/subscription.js";
 
+// The cron handler (../cron/update-air-quality.js) imported by this file now
+// calls deleteExpiredAuthTokens, so stub it while keeping the rest of the
+// real subscription service spyable for tests below.
 vi.mock("../_lib/services/subscription.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../_lib/services/subscription.js")>();
   return {

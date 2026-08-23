@@ -70,9 +70,30 @@ describe("update-air-quality cron", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
-        message: expect.stringContaining("deleted 7 expired authentication token(s)"),
+        message: expect.stringContaining("expired auth tokens deleted: 7"),
       }),
     );
+  });
+
+  it("does not fail the refresh when token cleanup throws", async () => {
+    vi.mocked(deleteExpiredAuthTokens).mockRejectedValue(
+      new Error("db write failed"),
+    );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = mockRes();
+    await handler(mockReq(VALID_AUTH), res);
+
+    expect(updateAirQualityForAllSubscriptions).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: expect.stringContaining(
+          "expired auth token cleanup failed",
+        ),
+      }),
+    );
+    errorSpy.mockRestore();
   });
 
   it("returns 500 when the refresh fails", async () => {
