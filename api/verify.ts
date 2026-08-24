@@ -7,7 +7,7 @@ import { validateUsZipCode } from "./_lib/zipCode.js";
 // Vercel puts the connecting client first in `x-forwarded-for`; fall back to
 // the socket address for local/dev requests that skip the proxy.
 function getClientIp(req: VercelRequest): string {
-  const forwardedFor = req.headers["x-forwarded-for"];
+  const forwardedFor = req.headers?.["x-forwarded-for"];
   const first = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
   if (first) {
     return first.split(",")[0].trim();

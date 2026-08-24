@@ -9,7 +9,10 @@ vi.mock("@upstash/redis", () => {
 });
 
 vi.mock("@upstash/ratelimit", () => {
-  const Ratelimit = vi.fn(() => ({ limit: limitMock })) as any;
+  // Must be a real constructable function: the service does `new Ratelimit(...)`.
+  const Ratelimit: any = function (this: any) {
+    this.limit = limitMock;
+  };
   Ratelimit.slidingWindow = vi.fn((limit: number, window: string) => ({
     limit,
     window,
