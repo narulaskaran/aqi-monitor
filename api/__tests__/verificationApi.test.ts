@@ -46,6 +46,12 @@ import {
   clearVerifyAttempts,
 } from "../_lib/services/verifyAttempts.js";
 
+vi.mock("../_lib/services/verifySendRateLimit.js", () => ({
+  checkVerifySendRateLimit: vi.fn(async () => ({ allowed: true })),
+}));
+
+import { checkVerifySendRateLimit } from "../_lib/services/verifySendRateLimit.js";
+
 vi.mock("../_lib/services/subscription.js", () => ({
   createSubscription: vi.fn(),
   subscriptionExists: vi.fn(),
@@ -376,6 +382,56 @@ describe("Verification API", () => {
       success: false,
       error: "Unauthorized",
     });
+  });
+});
+
+describe("verify send rate limiting", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (checkVerifySendRateLimit as any).mockResolvedValue({ allowed: true });
+  });
+
+  it("returns 429 and does not send a code once the limit is reached", async () => {
+    (checkVerifySendRateLimit as any).mockResolvedValue({
+      allowed: false,
+      limitedBy: "email",
+    });
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345" },
+      headers: {},
+      socket: { remoteAddress: "1.2.3.4" },
+    };
+    const res = mockRes();
+
+    await handleStartVerification(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Too many verification requests. Please try again later.",
+    });
+    const emailMod = await import("../_lib/services/email.js");
+    expect(emailMod.sendVerificationCode).not.toHaveBeenCalled();
+  });
+
+  it("checks the rate limit using the forwarded client IP", async () => {
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345" },
+      headers: { "x-forwarded-for": "5.6.7.8, 9.9.9.9" },
+      socket: { remoteAddress: "1.2.3.4" },
+    };
+    const res = mockRes();
+    const subMod = await import("../_lib/services/subscription.js");
+    vi.spyOn(subMod, "subscriptionExists").mockResolvedValue(false);
+
+    await handleStartVerification(req, res);
+
+    expect(checkVerifySendRateLimit).toHaveBeenCalledWith(
+      "a@b.com",
+      "5.6.7.8",
+    );
   });
 });
 

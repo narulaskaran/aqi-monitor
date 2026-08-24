@@ -132,7 +132,10 @@ export async function sendVerificationCode(
     });
 
     console.log("Sending verification code to:", email);
-    console.log("Code is:", code);
+    // Never log the plaintext code in production; it's the credential itself.
+    if ((process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production") {
+      console.log("Code is:", code);
+    }
 
     // Restrict outgoing emails in non-production
     if (!isEmailAllowlisted(email)) {
@@ -222,7 +225,6 @@ export async function checkVerificationCode(
   code: string,
 ): Promise<VerificationCheckResult> {
   console.log("Checking verification code for:", email);
-  console.log("Received code:", code);
 
   try {
     // Clean up expired codes first

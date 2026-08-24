@@ -1,7 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sendVerificationCode } from "./_lib/services/email.js";
 import { subscriptionExists } from "./_lib/services/subscription.js";
+import { checkVerifySendRateLimit } from "./_lib/services/verifySendRateLimit.js";
 import { validateUsZipCode } from "./_lib/zipCode.js";
+
+// Vercel puts the connecting client first in `x-forwarded-for`; fall back to
+// the socket address for local/dev requests that skip the proxy.
+function getClientIp(req: VercelRequest): string {
+  const forwardedFor = req.headers?.["x-forwarded-for"];
+  const first = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+  if (first) {
+    return first.split(",")[0].trim();
+  }
+  return req.socket?.remoteAddress ?? "unknown";
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -40,6 +52,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log("REST API verify request:", { email, zipCode: normalizedZipCode });
+
+    const rateLimit = await checkVerifySendRateLimit(email, getClientIp(req));
+    if (!rateLimit.allowed) {
+      return res.status(429).json({
+        success: false,
+        error: "Too many verification requests. Please try again later.",
+      });
+    }
 
     if (normalizedZipCode) {
       const exists = await subscriptionExists(email, normalizedZipCode);
