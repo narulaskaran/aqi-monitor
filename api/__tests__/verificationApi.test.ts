@@ -32,6 +32,20 @@ vi.mock("../_lib/services/email.js", () => ({
   sendEmail: vi.fn().mockResolvedValue({ success: true }),
 }));
 
+vi.mock("../_lib/services/verifyAttempts.js", () => ({
+  consumeVerifyAttempt: vi.fn(async () => ({
+    allowed: true,
+    attemptsUsed: 1,
+    maxAttempts: 5,
+  })),
+  clearVerifyAttempts: vi.fn(async () => undefined),
+}));
+
+import {
+  consumeVerifyAttempt,
+  clearVerifyAttempts,
+} from "../_lib/services/verifyAttempts.js";
+
 vi.mock("../_lib/services/subscription.js", () => ({
   createSubscription: vi.fn(),
   subscriptionExists: vi.fn(),
@@ -469,5 +483,128 @@ describe("Date-range subscription via handleVerifyCode", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ error: "Start date must be before end date" })
     );
+  });
+});
+
+describe("verify-code OTP attempt limiting", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 429 and does not check the code once the limit is reached", async () => {
+    (consumeVerifyAttempt as any).mockResolvedValue({
+      allowed: false,
+      attemptsUsed: 6,
+      maxAttempts: 5,
+    });
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "123456" },
+    };
+    const res = mockRes();
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Too many verification attempts. Try again in 10 minutes.",
+    });
+    const emailMod = await import("../_lib/services/email.js");
+    expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
+  });
+
+  it("fails closed with a 500 when Redis errors during attempt limiting", async () => {
+    (consumeVerifyAttempt as any).mockRejectedValue(
+      new Error("Redis connection refused"),
+    );
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "123456" },
+    };
+    const res = mockRes();
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false }),
+    );
+    // The code must NOT be accepted when Redis is unavailable.
+    const emailMod = await import("../_lib/services/email.js");
+    expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
+  });
+
+  it("records an attempt per submission keyed by the submitted email", async () => {
+    (consumeVerifyAttempt as any).mockResolvedValue({
+      allowed: true,
+      attemptsUsed: 2,
+      maxAttempts: 5,
+    });
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "wrong-code" },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({
+      success: false,
+      valid: false,
+      error: "Invalid or expired verification code",
+    });
+
+    await handleVerifyCode(req, res);
+
+    expect(consumeVerifyAttempt).toHaveBeenCalledWith("a@b.com");
+    expect(consumeVerifyAttempt).toHaveBeenCalledTimes(1);
+    // Failed attempt does NOT clear the counter
+    expect(clearVerifyAttempts).not.toHaveBeenCalled();
+  });
+
+  it("clears the attempt counter after a successful verification", async () => {
+    (consumeVerifyAttempt as any).mockResolvedValue({
+      allowed: true,
+      attemptsUsed: 3,
+      maxAttempts: 5,
+    });
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "123456" },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({
+      success: true,
+      valid: true,
+    });
+    const subMod = await import("../_lib/services/subscription.js");
+    (subMod.createSubscription as any).mockResolvedValue(mockSubscription);
+
+    await handleVerifyCode(req, res);
+
+    expect(clearVerifyAttempts).toHaveBeenCalledWith("a@b.com");
+    expect(res.json).toHaveBeenCalledWith({ success: true, valid: true });
+  });
+
+  it("does not consume OTP attempts on the authenticated session path", async () => {
+    const auth = await import("../_lib/middleware/auth.js");
+    (auth.authenticate as any).mockResolvedValue({
+      email: "signedin@example.com",
+    });
+    const subMod = await import("../_lib/services/subscription.js");
+    (subMod.subscriptionExists as any).mockResolvedValue(false);
+    (subMod.createSubscription as any).mockResolvedValue(mockSubscription);
+
+    const req: any = {
+      method: "POST",
+      headers: { authorization: "Bearer session-token" },
+      body: { zipCode: "12345" },
+    };
+    const res = mockRes();
+
+    await handleVerifyCode(req, res);
+
+    expect(consumeVerifyAttempt).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 });
