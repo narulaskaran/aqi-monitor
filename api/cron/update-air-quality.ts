@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { updateAirQualityForAllSubscriptions } from "../_lib/services/airQuality.js";
+import { deleteExpiredAuthTokens } from "../_lib/services/subscription.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -18,9 +19,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Update air quality data for all subscriptions
     await updateAirQualityForAllSubscriptions();
+
+    // Delete expired authentication tokens so the Authentication table
+    // does not grow unboundedly. A cleanup failure must not fail the
+    // (already successful) air-quality refresh, so log and continue.
+    let deletedTokenCount: number | null = null;
+    try {
+      deletedTokenCount = await deleteExpiredAuthTokens();
+    } catch (cleanupError) {
+      console.error("Error deleting expired auth tokens:", cleanupError);
+    }
+
     return res.json({
       success: true,
-      message: "Air quality data updated successfully",
+      message:
+        deletedTokenCount === null
+          ? "Air quality data updated successfully; expired auth token cleanup failed"
+          : `Air quality data updated successfully; expired auth tokens deleted: ${deletedTokenCount}`,
     });
   } catch (error) {
     console.error("Error updating air quality data:", error);
