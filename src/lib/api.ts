@@ -50,7 +50,7 @@ export async function getAirQuality(zipCode: string): Promise<AirQualityData> {
     `Failed to fetch air quality data: ${response.status}`,
   );
 
-  const data = await response.json();
+  const data: AirQualityData = await response.json();
   console.log('Air quality data received:', data);
   return data;
 }

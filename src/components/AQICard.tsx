@@ -6,6 +6,7 @@ interface AQICardProps {
   index: number;
   category: string;
   dominantPollutant: string;
+  recordedAt?: string;
   zipCode?: string;
 }
 
@@ -21,13 +22,30 @@ const formatPollutant = (pollutant: string): string => {
   return pollutantMap[pollutant] || pollutant;
 };
 
-export function AQICard({ index, category, dominantPollutant, zipCode }: AQICardProps) {
+export function AQICard({
+  index,
+  category,
+  dominantPollutant,
+  recordedAt,
+  zipCode,
+}: AQICardProps) {
   const categoryInfo = getAQICategory(category, index);
+  const formattedRecordedAt = recordedAt
+    ? new Date(recordedAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Air Quality Information</CardTitle>
+        {formattedRecordedAt && (
+          <p className="text-sm text-muted-foreground">
+            As of {formattedRecordedAt}
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         <div
