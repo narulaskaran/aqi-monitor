@@ -21,6 +21,7 @@ export interface Subscription {
   lastEmailSentAt: Date | null;
   startsAt: Date | null;
   expiresAt: Date | null;
+  minAlertAqi: number | null;
 }
 
 // Air quality alert thresholds
@@ -30,6 +31,21 @@ export enum AirQualityThreshold {
   UNHEALTHY = 151, // AQI > 150: Unhealthy
   VERY_UNHEALTHY = 201, // AQI > 200: Very Unhealthy
   HAZARDOUS = 301, // AQI > 300: Hazardous
+}
+
+export const MIN_ALERT_AQI_OPTIONS = [
+  AirQualityThreshold.MODERATE,
+  AirQualityThreshold.UNHEALTHY_SENSITIVE,
+  AirQualityThreshold.UNHEALTHY,
+] as const;
+
+export function isValidMinAlertAqi(
+  value: unknown,
+): value is (typeof MIN_ALERT_AQI_OPTIONS)[number] {
+  return (
+    typeof value === "number" &&
+    MIN_ALERT_AQI_OPTIONS.includes(value as (typeof MIN_ALERT_AQI_OPTIONS)[number])
+  );
 }
 
 // Initialize Upstash Redis and Ratelimit (2 requests per second)
@@ -70,8 +86,9 @@ export async function createSubscription(
   zipCode: string,
   startsAt?: Date,
   expiresAt?: Date,
+  minAlertAqi?: number | null,
 ): Promise<Subscription> {
-  return activateSubscription(email, zipCode, startsAt, expiresAt);
+  return activateSubscription(email, zipCode, startsAt, expiresAt, minAlertAqi);
 }
 
 /**
@@ -94,6 +111,7 @@ export async function activateSubscription(
   zipCode: string,
   startsAt?: Date,
   expiresAt?: Date,
+  minAlertAqi?: number | null,
 ): Promise<Subscription> {
   const data = {
     active: true,
@@ -101,6 +119,7 @@ export async function activateSubscription(
     lastEmailSentAt: null,
     startsAt: startsAt ?? null,
     expiresAt: expiresAt ?? null,
+    minAlertAqi: minAlertAqi ?? null,
   };
 
   // Keep an existing active row unchanged. This makes repeated verification
@@ -333,6 +352,19 @@ export async function setSubscriptionActive(
 }
 
 /**
+ * Updates the minimum AQI threshold without changing active status.
+ */
+export async function setSubscriptionAlertThreshold(
+  id: string,
+  minAlertAqi: number | null,
+): Promise<Subscription> {
+  return prisma.userSubscription.update({
+    where: { id },
+    data: { minAlertAqi },
+  });
+}
+
+/**
  * Checks if an active subscription already exists for this email and ZIP code.
  * Inactive (unsubscribed) rows are ignored so users can re-subscribe.
  */
@@ -473,6 +505,12 @@ export async function sendAirQualityAlerts(
 
     let results = [];
     for (const subscription of subscriptions) {
+      if (subscription.minAlertAqi !== null && aqi < subscription.minAlertAqi) {
+        console.log(
+          `Skipping email for ${subscription.email} (AQI ${aqi} is below minimum ${subscription.minAlertAqi})`,
+        );
+        continue;
+      }
       // 20-hour interval check
       const lastSent = subscription.lastEmailSentAt;
       let shouldSend = false;

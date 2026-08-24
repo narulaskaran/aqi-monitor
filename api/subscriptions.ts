@@ -3,6 +3,8 @@ import { authenticate } from "./_lib/middleware/auth.js";
 import { prisma } from "./_lib/db.js";
 import {
   getSubscriptionsForEmailSorted,
+  isValidMinAlertAqi,
+  setSubscriptionAlertThreshold,
   setSubscriptionActive,
 } from "./_lib/services/subscription.js";
 
@@ -34,12 +36,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // PATCH /api/subscriptions — toggle active status for a subscription
   if (req.method === "PATCH") {
     try {
-      const { id, active } = req.body as { id: string; active: boolean };
+      const { id, active, minAlertAqi } = req.body as {
+        id: string;
+        active?: boolean;
+        minAlertAqi?: number | null;
+      };
 
-      if (!id || typeof active !== "boolean") {
+      if (
+        !id ||
+        (active === undefined && minAlertAqi === undefined) ||
+        (active !== undefined && typeof active !== "boolean")
+      ) {
         return res
           .status(400)
-          .json({ error: "id (string) and active (boolean) are required" });
+          .json({
+            error:
+              minAlertAqi === undefined
+                ? "id (string) and active (boolean) are required"
+                : "id (string) and active or minAlertAqi are required",
+          });
+      }
+
+      if (
+        minAlertAqi !== undefined &&
+        minAlertAqi !== null &&
+        !isValidMinAlertAqi(minAlertAqi)
+      ) {
+        return res.status(400).json({
+          error: "Minimum AQI threshold must be one of 51, 101, or 151",
+        });
       }
 
       // Look up the subscription to verify ownership
@@ -55,7 +80,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: "Forbidden" });
       }
 
-      const updated = await setSubscriptionActive(id, active);
+      let updated = subscription;
+      if (active !== undefined) {
+        updated = await setSubscriptionActive(id, active);
+      }
+      if (minAlertAqi !== undefined) {
+        updated = await setSubscriptionAlertThreshold(id, minAlertAqi);
+      }
       return res.json({ success: true, subscription: updated });
     } catch (error) {
       console.error("Error updating subscription:", error);
