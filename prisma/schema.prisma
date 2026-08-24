@@ -19,6 +19,7 @@ model UserSubscription {
   lastEmailSentAt DateTime? // When the last update email was sent
   startsAt        DateTime? // Optional start date for the subscription (null = start immediately)
   expiresAt       DateTime? // Optional expiration date for the subscription
+  minAlertAqi     Int? // Optional minimum AQI required for an alert (null = all updates)
 
   // Prisma does not represent partial unique indexes in the schema. The
   // migration creates UserSubscription_active_email_zipCode_key on
