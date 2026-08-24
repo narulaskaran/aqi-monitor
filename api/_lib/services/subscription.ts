@@ -494,10 +494,10 @@ export async function sendAirQualityAlerts(
       const websiteUrl =
         (process.env.VERCEL_ENV || process.env.NODE_ENV) !== "production"
           ? "http://localhost:5173"
-          : process.env.VITE_API_URL;
+          : process.env.APP_URL;
       if (!websiteUrl) {
         throw new Error(
-          "No website URL configured. Please set VITE_API_URL in environment variables.",
+          "No website URL configured. Please set APP_URL in environment variables.",
         );
       }
       const html = airQualityEmail({
