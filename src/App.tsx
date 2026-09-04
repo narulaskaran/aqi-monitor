@@ -25,6 +25,7 @@ function App() {
     index: number;
     category: string;
     dominantPollutant: string;
+    recordedAt?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ function App() {
         index: data.index,
         category: data.category,
         dominantPollutant: data.dominantPollutant,
+        recordedAt: data.recordedAt,
       });
     } catch (error) {
       console.error("Error fetching air quality data:", error);
@@ -117,6 +119,7 @@ function App() {
               index={airQuality.index}
               category={airQuality.category}
               dominantPollutant={airQuality.dominantPollutant}
+              recordedAt={airQuality.recordedAt}
               zipCode={currentZipCode}
             />
           )}
