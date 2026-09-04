@@ -35,7 +35,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",
-    "resend": "^4.3.0",
+    "resend": "^6.25.0",
     "tailwind-merge": "^3.6.0",
     "ws": "^8.21.3",
     "zipcodes-us": "^1.1.3",
