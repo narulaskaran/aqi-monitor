@@ -132,6 +132,51 @@ describe("Verification API", () => {
     expect(res.json).toHaveBeenCalledWith({ success: true });
   });
 
+  it("resets OTP attempts after a verification code is sent successfully", async () => {
+    const emailMod = await import("../_lib/services/email.js");
+    const attemptsMod = await import("../_lib/services/verifyAttempts.js");
+    (emailMod.sendVerificationCode as any).mockResolvedValue({ success: true });
+    (attemptsMod.clearVerifyAttempts as any).mockClear();
+
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345" },
+      headers: {},
+      socket: { remoteAddress: "1.2.3.4" },
+    };
+    const res = mockRes();
+
+    await handleStartVerification(req, res);
+
+    expect(attemptsMod.clearVerifyAttempts).toHaveBeenCalledWith("a@b.com");
+  });
+
+  it("keeps OTP attempts when sending a verification code fails", async () => {
+    const emailMod = await import("../_lib/services/email.js");
+    const attemptsMod = await import("../_lib/services/verifyAttempts.js");
+    (emailMod.sendVerificationCode as any).mockResolvedValue({
+      success: false,
+      error: "Email provider unavailable",
+    });
+    (attemptsMod.clearVerifyAttempts as any).mockClear();
+
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345" },
+      headers: {},
+      socket: { remoteAddress: "1.2.3.4" },
+    };
+    const res = mockRes();
+
+    await handleStartVerification(req, res);
+
+    expect(attemptsMod.clearVerifyAttempts).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Email provider unavailable",
+    });
+  });
+
   it("handleVerifyCode returns 400 if missing fields", async () => {
     const req: any = { method: 'POST', body: {} };
     const res = mockRes();
@@ -414,6 +459,34 @@ describe("verify send rate limiting", () => {
     });
     const emailMod = await import("../_lib/services/email.js");
     expect(emailMod.sendVerificationCode).not.toHaveBeenCalled();
+  });
+
+  it("returns a documented 429 envelope when OTP attempts are exhausted", async () => {
+    (consumeVerifyAttempt as any).mockResolvedValue({
+      allowed: false,
+      attemptsUsed: 6,
+      maxAttempts: 5,
+    });
+    const emailMod = await import("../_lib/services/email.js");
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "000000" },
+    };
+    const res = mockRes();
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Too many verification attempts. Try again in 10 minutes.",
+    });
+    expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
+    (consumeVerifyAttempt as any).mockResolvedValue({
+      allowed: true,
+      attemptsUsed: 1,
+      maxAttempts: 5,
+    });
   });
 
   it("checks the rate limit using the forwarded client IP", async () => {
