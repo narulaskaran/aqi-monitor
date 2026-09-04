@@ -402,3 +402,35 @@ describe("sendAirQualityAlerts — startsAt filtering", () => {
     void futureSubscription;
   });
 });
+
+describe("sendAirQualityAlerts — minimum AQI filtering", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    process.env.JWT_SECRET = "test-secret-key";
+    process.env.VERCEL_ENV = "development";
+    process.env.VITE_API_URL = "http://localhost:5173";
+  });
+
+  it("sends only to subscribers whose threshold is met and preserves null behavior", async () => {
+    const dbMod = await import("../_lib/db.js");
+    vi.spyOn(dbMod.prisma.userSubscription, "findMany").mockResolvedValue([
+      { ...mockSubscription, id: "all-updates", email: "all@example.com", minAlertAqi: null },
+      { ...mockSubscription, id: "moderate", email: "moderate@example.com", minAlertAqi: 51 },
+      { ...mockSubscription, id: "unhealthy-sensitive", email: "sensitive@example.com", minAlertAqi: 101 },
+      { ...mockSubscription, id: "unhealthy", email: "unhealthy@example.com", minAlertAqi: 151 },
+    ] as any);
+
+    const emailMod = await import("../_lib/services/email.js");
+    const sendEmailSpy = vi.spyOn(emailMod, "sendEmail").mockResolvedValue({ success: true });
+
+    const mod = await import("../_lib/services/subscription.js");
+    const count = await mod.sendAirQualityAlerts("12345", 100, "Moderate", "PM2.5");
+
+    expect(count).toBe(2);
+    expect(sendEmailSpy.mock.calls.map(([email]) => email)).toEqual([
+      "all@example.com",
+      "moderate@example.com",
+    ]);
+  });
+});

@@ -30,6 +30,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   const [hasDateRange, setHasDateRange] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [minAlertAqi, setMinAlertAqi] = useState<number | null>(null);
 
   // Prevents duplicate / overlapping verify calls (onComplete + form submit,
   // or onComplete firing more than once while a request is in flight).
@@ -51,6 +52,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       setHasDateRange(false);
       setStartDate("");
       setEndDate("");
+      setMinAlertAqi(null);
       verifyingRef.current = false;
     }
 
@@ -164,14 +166,18 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
       const startsAt = hasDateRange && startDate ? new Date(startDate).toISOString() : undefined;
       const expiresAt = hasDateRange && endDate ? new Date(endDate).toISOString() : undefined;
-      const result = await verifyCode(
-        undefined,
-        zipCode,
-        undefined,
-        expiresAt,
-        startsAt,
-        token,
-      );
+      const result =
+        minAlertAqi === null
+          ? await verifyCode(undefined, zipCode, undefined, expiresAt, startsAt, token)
+          : await verifyCode(
+              undefined,
+              zipCode,
+              undefined,
+              expiresAt,
+              startsAt,
+              token,
+              minAlertAqi,
+            );
       if (!result.success || !result.valid) {
         throw new Error(result.error || "Failed to create subscription");
       }
@@ -220,7 +226,10 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
       // Pass startsAt and expiresAt if date range is set
       const startsAt = hasDateRange && startDate ? new Date(startDate).toISOString() : undefined;
       const expiresAt = hasDateRange && endDate ? new Date(endDate).toISOString() : undefined;
-      const result = await verifyCode(email, zipCode, code, expiresAt, startsAt);
+      const result =
+        minAlertAqi === null
+          ? await verifyCode(email, zipCode, code, expiresAt, startsAt)
+          : await verifyCode(email, zipCode, code, expiresAt, startsAt, undefined, minAlertAqi);
       console.log("Code verification response:", result);
 
       if (result.success && result.valid) {
@@ -302,6 +311,24 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
   const dateRangeSection = (
     <div className="space-y-2">
+      <div className="space-y-1">
+        <label htmlFor="min-alert-aqi" className="text-sm font-medium text-gray-600">
+          Only email me when AQI is at least…
+        </label>
+        <select
+          id="min-alert-aqi"
+          aria-label="Minimum AQI threshold"
+          value={minAlertAqi ?? ""}
+          onChange={(e) => setMinAlertAqi(e.target.value ? Number(e.target.value) : null)}
+          disabled={isLoading}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="">All updates</option>
+          <option value="51">Moderate (51+)</option>
+          <option value="101">Unhealthy for Sensitive Groups (101+)</option>
+          <option value="151">Unhealthy (151+)</option>
+        </select>
+      </div>
       <label className="flex items-center space-x-2 text-sm cursor-pointer">
         <input
           type="checkbox"

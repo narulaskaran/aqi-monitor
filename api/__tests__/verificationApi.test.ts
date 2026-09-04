@@ -55,6 +55,7 @@ import { checkVerifySendRateLimit } from "../_lib/services/verifySendRateLimit.j
 vi.mock("../_lib/services/subscription.js", () => ({
   createSubscription: vi.fn(),
   subscriptionExists: vi.fn(),
+  isValidMinAlertAqi: (value: unknown) => [51, 101, 151].includes(value as number),
 }));
 
 describe("Verification API", () => {
@@ -539,6 +540,62 @@ describe("Date-range subscription via handleVerifyCode", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ error: "Start date must be before end date" })
     );
+  });
+});
+
+describe("Minimum AQI subscription preference", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("stores the minimum AQI threshold when a signed-out user verifies", async () => {
+    const req: any = {
+      method: "POST",
+      body: {
+        email: "a@b.com",
+        zipCode: "12345",
+        code: "123456",
+        minAlertAqi: 101,
+      },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({ success: true, valid: true });
+    const subMod = await import("../_lib/services/subscription.js");
+    const createSpy = subMod.createSubscription as any;
+    createSpy.mockResolvedValue(mockSubscription);
+
+    await handleVerifyCode(req, res);
+
+    expect(createSpy).toHaveBeenCalledWith(
+      "a@b.com",
+      "12345",
+      undefined,
+      undefined,
+      101,
+    );
+  });
+
+  it("rejects unsupported minimum AQI thresholds before consuming the code", async () => {
+    const req: any = {
+      method: "POST",
+      body: {
+        email: "a@b.com",
+        zipCode: "12345",
+        code: "123456",
+        minAlertAqi: 75,
+      },
+    };
+    const res = mockRes();
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Minimum AQI threshold must be one of 51, 101, or 151",
+    });
+    expect(consumeVerifyAttempt).not.toHaveBeenCalled();
   });
 });
 

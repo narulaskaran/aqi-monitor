@@ -35,6 +35,7 @@ const mockSubscriptions = [
     activatedAt: "2024-01-01T00:00:00Z",
     lastEmailSentAt: null,
     expiresAt: null,
+    minAlertAqi: null,
   },
   {
     id: "sub-2",
@@ -46,6 +47,7 @@ const mockSubscriptions = [
     activatedAt: null,
     lastEmailSentAt: null,
     expiresAt: null,
+    minAlertAqi: 101,
   },
 ];
 
@@ -90,6 +92,38 @@ describe("SubscriptionList", () => {
     expect(screen.getByText("Inactive")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /deactivate/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /reactivate/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /minimum aqi for 10001/i })).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: /minimum aqi for 90210/i })).toHaveValue("101");
+  });
+
+  it("updates a subscription minimum AQI threshold", async () => {
+    (authModule.useAuth as any).mockReturnValue({
+      isSignedIn: true,
+      token: "test-token",
+      email: "user@example.com",
+      isValidating: false,
+    });
+    (apiModule.getSubscriptions as any).mockResolvedValue({
+      success: true,
+      subscriptions: mockSubscriptions,
+    });
+    (apiModule.updateSubscription as any).mockResolvedValue({ success: true });
+
+    render(<SubscriptionList />);
+    await waitFor(() => expect(screen.getByText("10001")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByRole("combobox", { name: /minimum aqi for 10001/i }), {
+      target: { value: "151" },
+    });
+
+    await waitFor(() => {
+      expect(apiModule.updateSubscription).toHaveBeenCalledWith(
+        "test-token",
+        "sub-1",
+        undefined,
+        151,
+      );
+    });
   });
 
   it("opens confirmation modal on toggle click and confirms", async () => {

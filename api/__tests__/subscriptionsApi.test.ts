@@ -11,6 +11,8 @@ vi.mock("../_lib/middleware/auth.js", () => ({
 vi.mock("../_lib/services/subscription.js", () => ({
   getSubscriptionsForEmailSorted: vi.fn(),
   setSubscriptionActive: vi.fn(),
+  setSubscriptionAlertThreshold: vi.fn(),
+  isValidMinAlertAqi: (value: unknown) => [51, 101, 151].includes(value as number),
 }));
 
 // Mock prisma
@@ -184,6 +186,55 @@ describe("PATCH /api/subscriptions", () => {
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.json).toHaveBeenCalledWith({
       error: "An active subscription already exists for this ZIP code",
+    });
+  });
+
+  it("updates only the minimum AQI threshold", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const db = await import("../_lib/db.js");
+    (db.prisma.userSubscription.findUnique as any).mockResolvedValue({
+      ...mockSubscription,
+      email: "user@example.com",
+    });
+
+    const { setSubscriptionAlertThreshold } = await import(
+      "../_lib/services/subscription.js"
+    );
+    const updatedSub = { ...mockSubscription, minAlertAqi: 151, email: "user@example.com" };
+    (setSubscriptionAlertThreshold as any).mockResolvedValue(updatedSub);
+
+    const req: any = {
+      method: "PATCH",
+      headers: {},
+      body: { id: mockSubscription.id, minAlertAqi: 151 },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      subscription: updatedSub,
+    });
+    expect(setSubscriptionAlertThreshold).toHaveBeenCalledWith(mockSubscription.id, 151);
+  });
+
+  it("rejects unsupported minimum AQI thresholds", async () => {
+    const { authenticate } = await import("../_lib/middleware/auth.js");
+    (authenticate as any).mockResolvedValue({ email: "user@example.com" });
+
+    const req: any = {
+      method: "PATCH",
+      headers: {},
+      body: { id: mockSubscription.id, minAlertAqi: 75 },
+    };
+    const res = mockRes();
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Minimum AQI threshold must be one of 51, 101, or 151",
     });
   });
 });

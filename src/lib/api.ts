@@ -161,7 +161,8 @@ export async function getSubscriptions(token: string) {
 export async function updateSubscription(
   token: string,
   id: string,
-  active: boolean,
+  active?: boolean,
+  minAlertAqi?: number | null,
 ) {
   const response = await fetch(getApiUrl("subscriptions"), {
     method: "PATCH",
@@ -169,7 +170,11 @@ export async function updateSubscription(
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ id, active }),
+    body: JSON.stringify({
+      id,
+      ...(active !== undefined ? { active } : {}),
+      ...(minAlertAqi !== undefined ? { minAlertAqi } : {}),
+    }),
   });
   await throwIfNotOk(
     response,
@@ -188,6 +193,7 @@ export async function verifyCode(
   expiresAt?: string,
   startsAt?: string,
   token?: string,
+  minAlertAqi?: number,
 ) {
   try {
     const baseUrl = getBaseUrl();
@@ -199,6 +205,7 @@ export async function verifyCode(
       code?: string;
       startsAt?: string;
       expiresAt?: string;
+      minAlertAqi?: number;
     } = {
       zipCode,
     };
@@ -216,6 +223,10 @@ export async function verifyCode(
     // Add expiresAt if provided
     if (expiresAt) {
       body.expiresAt = expiresAt;
+    }
+
+    if (minAlertAqi !== undefined) {
+      body.minAlertAqi = minAlertAqi;
     }
 
     const response = await fetch(`${baseUrl}/api/verify-code`, {
