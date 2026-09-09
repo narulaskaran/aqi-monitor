@@ -92,17 +92,6 @@ export async function createSubscription(
 }
 
 /**
- * Retrieves all subscriptions, sorted by most recent first
- */
-export async function getAllSubscriptions(): Promise<Subscription[]> {
-  return await prisma.userSubscription.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-}
-
-/**
  * Activates an inactive subscription or creates one after verification.
  * An already-active row is returned unchanged.
  */
