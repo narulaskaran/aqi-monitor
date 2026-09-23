@@ -132,3 +132,13 @@ export function getAQICategory(category: string, index: number): AQICategory {
 
   return AQI_CATEGORIES.Unknown;
 }
+
+// EPA categories in ascending order of severity (excludes "Unknown").
+export const AQI_SCALE: AQICategory[] = [
+  AQI_CATEGORIES.Good,
+  AQI_CATEGORIES.Moderate,
+  AQI_CATEGORIES['Unhealthy for Sensitive Groups'],
+  AQI_CATEGORIES.Unhealthy,
+  AQI_CATEGORIES['Very Unhealthy'],
+  AQI_CATEGORIES.Hazardous,
+];

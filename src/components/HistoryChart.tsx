@@ -75,7 +75,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
     return (
       <Card className="mt-3">
         <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-sm">Last {days} Days AQI Trend</CardTitle>
+          <CardTitle className="text-sm">Last {days} days AQI trend</CardTitle>
         </CardHeader>
         <CardContent className="pt-0 pb-3">
           <div className="flex items-center justify-center h-[70px] text-xs text-gray-400 dark:text-gray-500">
@@ -92,7 +92,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
     return (
       <Card className="mt-3">
         <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-sm">Last {days} Days AQI Trend</CardTitle>
+          <CardTitle className="text-sm">Last {days} days AQI trend</CardTitle>
         </CardHeader>
         <CardContent className="pt-0 pb-3">
           <div className="flex items-center justify-center h-[70px] text-xs text-red-400 dark:text-red-500">
@@ -138,7 +138,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   return (
     <Card className="mt-3">
       <CardHeader className="pb-2 pt-3">
-        <CardTitle className="text-sm">Last {days} Days AQI Trend</CardTitle>
+        <CardTitle className="text-sm">Last {days} days AQI trend</CardTitle>
       </CardHeader>
       <CardContent className="pt-0 pb-3">
         <div className="overflow-x-auto">
@@ -185,7 +185,9 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
                 key={idx}
                 x={points[idx].x}
                 y={CHART_HEIGHT - 2}
-                textAnchor="middle"
+                textAnchor={
+                  idx === 0 ? "start" : idx === points.length - 1 ? "end" : "middle"
+                }
                 className="fill-gray-400 dark:fill-gray-500"
                 fontSize="8"
               >
@@ -194,9 +196,6 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
             ))}
           </svg>
         </div>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-center">
-          Historical AQI snapshots
-        </p>
       </CardContent>
     </Card>
   );

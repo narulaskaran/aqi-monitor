@@ -3,24 +3,45 @@ import { Input } from "./components/ui/input";
 import { AQICard } from "./components/AQICard";
 import { AQIHeader } from "./components/AQIHeader";
 import { KofiButton } from "./components/KofiButton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./components/ui/tooltip";
 import "./App.css";
-import { useState, ChangeEvent, useEffect } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
 import { SubscriptionList } from "./components/SubscriptionList";
 import { ForecastCard } from "./components/ForecastCard";
 import { getAirQuality } from "./lib/api";
 import { ThemeToggle } from "./components/ThemeToggle";
 import AuthWidget from "./components/AuthWidget";
+import { AQI_SCALE } from "./types/air-quality";
+
+const ZIP_FORMAT_ERROR = "Please enter a valid 5-digit US ZIP code";
+
+function AQIScaleLegend() {
+  return (
+    <div className="aqi-legend">
+      <h2>What the numbers mean</h2>
+      <ul>
+        {AQI_SCALE.map((category) => (
+          <li key={category.name}>
+            <span
+              className="aqi-legend-swatch"
+              style={{ backgroundColor: category.color }}
+              aria-hidden="true"
+            />
+            <span className="aqi-legend-name">{category.name}</span>
+            <span className="aqi-legend-range">
+              {category.range[0]}–{category.range[1]}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function App() {
   const [zipCode, setZipCode] = useState("");
   const [currentZipCode, setCurrentZipCode] = useState("");
+  const [pendingZipCode, setPendingZipCode] = useState("");
   const [airQuality, setAirQuality] = useState<{
     index: number;
     category: string;
@@ -28,22 +49,21 @@ function App() {
     recordedAt?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleClick = async () => {
+  const handleSubmit = async () => {
     try {
       setError(null);
-
-      // Basic ZIP code validation
       if (!zipCode.match(/^\d{5}$/)) {
-        throw new Error("Please enter a valid 5-digit US ZIP code");
+        throw new Error(ZIP_FORMAT_ERROR);
       }
 
-      // Update current ZIP code to trigger reset in SubscriptionForm
-      setCurrentZipCode(zipCode);
-
-      // Get air quality data directly using the ZIP code
+      setPendingZipCode(zipCode);
+      setIsLoading(true);
       const data = await getAirQuality(zipCode);
-
+      // Only switch ZIPs once the new reading is in, so the card never pairs
+      // one ZIP's label and history with another ZIP's reading.
+      setCurrentZipCode(zipCode);
       setAirQuality({
         index: data.index,
         category: data.category,
@@ -51,16 +71,19 @@ function App() {
         recordedAt: data.recordedAt,
       });
     } catch (error) {
-      console.error("Error fetching air quality data:", error);
+      if (!(error instanceof Error) || error.message !== ZIP_FORMAT_ERROR) {
+        console.error("Error fetching air quality data:", error);
+      }
       setError(
         error instanceof Error
           ? error.message
-          : "Failed to fetch air quality data"
+          : "Failed to fetch air quality data",
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Update currentZipCode when zipCode changes in the input
   useEffect(() => {
     if (!currentZipCode && zipCode) {
       setCurrentZipCode(zipCode);
@@ -68,79 +91,100 @@ function App() {
   }, [zipCode, currentZipCode]);
 
   return (
-    <div className="min-h-screen p-4 transition-colors duration-300 rounded-lg shadow bg-background flex flex-col">
-      <div className="flex justify-between items-center mb-2">
-        <ThemeToggle />
-      </div>
-      <div className="max-w-md mx-auto w-full flex-1">
+    <div className="app">
+      <header className="app-header">
         <AQIHeader />
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleClick();
-          }}
-          className="mb-4"
-        >
-          <label
-            htmlFor="zip-code"
-            className="block text-sm font-medium mb-1 dark:text-gray-300"
-          >
-            ZIP code
-          </label>
-          <div className="flex gap-2">
-            <Input
-              id="zip-code"
-              type="text"
-              placeholder="Zip code"
-              value={zipCode}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setZipCode(e.target.value)
-              }
-              className="flex-1"
-            />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button type="submit">Get Air Quality</Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>US codes only at this time</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </form>
-
-        {error && <div className="text-red-500 mb-4">{error}</div>}
-
-        <div role="status" aria-live="polite" aria-atomic="true">
-          {airQuality && (
-            <AQICard
-              index={airQuality.index}
-              category={airQuality.category}
-              dominantPollutant={airQuality.dominantPollutant}
-              recordedAt={airQuality.recordedAt}
-              zipCode={currentZipCode}
-            />
-          )}
+        <div className="app-header-actions">
+          <AuthWidget />
+          <ThemeToggle className="app-theme-toggle" />
         </div>
+      </header>
 
-        {airQuality && (
-          <>
-            <SubscriptionForm zipCode={currentZipCode} />
-            <ForecastCard zipCode={currentZipCode} />
-          </>
-        )}
+      <main className="app-main">
+        <section className="app-intro" aria-labelledby="page-title">
+          <h1 id="page-title">Check the air where you live.</h1>
+          <p className="app-lede">
+            Current AQI, health guidance, and a short-range forecast for any US
+            ZIP code.
+          </p>
+
+          <form
+            className="zip-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSubmit();
+            }}
+          >
+            <label htmlFor="zip-code">ZIP code</label>
+            <div className="zip-form-row">
+              <Input
+                id="zip-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                maxLength={5}
+                placeholder="e.g. 94110"
+                value={zipCode}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setZipCode(event.target.value)
+                }
+                aria-invalid={error === ZIP_FORMAT_ERROR ? true : undefined}
+                aria-describedby={error ? "zip-error" : undefined}
+              />
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Checking…" : "Get air quality"}
+              </Button>
+            </div>
+            {error && (
+              <p id="zip-error" className="zip-form-error" role="alert">
+                {error}
+              </p>
+            )}
+          </form>
+        </section>
+
+        <section className="result-panel" aria-label="Air quality result">
+          {!airQuality && !isLoading && <AQIScaleLegend />}
+          <div
+            className="result-live"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {isLoading && (
+              <div className="result-loading">
+                <span className="result-spinner" aria-hidden="true" />
+                Loading air quality for {pendingZipCode}…
+              </div>
+            )}
+            {airQuality && !isLoading && (
+              <AQICard
+                index={airQuality.index}
+                category={airQuality.category}
+                dominantPollutant={airQuality.dominantPollutant}
+                recordedAt={airQuality.recordedAt}
+                zipCode={currentZipCode}
+              />
+            )}
+          </div>
+        </section>
+      </main>
+
+      {airQuality && (
+        <section className="app-details" aria-label="Alerts and forecast">
+          <SubscriptionForm zipCode={currentZipCode} />
+          <ForecastCard zipCode={currentZipCode} />
+        </section>
+      )}
+
+      <section className="app-subscriptions" aria-label="Your subscriptions">
         <SubscriptionList />
-      </div>
+      </section>
 
-      {/* Move AuthWidget to the bottom, above Ko-Fi */}
-      <div className="flex justify-center max-w-md mx-auto w-full mb-2">
-        <AuthWidget />
-      </div>
-      <div className="flex justify-end items-center w-full mt-4">
+      <footer className="app-footer">
+        <span>Data from the Google Air Quality API.</span>
         <KofiButton />
-      </div>
+      </footer>
     </div>
   );
 }

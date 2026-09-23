@@ -1,5 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
-import { getAQICategory } from "../types/air-quality";
+import { AQI_SCALE, getAQICategory } from "../types/air-quality";
 import { HistoryChart } from "./HistoryChart";
 
 interface AQICardProps {
@@ -13,14 +12,26 @@ interface AQICardProps {
 const formatPollutant = (pollutant: string): string => {
   const pollutantMap: { [key: string]: string } = {
     o3: "Ozone (O₃)",
-    pm25: "Fine Particulate Matter (PM2.5)",
-    pm10: "Coarse Particulate Matter (PM10)",
-    no2: "Nitrogen Dioxide (NO₂)",
-    so2: "Sulfur Dioxide (SO₂)",
-    co: "Carbon Monoxide (CO)",
+    pm25: "Fine particulate matter (PM2.5)",
+    pm10: "Coarse particulate matter (PM10)",
+    no2: "Nitrogen dioxide (NO₂)",
+    so2: "Sulfur dioxide (SO₂)",
+    co: "Carbon monoxide (CO)",
   };
   return pollutantMap[pollutant] || pollutant;
 };
+
+/**
+ * Position of an AQI value along the scale bar, as a percentage. Each EPA
+ * category gets an equal-width segment so low values stay readable.
+ */
+function scalePosition(index: number): number {
+  const segment = AQI_SCALE.findIndex(({ range }) => index <= range[1]);
+  if (segment === -1) return 100;
+  const [low, high] = AQI_SCALE[segment].range;
+  const within = Math.min(Math.max((index - low) / Math.max(high - low, 1), 0), 1);
+  return ((segment + within) / AQI_SCALE.length) * 100;
+}
 
 export function AQICard({
   index,
@@ -36,39 +47,61 @@ export function AQICard({
         minute: "2-digit",
       })
     : null;
+  const hasReading = Number.isFinite(index) && index >= 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Air Quality Information</CardTitle>
+    <article className="aqi-reading">
+      <p className="aqi-reading-meta">
+        Current conditions{zipCode ? ` · ${zipCode}` : ""}
         {formattedRecordedAt && (
-          <p className="text-sm text-muted-foreground">
-            As of {formattedRecordedAt}
-          </p>
+          <>
+            {" · "}
+            <span>As of {formattedRecordedAt}</span>
+          </>
         )}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div
+      </p>
+
+      <div className="aqi-reading-value">
+        <p className="aqi-number">
+          {hasReading ? index : "—"}
+          <span className="aqi-number-label"> US AQI</span>
+        </p>
+        <p
           data-testid="aqi-category-band"
-          className="rounded-lg px-4 py-4"
+          className="aqi-category"
           style={{
             backgroundColor: categoryInfo.color,
             color: categoryInfo.textColor,
           }}
         >
-          <p className="text-lg font-medium">AQI: {index}</p>
-          <p className="text-lg font-semibold">Category: {categoryInfo.name}</p>
-        </div>
-        <div>
-          <p className="text-sm font-medium">Health recommendation</p>
-          <p className="text-sm">{categoryInfo.advice}</p>
-        </div>
-        <p className="text-lg">
-          Dominant Pollutant: {formatPollutant(dominantPollutant)}
+          {categoryInfo.name}
         </p>
+      </div>
 
-        {zipCode && <HistoryChart zipCode={zipCode} />}
-      </CardContent>
-    </Card>
+      {hasReading && (
+        <div className="aqi-scale" aria-hidden="true">
+          {AQI_SCALE.map(({ name, color }) => (
+            <span key={name} style={{ backgroundColor: color }} />
+          ))}
+          <span
+            className="aqi-scale-marker"
+            style={{ left: `${scalePosition(index)}%` }}
+          />
+        </div>
+      )}
+
+      <p className="aqi-advice">{categoryInfo.advice}</p>
+
+      <dl className="aqi-facts">
+        <dt>Main pollutant</dt>
+        <dd>{formatPollutant(dominantPollutant)}</dd>
+      </dl>
+
+      {zipCode && (
+        <div className="aqi-history">
+          <HistoryChart zipCode={zipCode} />
+        </div>
+      )}
+    </article>
   );
 }

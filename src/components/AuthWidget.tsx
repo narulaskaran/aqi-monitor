@@ -85,10 +85,10 @@ export default function AuthWidget() {
       ) : !isSignedIn ? (
         <>
           <button
-            className="px-3 py-1 rounded bg-blue-600 text-white"
+            className="h-9 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             onClick={handleSignIn}
           >
-            Sign In
+            Sign in
           </button>
           {showModal && (
             <Modal onClose={() => setShowModal(false)}>
@@ -211,9 +211,9 @@ export default function AuthWidget() {
           <button
             className="ml-2 px-2 py-1 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
             onClick={signOut}
-            title="Sign Out"
+            title="Sign out"
           >
-            Sign Out
+            Sign out
           </button>
         </div>
       )}

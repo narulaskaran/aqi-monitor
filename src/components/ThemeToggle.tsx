@@ -1,7 +1,13 @@
 import { Button } from "./ui/button";
 import { useTheme } from "../lib/theme";
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  className?: string;
+}
+
+export function ThemeToggle({
+  className = "fixed top-4 right-4 z-50",
+}: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
   return (
     <Button
@@ -9,7 +15,7 @@ export function ThemeToggle() {
       size="icon"
       aria-label="Toggle dark mode"
       onClick={toggleTheme}
-      className="fixed top-4 right-4 z-50"
+      className={className}
     >
       {theme === "dark" ? (
         // Sun icon

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { startVerification, verifyCode } from "../lib/api";
 import { isValidEmail, normalizeOtpCode, OTP_LENGTH } from "../lib/utils";
 import { useAuth } from "../lib/auth";
@@ -297,15 +298,14 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
   if (success) {
     return (
-      <div className="mt-4 p-4 bg-green-100 rounded-lg text-green-800">
-        <p className="font-semibold">
-          {isSignedIn ? "Subscribed! 🎉" : "Verification successful! 🎉"}
-        </p>
-        <p className="mt-2">
-          You will now receive email alerts about air quality changes for your
-          area.
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{isSignedIn ? "Subscribed" : "Verification successful"}</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          You'll get an email when air quality changes for {zipCode}.
+        </CardContent>
+      </Card>
     );
   }
 
@@ -343,14 +343,14 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
           disabled={isLoading}
           className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
         />
-        <span className="text-gray-700">Schedule this subscription (optional)</span>
+        <span className="text-foreground">Schedule this subscription (optional)</span>
       </label>
 
       {hasDateRange && (
         <div className="ml-6 space-y-3">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">
-              Start date <span className="font-normal text-gray-500">(alerts begin; leave empty to start immediately)</span>
+            <label className="text-xs font-medium text-muted-foreground">
+              Start date <span className="font-normal text-muted-foreground">(alerts begin; leave empty to start immediately)</span>
             </label>
             <Input
               type="date"
@@ -363,8 +363,8 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">
-              End date <span className="font-normal text-gray-500">(alerts stop; leave empty to never expire)</span>
+            <label className="text-xs font-medium text-muted-foreground">
+              End date <span className="font-normal text-muted-foreground">(alerts stop; leave empty to never expire)</span>
             </label>
             <Input
               type="date"
@@ -375,7 +375,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
               className="w-full"
               aria-label="End date"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Your subscription will automatically end on this date
             </p>
           </div>
@@ -386,136 +386,140 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
 
   if (isValidating) {
     return (
-      <div className="mt-4 p-4 border rounded-lg text-sm text-gray-600">
-        Checking sign-in status...
-      </div>
+      <Card>
+        <CardContent className="pt-6 text-sm text-muted-foreground">
+          Checking sign-in status...
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="mt-4 p-4 border rounded-lg">
-      <h3 className="text-lg font-semibold mb-4">
-        Get Air Quality Alerts via Email
-      </h3>
-      {isSignedIn ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubscribeAuthenticated();
-          }}
-          className="space-y-4"
-        >
-          <p className="text-sm text-gray-600">
-            Signed in as <strong>{authEmail}</strong>
-          </p>
-
-          {dateRangeSection}
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Subscribing..." : "Sign Up for Alerts"}
-          </Button>
-        </form>
-      ) : !isVerifying ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubscribe();
-          }}
-          className="space-y-4"
-        >
-          <div className="space-y-1">
-            <label
-              htmlFor="alert-email"
-              className="text-sm font-medium text-gray-600"
-            >
-              Email address
-            </label>
-            <Input
-              id="alert-email"
-              type="email"
-              placeholder="Enter your email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-
-          {dateRangeSection}
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Sending..." : "Sign Up for Alerts"}
-          </Button>
-        </form>
-      ) : (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleVerify();
-          }}
-          className="space-y-4"
-        >
-          {verificationStatus && (
-            <p className="text-sm text-gray-600">
-              We've sent a verification code to <strong>{email}</strong>. Please
-              check your inbox.
+    <Card>
+      <CardHeader>
+        <CardTitle>Email alerts</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isSignedIn ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubscribeAuthenticated();
+            }}
+            className="space-y-4"
+          >
+            <p className="text-sm text-muted-foreground">
+              Signed in as <strong>{authEmail}</strong>
             </p>
-          )}
 
-          {/* Verification code input */}
-          <div className="flex flex-col items-center space-y-3">
-            <label
-              id="verification-code-label"
-              className="text-sm font-medium text-gray-600"
-            >
-              Enter verification code
-            </label>
-            <div className="flex justify-center w-full">
-              <InputOTP
-                maxLength={OTP_LENGTH}
-                value={otp}
-                onChange={handleOtpChange}
-                onComplete={handleOtpComplete}
-                autoFocus
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                disabled={isLoading}
-                aria-labelledby="verification-code-label"
+            {dateRangeSection}
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Subscribing..." : "Sign up for alerts"}
+            </Button>
+          </form>
+        ) : !isVerifying ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubscribe();
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-1">
+              <label
+                htmlFor="alert-email"
+                className="text-sm font-medium text-muted-foreground"
               >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
-                  <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
-                  <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
-                  <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
-                  <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
-                  <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
-                </InputOTPGroup>
-              </InputOTP>
+                Email address
+              </label>
+              <Input
+                id="alert-email"
+                type="email"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+              />
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-            <Button
-              type="submit"
-              className="flex-1"
-              disabled={
-                isLoading || otp.length !== OTP_LENGTH
-              }
-            >
-              {isLoading ? "Verifying..." : "Verify Code"}
+            {dateRangeSection}
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Sending..." : "Sign up for alerts"}
             </Button>
-            <Button
-              onClick={handleResendCode}
-              className="sm:w-auto"
-              variant="outline"
-              disabled={isLoading}
-              type="button"
-            >
-              Resend Code
-            </Button>
-          </div>
-        </form>
-      )}
-      {error && <div className="mt-2 text-red-500">{error}</div>}
-    </div>
+          </form>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleVerify();
+            }}
+            className="space-y-4"
+          >
+            {verificationStatus && (
+              <p className="text-sm text-muted-foreground">
+                We've sent a verification code to <strong>{email}</strong>. Please
+                check your inbox.
+              </p>
+            )}
+
+            {/* Verification code input */}
+            <div className="flex flex-col items-center space-y-3">
+              <label
+                id="verification-code-label"
+                className="text-sm font-medium text-muted-foreground"
+              >
+                Enter verification code
+              </label>
+              <div className="flex justify-center w-full">
+                <InputOTP
+                  maxLength={OTP_LENGTH}
+                  value={otp}
+                  onChange={handleOtpChange}
+                  onComplete={handleOtpComplete}
+                  autoFocus
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  disabled={isLoading}
+                  aria-labelledby="verification-code-label"
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
+                    <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
+                    <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
+                    <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
+                    <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
+                    <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={
+                  isLoading || otp.length !== OTP_LENGTH
+                }
+              >
+                {isLoading ? "Verifying..." : "Verify Code"}
+              </Button>
+              <Button
+                onClick={handleResendCode}
+                className="sm:w-auto"
+                variant="outline"
+                disabled={isLoading}
+                type="button"
+              >
+                Resend Code
+              </Button>
+            </div>
+          </form>
+        )}
+        {error && <div className="mt-3 text-sm text-red-500">{error}</div>}
+      </CardContent>
+    </Card>
   );
 }
