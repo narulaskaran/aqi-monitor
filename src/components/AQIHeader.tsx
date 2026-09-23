@@ -3,10 +3,8 @@ import { AQIIcon } from "./AQIIcon";
 
 export const AQIHeader: React.FC = () => {
   return (
-    <div className="cloud-brand" aria-label="AQI Monitor">
-      <span className="cloud-mark">
-        <AQIIcon />
-      </span>
+    <div className="app-brand">
+      <AQIIcon className="app-brand-icon" />
       <span>AQI Monitor</span>
     </div>
   );

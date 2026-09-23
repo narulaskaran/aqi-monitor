@@ -61,7 +61,7 @@ describe("App accessibility", () => {
     fireEvent.click(screen.getByRole("button", { name: /get air quality/i }));
 
     await waitFor(() => {
-      expect(liveRegion).toHaveTextContent(/aqi: 42/i);
+      expect(liveRegion).toHaveTextContent(/42 US AQI/i);
     });
     expect(liveRegion).toHaveAttribute("aria-live", "polite");
     expect(liveRegion).toHaveAttribute("aria-atomic", "true");

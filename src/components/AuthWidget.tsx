@@ -85,10 +85,10 @@ export default function AuthWidget() {
       ) : !isSignedIn ? (
         <>
           <button
-            className="px-3 py-1 rounded bg-blue-600 text-white"
+            className="h-9 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             onClick={handleSignIn}
           >
-            Sign In
+            Sign in
           </button>
           {showModal && (
             <Modal onClose={() => setShowModal(false)}>

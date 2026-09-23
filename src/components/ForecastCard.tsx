@@ -76,16 +76,16 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
   };
 
   return (
-    <Card className="mt-4">
+    <Card>
       <CardHeader>
-        <CardTitle>Air Quality Forecast</CardTitle>
+        <CardTitle>Air quality forecast</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex gap-2 items-center">
             <label
               htmlFor="forecast-start-date"
-              className="text-sm font-medium w-20 shrink-0 dark:text-gray-300"
+              className="text-sm font-medium w-20 shrink-0"
             >
               Start date
             </label>
@@ -109,7 +109,7 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
           <div className="flex gap-2 items-center">
             <label
               htmlFor="forecast-end-date"
-              className="text-sm font-medium w-20 shrink-0 dark:text-gray-300"
+              className="text-sm font-medium w-20 shrink-0"
             >
               End date
             </label>
@@ -125,7 +125,7 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
             />
           </div>
           <Button type="submit" disabled={isLoading || !startDate || !endDate}>
-            {isLoading ? "Loading…" : "Get Forecast"}
+            {isLoading ? "Loading…" : "Get forecast"}
           </Button>
         </form>
 
@@ -136,7 +136,7 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
         )}
 
         {forecasts !== null && forecasts.length === 0 && (
-          <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+          <div className="mt-3 text-sm text-muted-foreground">
             No forecast data available for the selected dates.
           </div>
         )}
@@ -161,7 +161,7 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
                 </div>
               </div>
             ))}
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               * These are projections only. Forecasts show the worst-case AQI per day and may change as conditions evolve.
             </p>
           </div>
