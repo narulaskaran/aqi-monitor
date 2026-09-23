@@ -50,6 +50,29 @@ describe("AQICard", () => {
     expect(screen.getByText(unhealthy.advice)).toBeInTheDocument();
   });
 
+  it.each([
+    [0, "0%"],
+    [50, "16.6667%"],
+    [51, "16.6667%"],
+    [100, "33.3333%"],
+    [101, "33.3333%"],
+    [500, "100%"],
+    [600, "100%"],
+  ])("places AQI %i at %s along the scale", (index, left) => {
+    const { container } = renderWithTheme(
+      <AQICard index={index} category="" dominantPollutant="pm25" />,
+    );
+    const marker = container.querySelector<HTMLElement>(".aqi-scale-marker");
+    expect(parseFloat(marker!.style.left)).toBeCloseTo(parseFloat(left), 3);
+  });
+
+  it("hides the scale when there is no reading", () => {
+    const { container } = renderWithTheme(
+      <AQICard index={-1} category="" dominantPollutant="pm25" />,
+    );
+    expect(container.querySelector(".aqi-scale")).toBeNull();
+  });
+
   it("renders the recorded time when provided", () => {
     const recordedAt = "2026-08-24T14:34:00.000Z";
     const formattedTime = new Date(recordedAt).toLocaleTimeString([], {

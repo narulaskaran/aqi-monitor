@@ -107,6 +107,46 @@ describe("App accessibility", () => {
     expect(liveRegion).toHaveTextContent(/120 US AQI/i);
   });
 
+  it("names the submitted ZIP while loading, even if the input changes", async () => {
+    getAirQuality.mockReturnValueOnce(new Promise(() => undefined));
+
+    renderWithTheme(<App />);
+    const liveRegion = screen.getByRole("status");
+    const zipInput = screen.getByLabelText(/zip code/i);
+
+    fireEvent.change(zipInput, { target: { value: "12345" } });
+    fireEvent.click(screen.getByRole("button", { name: /get air quality/i }));
+    fireEvent.change(zipInput, { target: { value: "99999" } });
+
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent(/loading air quality for 12345/i);
+    });
+    expect(liveRegion).not.toHaveTextContent(/99999/);
+  });
+
+  it("keeps the previous reading when a later lookup fails", async () => {
+    getAirQuality
+      .mockResolvedValueOnce({ index: 42, category: "Good", dominantPollutant: "pm25" })
+      .mockRejectedValueOnce(new Error("Service unavailable"));
+
+    renderWithTheme(<App />);
+    const liveRegion = screen.getByRole("status");
+    const zipInput = screen.getByLabelText(/zip code/i);
+    const submit = screen.getByRole("button", { name: /get air quality/i });
+
+    fireEvent.change(zipInput, { target: { value: "12345" } });
+    fireEvent.click(submit);
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent(/42 US AQI/i);
+    });
+
+    fireEvent.change(zipInput, { target: { value: "54321" } });
+    fireEvent.click(submit);
+    expect(await screen.findByText(/service unavailable/i)).toBeInTheDocument();
+    expect(liveRegion).toHaveTextContent(/current conditions · 12345/i);
+    expect(liveRegion).toHaveTextContent(/42 US AQI/i);
+  });
+
   it("marks the ZIP input invalid only for format errors", async () => {
     getAirQuality.mockRejectedValueOnce(new Error("Service unavailable"));
 

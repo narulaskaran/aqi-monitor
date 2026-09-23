@@ -41,6 +41,7 @@ function AQIScaleLegend() {
 function App() {
   const [zipCode, setZipCode] = useState("");
   const [currentZipCode, setCurrentZipCode] = useState("");
+  const [pendingZipCode, setPendingZipCode] = useState("");
   const [airQuality, setAirQuality] = useState<{
     index: number;
     category: string;
@@ -57,6 +58,7 @@ function App() {
         throw new Error(ZIP_FORMAT_ERROR);
       }
 
+      setPendingZipCode(zipCode);
       setIsLoading(true);
       const data = await getAirQuality(zipCode);
       // Only switch ZIPs once the new reading is in, so the card never pairs
@@ -77,7 +79,6 @@ function App() {
           ? error.message
           : "Failed to fetch air quality data",
       );
-      setAirQuality(null);
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +154,7 @@ function App() {
             {isLoading && (
               <div className="result-loading">
                 <span className="result-spinner" aria-hidden="true" />
-                Loading air quality for {zipCode}…
+                Loading air quality for {pendingZipCode}…
               </div>
             )}
             {airQuality && !isLoading && (
