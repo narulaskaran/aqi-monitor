@@ -10,6 +10,7 @@ import {
 } from "./_lib/services/verifyAttempts.js";
 import {
   createSubscription,
+  isValidMinAlertAqi,
   subscriptionExists,
 } from "./_lib/services/subscription.js";
 import { validateUsZipCode } from "./_lib/zipCode.js";
@@ -24,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { email, zipCode, code, mode, startsAt, expiresAt } = req.body;
+    const { email, zipCode, code, mode, startsAt, expiresAt, minAlertAqi } = req.body;
     const hasAuthHeader = Boolean(req.headers?.authorization);
     let authenticatedEmail: string | undefined;
 
@@ -82,6 +83,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    if (
+      minAlertAqi !== undefined &&
+      minAlertAqi !== null &&
+      !isValidMinAlertAqi(minAlertAqi)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "Minimum AQI threshold must be one of 51, 101, or 151",
+      });
+    }
+
+    const createVerifiedSubscription = () =>
+      minAlertAqi === undefined
+        ? createSubscription(
+            subscriptionEmail,
+            normalizedZipCode,
+            dateRange.dates?.startsAt,
+            dateRange.dates?.expiresAt,
+          )
+        : createSubscription(
+            subscriptionEmail,
+            normalizedZipCode,
+            dateRange.dates?.startsAt,
+            dateRange.dates?.expiresAt,
+            minAlertAqi,
+          );
+
     // A valid session already proves ownership of the email address, so the
     // authenticated caller can create the subscription without an OTP.
     if (authenticatedEmail) {
@@ -101,12 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // another authenticated request wins between this check and the
         // activation write, the service returns that active winner
         // idempotently rather than creating a duplicate row.
-        const subscription = await createSubscription(
-          subscriptionEmail,
-          normalizedZipCode,
-          dateRange.dates?.startsAt,
-          dateRange.dates?.expiresAt,
-        );
+        const subscription = await createVerifiedSubscription();
         return res.status(201).json({
           success: true,
           valid: true,
@@ -165,12 +188,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         // Default: create subscription
         try {
-          await createSubscription(
-            subscriptionEmail,
-            normalizedZipCode,
-            dateRange.dates?.startsAt,
-            dateRange.dates?.expiresAt,
-          );
+          await createVerifiedSubscription();
         } catch (dbError) {
           console.error(
             "Error creating subscription after verification:",

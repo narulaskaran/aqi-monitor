@@ -355,7 +355,7 @@ describe("sendAirQualityAlerts — startsAt filtering", () => {
     vi.restoreAllMocks(); // restore spies from earlier describe blocks
     vi.clearAllMocks();
     process.env.VERCEL_ENV = "development";
-    process.env.VITE_API_URL = "http://localhost:5173";
+    process.env.APP_URL = "http://localhost:5173";
   });
 
   it("queries prisma with startsAt filter (excludes future-start subscriptions)", async () => {
@@ -400,5 +400,66 @@ describe("sendAirQualityAlerts — startsAt filtering", () => {
     expect(sendEmailSpy).not.toHaveBeenCalled();
     // Silence unused variable warning
     void futureSubscription;
+  });
+
+  it("uses APP_URL for production unsubscribe links", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.APP_URL = "https://aqi.example";
+    delete process.env.VITE_API_URL;
+
+    const dbMod = await import("../_lib/db.js");
+    vi.spyOn(dbMod.prisma.userSubscription, "findMany").mockResolvedValue([
+      { ...mockSubscription, lastEmailSentAt: null },
+    ] as any);
+    vi.spyOn(dbMod.prisma.userSubscription, "update").mockResolvedValue(
+      mockSubscription as any,
+    );
+
+    const emailMod = await import("../_lib/services/email.js");
+    const sendEmailSpy = vi
+      .spyOn(emailMod, "sendEmail")
+      .mockResolvedValue({ success: true });
+    const mod = await import("../_lib/services/subscription.js");
+
+    await mod.sendAirQualityAlerts("12345", 100, "Moderate", "PM2.5");
+
+    expect(sendEmailSpy).toHaveBeenCalledWith(
+      mockSubscription.email,
+      expect.any(String),
+      expect.stringContaining("https://aqi.example"),
+    );
+    process.env.VERCEL_ENV = "development";
+  });
+});
+
+describe("sendAirQualityAlerts — minimum AQI filtering", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    process.env.JWT_SECRET = "test-secret-key";
+    process.env.VERCEL_ENV = "development";
+    process.env.VITE_API_URL = "http://localhost:5173";
+  });
+
+  it("sends only to subscribers whose threshold is met and preserves null behavior", async () => {
+    const dbMod = await import("../_lib/db.js");
+    vi.spyOn(dbMod.prisma.userSubscription, "findMany").mockResolvedValue([
+      { ...mockSubscription, id: "all-updates", email: "all@example.com", minAlertAqi: null },
+      { ...mockSubscription, id: "moderate", email: "moderate@example.com", minAlertAqi: 51 },
+      { ...mockSubscription, id: "unhealthy-sensitive", email: "sensitive@example.com", minAlertAqi: 101 },
+      { ...mockSubscription, id: "unhealthy", email: "unhealthy@example.com", minAlertAqi: 151 },
+    ] as any);
+
+    const emailMod = await import("../_lib/services/email.js");
+    const sendEmailSpy = vi.spyOn(emailMod, "sendEmail").mockResolvedValue({ success: true });
+
+    const mod = await import("../_lib/services/subscription.js");
+    const count = await mod.sendAirQualityAlerts("12345", 100, "Moderate", "PM2.5");
+
+    expect(count).toBe(2);
+    expect(sendEmailSpy.mock.calls.map(([email]) => email)).toEqual([
+      "all@example.com",
+      "moderate@example.com",
+    ]);
   });
 });

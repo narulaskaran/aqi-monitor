@@ -43,6 +43,7 @@ describe("getAirQuality", () => {
             index: 42,
             category: "Good",
             dominantPollutant: "PM2.5",
+            recordedAt: "2026-08-24T14:34:00.000Z",
           }),
       }),
     );
@@ -51,6 +52,7 @@ describe("getAirQuality", () => {
     expect(data.index).toBe(42);
     expect(data.category).toBe("Good");
     expect(data.dominantPollutant).toBe("PM2.5");
+    expect(data.recordedAt).toBe("2026-08-24T14:34:00.000Z");
   });
 
   it("throws the server error message when API responds with error JSON", async () => {

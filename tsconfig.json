@@ -6,8 +6,8 @@
     { "path": "./tsconfig.api.json" }
   ],
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@/*": ["./src/*"]
     }
   }

@@ -175,6 +175,44 @@ describe("SubscriptionForm", () => {
     });
   });
 
+  it("shows an optional minimum AQI threshold select", () => {
+    renderWithTheme(<SubscriptionForm zipCode="12345" />);
+
+    const select = screen.getByRole("combobox", { name: /minimum aqi/i });
+    expect(select).toHaveValue("");
+    expect(screen.getByRole("option", { name: /moderate \(51\+\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /unhealthy for sensitive groups \(101\+\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /unhealthy \(151\+\)/i })).toBeInTheDocument();
+  });
+
+  it("submits the selected minimum AQI threshold with the verification", async () => {
+    startVerification.mockResolvedValue({ success: true, status: "pending" });
+    renderWithTheme(<SubscriptionForm zipCode="12345" />);
+    fireEvent.change(screen.getByRole("combobox", { name: /minimum aqi/i }), {
+      target: { value: "101" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/email/i), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /sign up for alerts/i }));
+    await waitFor(() => expect(screen.getByTestId("otp-input")).toBeInTheDocument());
+
+    verifyCode.mockResolvedValue({ success: true, valid: true });
+    fireEvent.change(screen.getByTestId("otp-input"), { target: { value: "123456" } });
+
+    await waitFor(() => {
+      expect(verifyCode).toHaveBeenCalledWith(
+        "test@example.com",
+        "12345",
+        "123456",
+        undefined,
+        undefined,
+        undefined,
+        101,
+      );
+    });
+  });
+
   it("shows validation error for a past start date", async () => {
     startVerification.mockResolvedValue({ success: true });
     renderWithTheme(<SubscriptionForm zipCode="12345" />);

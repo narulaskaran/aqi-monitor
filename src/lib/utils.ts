@@ -31,35 +31,6 @@ export function normalizeOtpCode(value: string): string {
 }
 
 /**
- * Shared helper to handle pasting a 6-digit code into an array of inputs
- * @param e React.ClipboardEvent
- * @param code string[] (current code array)
- * @param setCode (setter for code array)
- * @param inputRefs array of refs for the input elements
- */
-export function handlePasteCode(
-  e: React.ClipboardEvent,
-  code: string[],
-  setCode: (code: string[]) => void,
-  inputRefs: React.RefObject<HTMLInputElement>[]
-) {
-  e.preventDefault();
-  const digits = normalizeOtpCode(e.clipboardData.getData("text"));
-  if (digits.length > 0) {
-    const newCode = [...code];
-    digits.split("").forEach((digit, index) => {
-      if (index < OTP_LENGTH) {
-        newCode[index] = digit;
-      }
-    });
-    setCode(newCode);
-    if (digits.length < OTP_LENGTH && inputRefs[digits.length]) {
-      inputRefs[digits.length].current?.focus();
-    }
-  }
-}
-
-/**
  * Validate email address format
  */
 export function isValidEmail(email: string): boolean {

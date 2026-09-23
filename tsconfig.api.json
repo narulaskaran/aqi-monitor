@@ -7,8 +7,7 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "baseUrl": "."
+    "noEmit": true
   },
   "include": ["api/**/*.ts", "prisma/**/*.ts", "src/lib/forecastWindow.ts"]
 }

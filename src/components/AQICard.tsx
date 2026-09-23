@@ -5,6 +5,7 @@ interface AQICardProps {
   index: number;
   category: string;
   dominantPollutant: string;
+  recordedAt?: string;
   zipCode?: string;
 }
 
@@ -32,14 +33,32 @@ function scalePosition(index: number): number {
   return ((segment + within) / AQI_SCALE.length) * 100;
 }
 
-export function AQICard({ index, category, dominantPollutant, zipCode }: AQICardProps) {
+export function AQICard({
+  index,
+  category,
+  dominantPollutant,
+  recordedAt,
+  zipCode,
+}: AQICardProps) {
   const categoryInfo = getAQICategory(category, index);
+  const formattedRecordedAt = recordedAt
+    ? new Date(recordedAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
   const hasReading = Number.isFinite(index) && index >= 0;
 
   return (
     <article className="aqi-reading">
       <p className="aqi-reading-meta">
         Current conditions{zipCode ? ` · ${zipCode}` : ""}
+        {formattedRecordedAt && (
+          <>
+            {" · "}
+            <span>As of {formattedRecordedAt}</span>
+          </>
+        )}
       </p>
 
       <div className="aqi-reading-value">

@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sendVerificationCode } from "./_lib/services/email.js";
 import { subscriptionExists } from "./_lib/services/subscription.js";
 import { checkVerifySendRateLimit } from "./_lib/services/verifySendRateLimit.js";
+import { clearVerifyAttempts } from "./_lib/services/verifyAttempts.js";
 import { validateUsZipCode } from "./_lib/zipCode.js";
 
 // Vercel puts the connecting client first in `x-forwarded-for`; fall back to
@@ -73,6 +74,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Send verification code
     const result = await sendVerificationCode(email);
+    if (result.success) {
+      // A successful send invalidates the previous code and starts a fresh
+      // OTP window. The endpoint's send limiter still caps new-code requests.
+      await clearVerifyAttempts(email);
+    }
     return res.json(result);
   } catch (error) {
     console.error("Error in verification API:", error);

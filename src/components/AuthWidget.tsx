@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { isValidEmail } from "../lib/utils";
+import { isValidEmail, OTP_LENGTH } from "../lib/utils";
 import {
   InputOTP,
   InputOTPGroup,
@@ -52,7 +52,7 @@ export default function AuthWidget() {
     setIsLoading(true);
     setError(null);
     try {
-      if (otp.length !== 6) throw new Error("Enter 6-digit code");
+      if (otp.length !== OTP_LENGTH) throw new Error("Enter 6-digit code");
       const res = await fetch("/api/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,7 +144,7 @@ export default function AuthWidget() {
                   </h3>
                   <div className="flex justify-center">
                     <InputOTP
-                      maxLength={6}
+                      maxLength={OTP_LENGTH}
                       value={otp}
                       onChange={(value) => {
                         setOtp(value);
@@ -165,7 +165,7 @@ export default function AuthWidget() {
                   <button
                     type="submit"
                     className="w-full bg-blue-600 text-white rounded py-2"
-                    disabled={isLoading || otp.length !== 6}
+                    disabled={isLoading || otp.length !== OTP_LENGTH}
                     ref={verifyButtonRef}
                   >
                     {isLoading ? "Verifying..." : "Verify Code"}

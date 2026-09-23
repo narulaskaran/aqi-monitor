@@ -14,6 +14,7 @@ interface Subscription {
   activatedAt: string | null;
   lastEmailSentAt: string | null;
   expiresAt: string | null;
+  minAlertAqi: number | null;
 }
 
 interface PendingToggle {
@@ -60,6 +61,24 @@ export function SubscriptionList() {
 
   const handleToggleClick = (sub: Subscription) => {
     setPendingToggle({ id: sub.id, currentActive: sub.active });
+  };
+
+  const handleThresholdChange = async (sub: Subscription, value: string) => {
+    if (!token) return;
+    setIsUpdating(true);
+    try {
+      await updateSubscription(
+        token,
+        sub.id,
+        undefined,
+        value === "" ? null : Number(value),
+      );
+      await fetchSubscriptions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update subscription");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleConfirm = async () => {
@@ -125,6 +144,21 @@ export function SubscriptionList() {
                     Inactive
                   </span>
                 )}
+                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <span className="sr-only">Minimum AQI for {sub.zipCode}</span>
+                  <select
+                    aria-label={`Minimum AQI for ${sub.zipCode}`}
+                    value={sub.minAlertAqi ?? ""}
+                    onChange={(e) => void handleThresholdChange(sub, e.target.value)}
+                    disabled={isUpdating}
+                    className="h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 text-xs"
+                  >
+                    <option value="">All updates</option>
+                    <option value="51">Moderate (51+)</option>
+                    <option value="101">Sensitive groups (101+)</option>
+                    <option value="151">Unhealthy (151+)</option>
+                  </select>
+                </label>
               </div>
               <Button
                 size="sm"

@@ -49,4 +49,31 @@ describe("AQICard", () => {
     });
     expect(screen.getByText(unhealthy.advice)).toBeInTheDocument();
   });
+
+  it("renders the recorded time when provided", () => {
+    const recordedAt = "2026-08-24T14:34:00.000Z";
+    const formattedTime = new Date(recordedAt).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+    renderWithTheme(
+      <AQICard
+        index={42}
+        category="Good"
+        dominantPollutant="O3"
+        recordedAt={recordedAt}
+      />,
+    );
+
+    expect(screen.getByText(`As of ${formattedTime}`)).toBeInTheDocument();
+  });
+
+  it("does not render a recorded time when it is absent", () => {
+    renderWithTheme(
+      <AQICard index={42} category="Good" dominantPollutant="O3" />,
+    );
+
+    expect(screen.queryByText(/^As of /)).not.toBeInTheDocument();
+  });
 });

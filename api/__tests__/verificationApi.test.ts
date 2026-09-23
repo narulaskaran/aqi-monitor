@@ -55,6 +55,7 @@ import { checkVerifySendRateLimit } from "../_lib/services/verifySendRateLimit.j
 vi.mock("../_lib/services/subscription.js", () => ({
   createSubscription: vi.fn(),
   subscriptionExists: vi.fn(),
+  isValidMinAlertAqi: (value: unknown) => [51, 101, 151].includes(value as number),
 }));
 
 describe("Verification API", () => {
@@ -129,6 +130,51 @@ describe("Verification API", () => {
     expect(subMod.subscriptionExists).not.toHaveBeenCalled();
     expect(emailMod.sendVerificationCode).toHaveBeenCalledWith("a@b.com");
     expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  it("resets OTP attempts after a verification code is sent successfully", async () => {
+    const emailMod = await import("../_lib/services/email.js");
+    const attemptsMod = await import("../_lib/services/verifyAttempts.js");
+    (emailMod.sendVerificationCode as any).mockResolvedValue({ success: true });
+    (attemptsMod.clearVerifyAttempts as any).mockClear();
+
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345" },
+      headers: {},
+      socket: { remoteAddress: "1.2.3.4" },
+    };
+    const res = mockRes();
+
+    await handleStartVerification(req, res);
+
+    expect(attemptsMod.clearVerifyAttempts).toHaveBeenCalledWith("a@b.com");
+  });
+
+  it("keeps OTP attempts when sending a verification code fails", async () => {
+    const emailMod = await import("../_lib/services/email.js");
+    const attemptsMod = await import("../_lib/services/verifyAttempts.js");
+    (emailMod.sendVerificationCode as any).mockResolvedValue({
+      success: false,
+      error: "Email provider unavailable",
+    });
+    (attemptsMod.clearVerifyAttempts as any).mockClear();
+
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345" },
+      headers: {},
+      socket: { remoteAddress: "1.2.3.4" },
+    };
+    const res = mockRes();
+
+    await handleStartVerification(req, res);
+
+    expect(attemptsMod.clearVerifyAttempts).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Email provider unavailable",
+    });
   });
 
   it("handleVerifyCode returns 400 if missing fields", async () => {
@@ -415,6 +461,34 @@ describe("verify send rate limiting", () => {
     expect(emailMod.sendVerificationCode).not.toHaveBeenCalled();
   });
 
+  it("returns a documented 429 envelope when OTP attempts are exhausted", async () => {
+    (consumeVerifyAttempt as any).mockResolvedValue({
+      allowed: false,
+      attemptsUsed: 6,
+      maxAttempts: 5,
+    });
+    const emailMod = await import("../_lib/services/email.js");
+    const req: any = {
+      method: "POST",
+      body: { email: "a@b.com", zipCode: "12345", code: "000000" },
+    };
+    const res = mockRes();
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Too many verification attempts. Try again in 10 minutes.",
+    });
+    expect(emailMod.checkVerificationCode).not.toHaveBeenCalled();
+    (consumeVerifyAttempt as any).mockResolvedValue({
+      allowed: true,
+      attemptsUsed: 1,
+      maxAttempts: 5,
+    });
+  });
+
   it("checks the rate limit using the forwarded client IP", async () => {
     const req: any = {
       method: "POST",
@@ -539,6 +613,62 @@ describe("Date-range subscription via handleVerifyCode", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ error: "Start date must be before end date" })
     );
+  });
+});
+
+describe("Minimum AQI subscription preference", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("stores the minimum AQI threshold when a signed-out user verifies", async () => {
+    const req: any = {
+      method: "POST",
+      body: {
+        email: "a@b.com",
+        zipCode: "12345",
+        code: "123456",
+        minAlertAqi: 101,
+      },
+    };
+    const res = mockRes();
+    const emailMod = await import("../_lib/services/email.js");
+    vi.spyOn(emailMod, "checkVerificationCode").mockResolvedValue({ success: true, valid: true });
+    const subMod = await import("../_lib/services/subscription.js");
+    const createSpy = subMod.createSubscription as any;
+    createSpy.mockResolvedValue(mockSubscription);
+
+    await handleVerifyCode(req, res);
+
+    expect(createSpy).toHaveBeenCalledWith(
+      "a@b.com",
+      "12345",
+      undefined,
+      undefined,
+      101,
+    );
+  });
+
+  it("rejects unsupported minimum AQI thresholds before consuming the code", async () => {
+    const req: any = {
+      method: "POST",
+      body: {
+        email: "a@b.com",
+        zipCode: "12345",
+        code: "123456",
+        minAlertAqi: 75,
+      },
+    };
+    const res = mockRes();
+
+    await handleVerifyCode(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Minimum AQI threshold must be one of 51, 101, or 151",
+    });
+    expect(consumeVerifyAttempt).not.toHaveBeenCalled();
   });
 });
 

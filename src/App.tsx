@@ -43,6 +43,7 @@ function App() {
     index: number;
     category: string;
     dominantPollutant: string;
+    recordedAt?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +62,7 @@ function App() {
         index: data.index,
         category: data.category,
         dominantPollutant: data.dominantPollutant,
+        recordedAt: data.recordedAt,
       });
     } catch (error) {
       if (!(error instanceof Error) || !error.message.includes("valid 5-digit")) {
@@ -156,6 +158,7 @@ function App() {
                 index={airQuality.index}
                 category={airQuality.category}
                 dominantPollutant={airQuality.dominantPollutant}
+                recordedAt={airQuality.recordedAt}
                 zipCode={currentZipCode}
               />
             )}

@@ -7,6 +7,7 @@ export interface AirQualityData {
   index: number;
   category: string;
   dominantPollutant: string;
+  recordedAt?: string;
   pollutants?: Record<string, {
     concentration: number;
     unit: string;
