@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../lib/auth";
 import { getSubscriptions, updateSubscription } from "../lib/api";
 import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Modal } from "./ui/modal";
 
 interface Subscription {
@@ -105,13 +106,16 @@ export function SubscriptionList() {
     : null;
 
   return (
-    <div className="mt-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-        Your Subscriptions
-      </h2>
-
+    <>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>Your subscriptions</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
       {isLoading && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+        <p className="text-sm text-muted-foreground">Loading...</p>
       )}
 
       {error && (
@@ -119,7 +123,7 @@ export function SubscriptionList() {
       )}
 
       {!isLoading && !error && subscriptions.length === 0 && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           No subscriptions yet.
         </p>
       )}
@@ -129,10 +133,10 @@ export function SubscriptionList() {
           {subscriptions.map((sub) => (
             <li
               key={sub.id}
-              className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3"
             >
               <div className="flex items-center gap-3">
-                <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                <span className="font-mono text-sm">
                   {sub.zipCode}
                 </span>
                 {sub.active ? (
@@ -144,14 +148,14 @@ export function SubscriptionList() {
                     Inactive
                   </span>
                 )}
-                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="sr-only">Minimum AQI for {sub.zipCode}</span>
                   <select
                     aria-label={`Minimum AQI for ${sub.zipCode}`}
                     value={sub.minAlertAqi ?? ""}
                     onChange={(e) => void handleThresholdChange(sub, e.target.value)}
                     disabled={isUpdating}
-                    className="h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 text-xs"
+                    className="h-8 rounded-md border border-input bg-card px-2 text-xs text-foreground"
                   >
                     <option value="">All updates</option>
                     <option value="51">Moderate (51+)</option>
@@ -171,8 +175,11 @@ export function SubscriptionList() {
           ))}
         </ul>
       )}
+      </CardContent>
+    </Card>
 
-      {/* Confirmation modal */}
+      {/* Confirmation modal (outside the Card so a card backdrop-filter can't
+          become the containing block for the modal's fixed overlay) */}
       {pendingToggle && pendingSub && (
         <Modal>
           <h3 className="text-lg font-semibold mb-3">Confirm</h3>
@@ -196,6 +203,6 @@ export function SubscriptionList() {
           </div>
         </Modal>
       )}
-    </div>
+    </>
   );
 }

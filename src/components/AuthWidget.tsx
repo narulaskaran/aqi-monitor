@@ -211,9 +211,9 @@ export default function AuthWidget() {
           <button
             className="ml-2 px-2 py-1 text-xs rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
             onClick={signOut}
-            title="Sign Out"
+            title="Sign out"
           >
-            Sign Out
+            Sign out
           </button>
         </div>
       )}

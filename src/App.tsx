@@ -95,7 +95,7 @@ function App() {
         <AQIHeader />
         <div className="app-header-actions">
           <AuthWidget />
-          <ThemeToggle className="" />
+          <ThemeToggle className="app-theme-toggle" />
         </div>
       </header>
 
@@ -173,9 +173,12 @@ function App() {
         <section className="app-details" aria-label="Alerts and forecast">
           <SubscriptionForm zipCode={currentZipCode} />
           <ForecastCard zipCode={currentZipCode} />
-          <SubscriptionList />
         </section>
       )}
+
+      <section className="app-subscriptions" aria-label="Your subscriptions">
+        <SubscriptionList />
+      </section>
 
       <footer className="app-footer">
         <span>Data from the Google Air Quality API.</span>
