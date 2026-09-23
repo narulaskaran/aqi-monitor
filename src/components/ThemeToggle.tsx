@@ -9,7 +9,7 @@ export function ThemeToggle() {
       size="icon"
       aria-label="Toggle dark mode"
       onClick={toggleTheme}
-      className="fixed top-4 right-4 z-50"
+      className="cloud-theme-toggle"
     >
       {theme === "dark" ? (
         // Sun icon

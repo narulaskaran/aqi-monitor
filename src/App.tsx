@@ -10,13 +10,26 @@ import {
   TooltipTrigger,
 } from "./components/ui/tooltip";
 import "./App.css";
-import { useState, ChangeEvent, useEffect } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { SubscriptionForm } from "./components/SubscriptionForm";
 import { SubscriptionList } from "./components/SubscriptionList";
 import { ForecastCard } from "./components/ForecastCard";
 import { getAirQuality } from "./lib/api";
 import { ThemeToggle } from "./components/ThemeToggle";
 import AuthWidget from "./components/AuthWidget";
+
+const CloudIcon = () => (
+  <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <path
+      d="M12 31.5h24.5a7.5 7.5 0 0 0 .7-15 12.2 12.2 0 0 0-23.4-1.6A8.4 8.4 0 0 0 12 31.5Z"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M15 36h18M20 40h9" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+  </svg>
+);
 
 function App() {
   const [zipCode, setZipCode] = useState("");
@@ -27,38 +40,38 @@ function App() {
     dominantPollutant: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleClick = async () => {
+  const handleSubmit = async () => {
     try {
       setError(null);
-
-      // Basic ZIP code validation
       if (!zipCode.match(/^\d{5}$/)) {
         throw new Error("Please enter a valid 5-digit US ZIP code");
       }
 
-      // Update current ZIP code to trigger reset in SubscriptionForm
       setCurrentZipCode(zipCode);
-
-      // Get air quality data directly using the ZIP code
+      setIsLoading(true);
       const data = await getAirQuality(zipCode);
-
       setAirQuality({
         index: data.index,
         category: data.category,
         dominantPollutant: data.dominantPollutant,
       });
     } catch (error) {
-      console.error("Error fetching air quality data:", error);
+      if (!(error instanceof Error) || !error.message.includes("valid 5-digit")) {
+        console.error("Error fetching air quality data:", error);
+      }
       setError(
         error instanceof Error
           ? error.message
-          : "Failed to fetch air quality data"
+          : "Failed to fetch air quality data",
       );
+      setAirQuality(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Update currentZipCode when zipCode changes in the input
   useEffect(() => {
     if (!currentZipCode && zipCode) {
       setCurrentZipCode(zipCode);
@@ -66,78 +79,136 @@ function App() {
   }, [zipCode, currentZipCode]);
 
   return (
-    <div className="min-h-screen p-4 transition-colors duration-300 rounded-lg shadow bg-background flex flex-col">
-      <div className="flex justify-between items-center mb-2">
-        <ThemeToggle />
-      </div>
-      <div className="max-w-md mx-auto w-full flex-1">
+    <div className="cloud-app">
+      <div className="cloud-shape cloud-shape-one" aria-hidden="true" />
+      <div className="cloud-shape cloud-shape-two" aria-hidden="true" />
+      <div className="cloud-shape cloud-shape-three" aria-hidden="true" />
+
+      <header className="cloud-topbar">
         <AQIHeader />
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleClick();
-          }}
-          className="mb-4"
-        >
-          <label
-            htmlFor="zip-code"
-            className="block text-sm font-medium mb-1 dark:text-gray-300"
-          >
-            ZIP code
-          </label>
-          <div className="flex gap-2">
-            <Input
-              id="zip-code"
-              type="text"
-              placeholder="Zip code"
-              value={zipCode}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setZipCode(e.target.value)
-              }
-              className="flex-1"
-            />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button type="submit">Get Air Quality</Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>US codes only at this time</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </form>
-
-        {error && <div className="text-red-500 mb-4">{error}</div>}
-
-        <div role="status" aria-live="polite" aria-atomic="true">
-          {airQuality && (
-            <AQICard
-              index={airQuality.index}
-              category={airQuality.category}
-              dominantPollutant={airQuality.dominantPollutant}
-              zipCode={currentZipCode}
-            />
-          )}
+        <div className="cloud-utilities">
+          <span className="cloud-live-label">Live air quality</span>
+          <ThemeToggle />
         </div>
+      </header>
 
-        {airQuality && (
-          <>
-            <SubscriptionForm zipCode={currentZipCode} />
-            <ForecastCard zipCode={currentZipCode} />
-          </>
-        )}
-        <SubscriptionList />
-      </div>
+      <main className="cloud-main">
+        <section className="cloud-hero" aria-labelledby="cloud-page-title">
+          <p className="cloud-eyebrow">Know your air</p>
+          <h1 id="cloud-page-title">Breathe easier where you are.</h1>
+          <p className="cloud-lede">
+            A clear, current read on the air around you — without the noise.
+          </p>
 
-      {/* Move AuthWidget to the bottom, above Ko-Fi */}
-      <div className="flex justify-center max-w-md mx-auto w-full mb-2">
-        <AuthWidget />
-      </div>
-      <div className="flex justify-end items-center w-full mt-4">
-        <KofiButton />
-      </div>
+          <form
+            className="cloud-lookup"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSubmit();
+            }}
+          >
+            <label htmlFor="zip-code" className="cloud-field-label">
+              ZIP code
+            </label>
+            <div className="cloud-form-row">
+              <div className="cloud-input-wrap">
+                <span className="cloud-pin" aria-hidden="true">
+                  ⌖
+                </span>
+                <Input
+                  id="zip-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  maxLength={5}
+                  placeholder="Enter a ZIP code"
+                  value={zipCode}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setZipCode(event.target.value)
+                  }
+                  className="cloud-input"
+                  aria-describedby="zip-helper"
+                />
+              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button type="submit" disabled={isLoading} className="cloud-primary">
+                      {isLoading ? "Checking…" : "Get Air Quality"}
+                      {!isLoading && <span aria-hidden="true">↗</span>}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>US codes only at this time</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p id="zip-helper" className="cloud-helper">
+              Try a US ZIP code, like 10001
+            </p>
+          </form>
+
+          {error && (
+            <p className="cloud-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className="cloud-account">
+            <span>Save locations and get updates</span>
+            <AuthWidget />
+          </div>
+        </section>
+
+        <aside className="cloud-result-shell" aria-label="Air quality result">
+          {!airQuality && !isLoading && (
+            <div className="cloud-empty-state">
+              <div className="cloud-empty-icon">
+                <CloudIcon />
+              </div>
+              <h2>Your air, at a glance.</h2>
+              <p>Enter a ZIP code to see the latest local air-quality reading.</p>
+            </div>
+          )}
+          {isLoading && (
+            <div className="cloud-loading-state" role="status">
+              <span className="cloud-spinner" aria-hidden="true" />
+              <h2>Reading the air…</h2>
+              <p>Checking the latest conditions near {zipCode}.</p>
+            </div>
+          )}
+          <div
+            className="cloud-live-result"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            aria-busy={isLoading}
+          >
+            {airQuality && (
+              <AQICard
+                index={airQuality.index}
+                category={airQuality.category}
+                dominantPollutant={airQuality.dominantPollutant}
+                zipCode={currentZipCode}
+              />
+            )}
+          </div>
+        </aside>
+      </main>
+
+      {airQuality && (
+        <section className="cloud-details" aria-label="Air quality details">
+          <SubscriptionForm zipCode={currentZipCode} />
+          <ForecastCard zipCode={currentZipCode} />
+          <SubscriptionList />
+        </section>
+      )}
+
+      <footer className="cloud-footer">
+        <span>Designed for quick decisions.</span>
+        <KofiButton className="cloud-kofi" />
+      </footer>
     </div>
   );
 }

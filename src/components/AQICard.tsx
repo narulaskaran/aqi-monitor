@@ -25,14 +25,14 @@ export function AQICard({ index, category, dominantPollutant, zipCode }: AQICard
   const categoryInfo = getAQICategory(category, index);
 
   return (
-    <Card>
+    <Card className="cloud-result-card">
       <CardHeader>
-        <CardTitle>Air Quality Information</CardTitle>
+        <CardTitle className="cloud-result-heading">Air Quality Information</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div
           data-testid="aqi-category-band"
-          className="rounded-lg px-4 py-4"
+          className="cloud-category-band rounded-lg px-4 py-4"
           style={{
             backgroundColor: categoryInfo.color,
             color: categoryInfo.textColor,
@@ -42,10 +42,10 @@ export function AQICard({ index, category, dominantPollutant, zipCode }: AQICard
           <p className="text-lg font-semibold">Category: {categoryInfo.name}</p>
         </div>
         <div>
-          <p className="text-sm font-medium">Health recommendation</p>
-          <p className="text-sm">{categoryInfo.advice}</p>
+          <p className="cloud-health-label text-sm font-medium">Health recommendation</p>
+          <p className="cloud-health-copy text-sm">{categoryInfo.advice}</p>
         </div>
-        <p className="text-lg">
+        <p className="cloud-result-muted text-lg">
           Dominant Pollutant: {formatPollutant(dominantPollutant)}
         </p>
 
