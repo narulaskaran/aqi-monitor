@@ -29,7 +29,7 @@ function scalePosition(index: number): number {
   const segment = AQI_SCALE.findIndex(({ range }) => index <= range[1]);
   if (segment === -1) return 100;
   const [low, high] = AQI_SCALE[segment].range;
-  const within = Math.min(Math.max((index - low) / (high - low), 0), 1);
+  const within = Math.min(Math.max((index - low) / Math.max(high - low, 1), 0), 1);
   return ((segment + within) / AQI_SCALE.length) * 100;
 }
 

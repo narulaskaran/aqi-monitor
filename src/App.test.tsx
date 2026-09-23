@@ -66,4 +66,62 @@ describe("App accessibility", () => {
     expect(liveRegion).toHaveAttribute("aria-live", "polite");
     expect(liveRegion).toHaveAttribute("aria-atomic", "true");
   });
+
+  it("hides the previous reading while a repeat lookup is in flight", async () => {
+    getAirQuality.mockResolvedValueOnce({
+      index: 42,
+      category: "Good",
+      dominantPollutant: "pm25",
+    });
+
+    renderWithTheme(<App />);
+    const liveRegion = screen.getByRole("status");
+    const zipInput = screen.getByLabelText(/zip code/i);
+    const submit = screen.getByRole("button", { name: /get air quality/i });
+
+    fireEvent.change(zipInput, { target: { value: "12345" } });
+    fireEvent.click(submit);
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent(/current conditions · 12345/i);
+    });
+
+    let resolveSecond: (value: unknown) => void = () => undefined;
+    getAirQuality.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSecond = resolve;
+      }),
+    );
+    fireEvent.change(zipInput, { target: { value: "54321" } });
+    fireEvent.click(submit);
+
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent(/loading air quality for 54321/i);
+    });
+    expect(liveRegion).not.toHaveTextContent(/42 US AQI/i);
+    expect(liveRegion).not.toHaveTextContent(/current conditions/i);
+
+    resolveSecond({ index: 120, category: "", dominantPollutant: "o3" });
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent(/current conditions · 54321/i);
+    });
+    expect(liveRegion).toHaveTextContent(/120 US AQI/i);
+  });
+
+  it("marks the ZIP input invalid only for format errors", async () => {
+    getAirQuality.mockRejectedValueOnce(new Error("Service unavailable"));
+
+    renderWithTheme(<App />);
+    const zipInput = screen.getByLabelText(/zip code/i);
+    const submit = screen.getByRole("button", { name: /get air quality/i });
+
+    fireEvent.change(zipInput, { target: { value: "123" } });
+    fireEvent.click(submit);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/valid 5-digit/i);
+    expect(zipInput).toHaveAttribute("aria-invalid", "true");
+
+    fireEvent.change(zipInput, { target: { value: "12345" } });
+    fireEvent.click(submit);
+    expect(await screen.findByText(/service unavailable/i)).toBeInTheDocument();
+    expect(zipInput).not.toHaveAttribute("aria-invalid");
+  });
 });

@@ -13,6 +13,8 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import AuthWidget from "./components/AuthWidget";
 import { AQI_SCALE } from "./types/air-quality";
 
+const ZIP_FORMAT_ERROR = "Please enter a valid 5-digit US ZIP code";
+
 function AQIScaleLegend() {
   return (
     <div className="aqi-legend">
@@ -52,12 +54,14 @@ function App() {
     try {
       setError(null);
       if (!zipCode.match(/^\d{5}$/)) {
-        throw new Error("Please enter a valid 5-digit US ZIP code");
+        throw new Error(ZIP_FORMAT_ERROR);
       }
 
-      setCurrentZipCode(zipCode);
       setIsLoading(true);
       const data = await getAirQuality(zipCode);
+      // Only switch ZIPs once the new reading is in, so the card never pairs
+      // one ZIP's label and history with another ZIP's reading.
+      setCurrentZipCode(zipCode);
       setAirQuality({
         index: data.index,
         category: data.category,
@@ -65,7 +69,7 @@ function App() {
         recordedAt: data.recordedAt,
       });
     } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes("valid 5-digit")) {
+      if (!(error instanceof Error) || error.message !== ZIP_FORMAT_ERROR) {
         console.error("Error fetching air quality data:", error);
       }
       setError(
@@ -123,7 +127,7 @@ function App() {
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   setZipCode(event.target.value)
                 }
-                aria-invalid={error ? true : undefined}
+                aria-invalid={error === ZIP_FORMAT_ERROR ? true : undefined}
                 aria-describedby={error ? "zip-error" : undefined}
               />
               <Button type="submit" disabled={isLoading}>
@@ -140,20 +144,19 @@ function App() {
 
         <section className="result-panel" aria-label="Air quality result">
           {!airQuality && !isLoading && <AQIScaleLegend />}
-          {isLoading && (
-            <div className="result-loading">
-              <span className="result-spinner" aria-hidden="true" />
-              Loading air quality for {zipCode}…
-            </div>
-          )}
           <div
             className="result-live"
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            aria-busy={isLoading}
           >
-            {airQuality && (
+            {isLoading && (
+              <div className="result-loading">
+                <span className="result-spinner" aria-hidden="true" />
+                Loading air quality for {zipCode}…
+              </div>
+            )}
+            {airQuality && !isLoading && (
               <AQICard
                 index={airQuality.index}
                 category={airQuality.category}
