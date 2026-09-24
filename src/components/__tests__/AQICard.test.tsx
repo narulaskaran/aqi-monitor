@@ -1,6 +1,11 @@
+import { vi } from "vitest";
 import { renderWithTheme, screen } from "../../lib/test-utils";
 import { AQICard } from "../AQICard";
 import { AQI_CATEGORIES } from "../../types/air-quality";
+
+vi.mock("../../lib/api", () => ({
+  getAirQualityHistory: vi.fn(() => new Promise(() => {})),
+}));
 
 describe("AQICard", () => {
   it("renders without crashing", () => {
@@ -10,7 +15,7 @@ describe("AQICard", () => {
   });
 
   it("renders the location, AQI, category, and pollutant", () => {
-    renderWithTheme(
+    const { container } = renderWithTheme(
       <AQICard index={42} category="Good" dominantPollutant="O3" zipCode="10023" />,
     );
     expect(screen.getByText(/air quality near 10023/i)).toBeInTheDocument();
@@ -19,6 +24,7 @@ describe("AQICard", () => {
     expect(screen.getByTestId("aqi-category-band")).toHaveTextContent("Good");
     expect(screen.getByText(/main pollutant/i)).toBeInTheDocument();
     expect(screen.getByText("O3")).toBeInTheDocument();
+    expect(container.querySelector(".aqi-history:empty")).toBeInTheDocument();
   });
 
   it("color-codes the category and shows the health recommendation", () => {

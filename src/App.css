@@ -419,6 +419,10 @@
   border-top: 1px solid var(--border);
 }
 
+.aqi-history:empty {
+  display: none;
+}
+
 .aqi-history > * {
   margin: 0;
   border: 0;
