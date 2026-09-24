@@ -22,4 +22,16 @@ describe("NotFoundPage", () => {
       screen.queryByText(/unexpected application error/i)
     ).not.toBeInTheDocument();
   });
+
+  it("uses the Cloud Glass route shell", () => {
+    renderWithRouter(<NotFoundPage />);
+
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByText("Data from the Google Air Quality API.")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /support this project/i })).toHaveAttribute(
+      "href",
+      "https://ko-fi.com/Y8Y21CC8IA",
+    );
+  });
 });

@@ -8,8 +8,10 @@ describe("KofiButton", () => {
 
   it("renders a link", () => {
     renderWithTheme(<KofiButton />);
-    expect(
-      screen.getByRole("link", { name: /buy me a coffee/i })
-    ).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /support this project/i });
+    expect(link).toHaveAttribute("href", "https://ko-fi.com/Y8Y21CC8IA");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });

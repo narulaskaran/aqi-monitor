@@ -18,6 +18,9 @@ describe("UnsubscribePage", () => {
         )
       ).toBeInTheDocument();
     });
+
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
   });
 
   it("shows error for API failure", async () => {
@@ -29,13 +32,8 @@ describe("UnsubscribePage", () => {
       initialEntries: ["/unsubscribe?token=t"],
     });
     await waitFor(() => {
-      screen.debug();
       expect(screen.getByText("Unsubscribe Failed")).toBeInTheDocument();
-      expect(
-        screen.queryAllByText((content) =>
-          content.toLowerCase().includes("http error")
-        ).length
-      ).toBeGreaterThan(0);
+      expect(screen.getByText(/http error! status:/i)).toBeInTheDocument();
     });
   });
 
@@ -48,19 +46,36 @@ describe("UnsubscribePage", () => {
       initialEntries: ["/unsubscribe?token=t"],
     });
     await waitFor(() => {
-      screen.debug();
+      expect(screen.getByText("Successfully Unsubscribed")).toBeInTheDocument();
       expect(
-        screen.queryAllByText((content) =>
-          content.includes("Successfully Unsubscribed")
-        ).length
-      ).toBeGreaterThan(0);
-      expect(
-        screen.queryAllByText((content) =>
-          content.includes(
-            "You have been successfully unsubscribed from air quality alerts."
-          )
-        ).length
-      ).toBeGreaterThan(0);
+        screen.getByText(
+          "You have been successfully unsubscribed from air quality alerts."
+        )
+      ).toBeInTheDocument();
     });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          Authorization: "Bearer t",
+        }),
+        body: "{}",
+        credentials: "include",
+      }),
+    );
+  });
+
+  it("exposes a live status while the request is pending", () => {
+    global.fetch = vi.fn().mockReturnValue(new Promise(() => undefined));
+    renderWithRouter(<UnsubscribePage />, {
+      initialEntries: ["/unsubscribe?token=synthetic-token"],
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Processing your unsubscribe request...",
+    );
   });
 });

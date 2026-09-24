@@ -929,6 +929,96 @@
   opacity: 1;
 }
 
+/* Secondary routes use the same glass shell as the home page. */
+.route-main {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  width: min(1120px, 100% - 48px);
+  margin-inline: auto;
+  padding: 56px 0 80px;
+}
+
+.route-card {
+  width: min(100%, 480px);
+  border-color: var(--surface-border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.route-card .rounded-xl {
+  border-radius: var(--control-radius);
+}
+
+.route-message {
+  margin: 0 0 24px;
+  line-height: 1.55;
+}
+
+.route-follow-up {
+  display: grid;
+  gap: 16px;
+}
+
+.route-supporting-copy {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.kofi-link {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 1 !important;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.kofi-link:hover {
+  background: var(--accent);
+  border-color: var(--surface-border);
+  transform: translateY(-1px);
+}
+
+.kofi-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kofi-link-mark {
+  color: #e25573;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .route-main {
+    width: calc(100% - 32px);
+    padding: 32px 0 56px;
+  }
+
+  .route-card {
+    width: 100%;
+  }
+
+  .app-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 /* Accessible dialog and auth controls share the app's Cloud Glass tokens. */
 .app-modal-overlay {
   position: fixed;

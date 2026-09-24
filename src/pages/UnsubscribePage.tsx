@@ -1,5 +1,7 @@
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { RouteShell } from "../components/RouteShell";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -9,7 +11,6 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { getApiUrl } from "../lib/api";
-import { ThemeToggle } from "../components/ThemeToggle";
 
 export function UnsubscribePage() {
   const [searchParams] = useSearchParams();
@@ -79,45 +80,44 @@ export function UnsubscribePage() {
   }, [searchParams]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <ThemeToggle />
-      <Card className="max-w-md mx-auto">
+    <RouteShell>
+      <Card className="route-card">
         <CardHeader>
           <CardTitle>Unsubscribe Status</CardTitle>
-          <CardDescription>
+          <CardDescription role="status" aria-live="polite">
             {status === "loading" && "Processing your unsubscribe request..."}
             {status === "success" && "Successfully Unsubscribed"}
             {status === "error" && "Unsubscribe Failed"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="mb-6">{message}</p>
+          <p className="route-message">{message}</p>
 
           {status === "success" && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+            <div className="route-follow-up">
+              <p className="route-supporting-copy">
                 If you change your mind, you can always sign up for air quality
                 alerts again from our main page.
               </p>
               <Button asChild>
-                <a href="/">Return to Home Page</a>
+                <Link to="/">Return to Home Page</Link>
               </Button>
             </div>
           )}
 
           {status === "error" && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+            <div className="route-follow-up">
+              <p className="route-supporting-copy">
                 If you're having trouble unsubscribing, please contact our
                 support team.
               </p>
               <Button asChild>
-                <a href="/">Return to Home Page</a>
+                <Link to="/">Return to Home Page</Link>
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
-    </div>
+    </RouteShell>
   );
 }

@@ -11,14 +11,12 @@ export const KofiButton: React.FC<KofiButtonProps> = ({ className }) => {
         href="https://ko-fi.com/Y8Y21CC8IA"
         target="_blank"
         rel="noopener noreferrer"
-        className="transform scale-75 transition-all hover:scale-[.755] hover:brightness-110"
+        className="kofi-link"
       >
-        <img
-          height="36"
-          style={{ border: 0, height: "40px" }}
-          src="https://storage.ko-fi.com/cdn/kofi3.png?v=6"
-          alt="Buy Me a Coffee at ko-fi.com"
-        />
+        <span aria-hidden="true" className="kofi-link-mark">
+          ♥
+        </span>
+        <span>Support this project</span>
       </a>
     </div>
   );
