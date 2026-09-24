@@ -209,6 +209,7 @@
 }
 
 .app-brand {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -225,6 +226,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.app-header-actions > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-header-actions > div > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .app-theme-toggle {
@@ -1057,6 +1069,14 @@
   .app-subscriptions,
   .app-footer {
     width: calc(100% - 32px);
+  }
+
+  .app-header {
+    flex-wrap: wrap;
+  }
+
+  .app-header-actions {
+    margin-left: auto;
   }
 
   .app-main {
