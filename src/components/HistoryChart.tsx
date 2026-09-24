@@ -111,6 +111,9 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   // Gradient stops: color the fill by the last data point's AQI band
   const fillColor = aqiColorHex(aqiValues[aqiValues.length - 1]);
   const yTicks = [...new Set([axisMin, Math.round((axisMin + axisMax) / 2), axisMax])];
+  const accessibleSeries = points
+    .map((point) => `${formatShortDate(point.timestamp)}: AQI ${point.aqi}`)
+    .join("; ");
 
   return (
     <Card className="aqi-chart mt-3">
@@ -125,6 +128,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
             role="img"
             aria-label={`Air Quality Index trend chart; values ranged from ${minAqi} to ${maxAqi}`}
           >
+            <desc>Daily readings: {accessibleSeries}.</desc>
             <defs>
               <linearGradient id={`aqi-fill-${zipCode}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={fillColor} stopOpacity="0.35" />
@@ -156,8 +160,8 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
             <path
               d={pathD}
               fill="none"
-              stroke={fillColor}
-              strokeWidth="1.5"
+              stroke="var(--aqi-trend-line)"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -167,10 +171,10 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
                 key={i}
                 cx={p.x}
                 cy={p.y}
-                r="2"
+                r="2.5"
                 fill={aqiColorHex(p.aqi)}
-                stroke="#fff"
-                strokeWidth="0.5"
+                stroke="var(--aqi-trend-point-outline)"
+                strokeWidth="1"
               >
                 <title>{`${p.category}: AQI ${p.aqi} (${formatShortDate(p.timestamp)})`}</title>
               </circle>

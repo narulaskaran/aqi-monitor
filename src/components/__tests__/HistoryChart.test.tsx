@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { renderWithTheme, screen, waitFor } from "../../lib/test-utils";
+import { act, renderWithTheme, screen, waitFor } from "../../lib/test-utils";
 import { HistoryChart } from "../HistoryChart";
 import { getAirQualityHistory as realGetAirQualityHistory } from "../../lib/api";
 
@@ -41,7 +41,7 @@ describe("HistoryChart", () => {
       history,
     });
 
-    renderWithTheme(<HistoryChart zipCode="94102" />);
+    const { container } = renderWithTheme(<HistoryChart zipCode="94102" />);
 
     await waitFor(() => {
       expect(
@@ -49,6 +49,8 @@ describe("HistoryChart", () => {
       ).toBeInTheDocument();
     });
     expect(screen.getByText(/last 7 days aqi trend/i)).toBeInTheDocument();
+    expect(container.querySelector("svg desc")).toHaveTextContent("AQI 42");
+    expect(container.querySelector("svg desc")).toHaveTextContent("AQI 62");
   });
 
   it("renders no chart or placeholder when fewer than six distinct days exist", async () => {
@@ -57,24 +59,46 @@ describe("HistoryChart", () => {
       aqi: 42 + day * 4,
       category: "Good",
     }));
-    getAirQualityHistory.mockResolvedValue({
-      success: true,
-      zipCode: "94102",
-      history: [...fiveDays, { ...fiveDays[0], aqi: 55 }],
-    });
+    let resolveHistory!: (value: {
+      success: boolean;
+      zipCode: string;
+      history: typeof fiveDays;
+    }) => void;
+    getAirQualityHistory.mockReturnValue(
+      new Promise((resolve) => {
+        resolveHistory = resolve;
+      }),
+    );
 
     const { container } = renderWithTheme(<HistoryChart zipCode="94102" />);
     await waitFor(() => {
       expect(getAirQualityHistory).toHaveBeenCalled();
+    });
+    expect(container.textContent).toBe("");
+    await act(async () => {
+      resolveHistory({
+        success: true,
+        zipCode: "94102",
+        history: [...fiveDays, { ...fiveDays[0], aqi: 55 }],
+      });
     });
     expect(container.querySelector("svg")).toBeNull();
     expect(container.textContent).toBe("");
   });
 
   it("does not show a trend placeholder on history request failure", async () => {
-    getAirQualityHistory.mockRejectedValue(new Error("unavailable"));
+    let rejectHistory!: (error: Error) => void;
+    getAirQualityHistory.mockReturnValue(
+      new Promise((_, reject) => {
+        rejectHistory = reject;
+      }),
+    );
     const { container } = renderWithTheme(<HistoryChart zipCode="94102" />);
     await waitFor(() => expect(getAirQualityHistory).toHaveBeenCalled());
+    expect(container.textContent).toBe("");
+    await act(async () => {
+      rejectHistory(new Error("unavailable"));
+    });
     expect(container.textContent).toBe("");
     expect(container.querySelector("svg")).toBeNull();
   });

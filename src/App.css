@@ -35,6 +35,8 @@
   --input: rgba(15, 27, 51, 0.14);
   --ring: #2952cc;
   --radius: 0.75rem;
+  --aqi-trend-line: #246246;
+  --aqi-trend-point-outline: #0f1b33;
 
   display: flex;
   flex-direction: column;
@@ -64,6 +66,8 @@
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.16);
   --ring: #8aa6ff;
+  --aqi-trend-line: #72d9a7;
+  --aqi-trend-point-outline: #e6ecf7;
 }
 
 .app-header,
@@ -482,7 +486,8 @@
 }
 
 .aqi-chart-gridline {
-  stroke: var(--border);
+  stroke: var(--muted-foreground);
+  opacity: 0.38;
   stroke-width: 1;
   stroke-dasharray: 2 3;
 }
