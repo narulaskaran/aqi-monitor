@@ -286,9 +286,32 @@
   margin: 0;
 }
 
+.aqi-reading-heading {
+  margin-bottom: 4px !important;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
 .aqi-reading-meta {
   color: var(--muted-foreground);
   font-size: 13px;
+}
+
+.aqi-reading-meta:empty {
+  display: none;
+}
+
+.aqi-reading-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  border: 1px solid color-mix(in srgb, var(--aqi-category-color) 30%, var(--border));
+  border-radius: 16px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--aqi-category-color) 10%, var(--card));
 }
 
 .aqi-reading-value {
@@ -308,7 +331,15 @@
 }
 
 .aqi-number-label {
-  margin-left: 6px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.aqi-unit-label {
+  margin-left: 5px;
   color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 500;
@@ -316,8 +347,11 @@
 }
 
 .aqi-category {
+  border: 1px solid color-mix(in srgb, var(--aqi-category-color) 40%, var(--border));
   border-radius: 999px;
-  padding: 4px 12px;
+  padding: 7px 12px;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--aqi-category-color) 18%, var(--card));
   font-size: 13px;
   font-weight: 600;
   text-align: center;
@@ -351,6 +385,16 @@
 .aqi-advice {
   font-size: 15px;
   line-height: 1.5;
+}
+
+.aqi-health-guidance {
+  margin-top: 18px;
+}
+
+.aqi-health-heading {
+  margin-bottom: 4px !important;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .aqi-facts {
@@ -408,6 +452,52 @@
 
 .aqi-history svg {
   max-width: none;
+}
+
+.aqi-chart {
+  margin-top: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.aqi-chart > div:first-child {
+  padding: 0 0 10px !important;
+}
+
+.aqi-chart > div:last-child {
+  padding: 0 !important;
+}
+
+.aqi-chart h3 {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.aqi-history-svg {
+  display: block;
+  max-width: 320px;
+  overflow: visible;
+}
+
+.aqi-chart-gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.aqi-chart-label {
+  fill: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 9px;
+}
+
+.aqi-chart-caption {
+  margin-top: 4px !important;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  text-align: right;
 }
 
 /* Alerts, forecast, subscriptions */

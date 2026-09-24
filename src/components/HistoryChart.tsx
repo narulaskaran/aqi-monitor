@@ -31,9 +31,9 @@ function formatShortDate(iso: string): string {
   });
 }
 
-const CHART_WIDTH = 280;
-const CHART_HEIGHT = 70;
-const PADDING = { top: 4, bottom: 16, left: 4, right: 4 };
+const CHART_WIDTH = 320;
+const CHART_HEIGHT = 104;
+const PADDING = { top: 8, bottom: 24, left: 34, right: 10 };
 const PLOT_W = CHART_WIDTH - PADDING.left - PADDING.right;
 const PLOT_H = CHART_HEIGHT - PADDING.top - PADDING.bottom;
 
@@ -70,58 +70,34 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
     };
   }, [zipCode, days]);
 
-  // Loading state: show a minimal placeholder
-  if (isLoading) {
-    return (
-      <Card className="mt-3">
-        <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-sm">Last {days} days AQI trend</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0 pb-3">
-          <div className="flex items-center justify-center h-[70px] text-xs text-gray-400 dark:text-gray-500">
-            Loading chart...
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Error state: show a visible inline indicator
-  if (error) {
-    console.error("HistoryChart: failed to load history:", error);
-    return (
-      <Card className="mt-3">
-        <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-sm">Last {days} days AQI trend</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0 pb-3">
-          <div className="flex items-center justify-center h-[70px] text-xs text-red-400 dark:text-red-500">
-            Unable to load chart data
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // No data state: fewer than 2 data points
-  if (!history || history.length < 2) {
+  // Hide the trend area until there are six distinct calendar days of readings.
+  // Multiple snapshots from one day count as one day of coverage.
+  if (isLoading || error || !history) {
     return null;
   }
 
-  const aqiValues = history.map((h) => h.aqi);
+  const datedHistory = history.filter((point) => Number.isFinite(Date.parse(point.timestamp)));
+  const coveredDays = new Set(
+    datedHistory.map((point) => new Date(point.timestamp).toISOString().slice(0, 10)),
+  );
+  if (coveredDays.size < 6 || datedHistory.length < 2) return null;
+
+  const aqiValues = datedHistory.map((h) => h.aqi);
   const minAqi = Math.min(...aqiValues);
   const maxAqi = Math.max(...aqiValues);
-  const range = Math.max(maxAqi - minAqi, 1);
+  const axisMin = Math.max(0, Math.floor(minAqi / 25) * 25);
+  const axisMax = Math.max(axisMin + 25, Math.ceil(maxAqi / 25) * 25);
+  const range = axisMax - axisMin;
 
-  const times = history.map((h) => new Date(h.timestamp).getTime());
+  const times = datedHistory.map((h) => new Date(h.timestamp).getTime());
   const minT = Math.min(...times);
   const maxT = Math.max(...times);
   const tRange = Math.max(maxT - minT, 1);
 
-  const points = history.map((h) => {
+  const points = datedHistory.map((h) => {
     const t = new Date(h.timestamp).getTime();
     const x = PADDING.left + ((t - minT) / tRange) * PLOT_W;
-    const y = PADDING.top + PLOT_H - ((h.aqi - minAqi) / range) * PLOT_H;
+    const y = PADDING.top + PLOT_H - ((h.aqi - axisMin) / range) * PLOT_H;
     return { x, y, aqi: h.aqi, category: h.category, timestamp: h.timestamp };
   });
 
@@ -134,9 +110,10 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
 
   // Gradient stops: color the fill by the last data point's AQI band
   const fillColor = aqiColorHex(aqiValues[aqiValues.length - 1]);
+  const yTicks = [...new Set([axisMin, Math.round((axisMin + axisMax) / 2), axisMax])];
 
   return (
-    <Card className="mt-3">
+    <Card className="aqi-chart mt-3">
       <CardHeader className="pb-2 pt-3">
         <CardTitle className="text-sm">Last {days} days AQI trend</CardTitle>
       </CardHeader>
@@ -144,9 +121,9 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
         <div className="overflow-x-auto">
           <svg
             viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-            className="w-full max-w-[280px] h-auto"
+            className="aqi-history-svg w-full h-auto"
             role="img"
-            aria-label="Air Quality Index trend chart"
+            aria-label={`Air Quality Index trend chart; values ranged from ${minAqi} to ${maxAqi}`}
           >
             <defs>
               <linearGradient id={`aqi-fill-${zipCode}`} x1="0" y1="0" x2="0" y2="1">
@@ -154,6 +131,25 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
                 <stop offset="100%" stopColor={fillColor} stopOpacity="0.05" />
               </linearGradient>
             </defs>
+            <g aria-hidden="true">
+              {yTicks.map((value) => {
+                const y = PADDING.top + PLOT_H - ((value - axisMin) / range) * PLOT_H;
+                return (
+                  <g key={value}>
+                    <line
+                      x1={PADDING.left}
+                      x2={CHART_WIDTH - PADDING.right}
+                      y1={y}
+                      y2={y}
+                      className="aqi-chart-gridline"
+                    />
+                    <text x={PADDING.left - 6} y={y + 3} textAnchor="end" className="aqi-chart-label">
+                      {value}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
             {/* Area fill */}
             <path d={areaD} fill={`url(#aqi-fill-${zipCode})`} />
             {/* Line */}
@@ -183,19 +179,18 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
             {[...new Set([0, Math.floor(points.length / 2), points.length - 1])].map((idx) => (
               <text
                 key={idx}
-                x={points[idx].x}
-                y={CHART_HEIGHT - 2}
-                textAnchor={
-                  idx === 0 ? "start" : idx === points.length - 1 ? "end" : "middle"
-                }
-                className="fill-gray-400 dark:fill-gray-500"
-                fontSize="8"
+                x={Math.max(PADDING.left + 27, Math.min(points[idx].x, CHART_WIDTH - PADDING.right - 21))}
+                y={CHART_HEIGHT - 3}
+                textAnchor="middle"
+                className="aqi-chart-label"
+                fontSize="10"
               >
-                {history[idx] ? formatShortDate(history[idx].timestamp) : ""}
+                {datedHistory[idx] ? formatShortDate(datedHistory[idx].timestamp) : ""}
               </text>
             ))}
           </svg>
         </div>
+        <p className="aqi-chart-caption">Historical AQI snapshots · scale {axisMin}–{axisMax}</p>
       </CardContent>
     </Card>
   );
