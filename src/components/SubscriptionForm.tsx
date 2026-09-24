@@ -302,7 +302,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
         <CardHeader>
           <CardTitle>{isSignedIn ? "Subscribed" : "Verification successful"}</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="app-alert-success text-sm" role="status" aria-live="polite">
           You'll get an email when air quality changes for {zipCode}.
         </CardContent>
       </Card>
@@ -310,18 +310,22 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   }
 
   const dateRangeSection = (
-    <div className="space-y-2">
-      <div className="space-y-1">
-        <label htmlFor="min-alert-aqi" className="text-sm font-medium text-gray-600">
+    <div className="app-alert-options">
+      <div className="app-alert-field">
+        <label htmlFor="min-alert-aqi" className="app-alert-label">
           Only email me when AQI is at least…
         </label>
+        <p id="min-alert-aqi-help" className="app-alert-helper">
+          Choose the lowest AQI category that should send an email.
+        </p>
         <select
           id="min-alert-aqi"
           aria-label="Minimum AQI threshold"
+          aria-describedby="min-alert-aqi-help"
           value={minAlertAqi ?? ""}
           onChange={(e) => setMinAlertAqi(e.target.value ? Number(e.target.value) : null)}
           disabled={isLoading}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="app-alert-select"
         >
           <option value="">All updates</option>
           <option value="51">Moderate (51+)</option>
@@ -329,7 +333,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
           <option value="151">Unhealthy (151+)</option>
         </select>
       </div>
-      <label className="flex items-center space-x-2 text-sm cursor-pointer">
+      <label className="app-alert-checkbox-label">
         <input
           type="checkbox"
           checked={hasDateRange}
@@ -341,18 +345,22 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             }
           }}
           disabled={isLoading}
-          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+          className="app-alert-checkbox"
         />
-        <span className="text-foreground">Schedule this subscription (optional)</span>
+        <span>Schedule this subscription (optional)</span>
       </label>
 
       {hasDateRange && (
-        <div className="ml-6 space-y-3">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              Start date <span className="font-normal text-muted-foreground">(alerts begin; leave empty to start immediately)</span>
+        <div className="app-alert-date-range">
+          <div className="app-alert-field">
+            <label htmlFor="alert-start-date" className="app-alert-label-small">
+              Start date
             </label>
+            <p className="app-alert-helper">
+              Alerts begin on this date; leave empty to start immediately.
+            </p>
             <Input
+              id="alert-start-date"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -362,11 +370,15 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
               aria-label="Start date"
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              End date <span className="font-normal text-muted-foreground">(alerts stop; leave empty to never expire)</span>
+          <div className="app-alert-field">
+            <label htmlFor="alert-end-date" className="app-alert-label-small">
+              End date
             </label>
+            <p className="app-alert-helper">
+              Alerts stop on this date; leave empty to never expire.
+            </p>
             <Input
+              id="alert-end-date"
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -375,9 +387,6 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
               className="w-full"
               aria-label="End date"
             />
-            <p className="text-xs text-muted-foreground">
-              Your subscription will automatically end on this date
-            </p>
           </div>
         </div>
       )}
@@ -387,7 +396,7 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
   if (isValidating) {
     return (
       <Card>
-        <CardContent className="pt-6 text-sm text-muted-foreground">
+        <CardContent className="app-alert-status text-sm" role="status" aria-live="polite">
           Checking sign-in status...
         </CardContent>
       </Card>
@@ -518,7 +527,16 @@ export function SubscriptionForm({ zipCode }: SubscriptionFormProps) {
             </div>
           </form>
         )}
-        {error && <div className="mt-3 text-sm text-red-500">{error}</div>}
+        {error && (
+          <div
+            id="alert-form-error"
+            className="app-alert-error"
+            role="alert"
+            aria-live="polite"
+          >
+            {error}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

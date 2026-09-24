@@ -90,6 +90,8 @@ describe("SubscriptionList", () => {
 
     expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.getByText("Inactive")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toHaveClass("app-subscription-status", "is-active");
+    expect(screen.getByText("Inactive")).toHaveClass("app-subscription-status", "is-inactive");
     expect(screen.getByRole("button", { name: /deactivate/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /reactivate/i })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /minimum aqi for 10001/i })).toHaveValue("");
@@ -124,6 +126,31 @@ describe("SubscriptionList", () => {
         151,
       );
     });
+  });
+
+  it("announces successful subscription updates", async () => {
+    (authModule.useAuth as any).mockReturnValue({
+      isSignedIn: true,
+      token: "test-token",
+      email: "user@example.com",
+      isValidating: false,
+    });
+    (apiModule.getSubscriptions as any).mockResolvedValue({
+      success: true,
+      subscriptions: mockSubscriptions,
+    });
+    (apiModule.updateSubscription as any).mockResolvedValue({ success: true });
+
+    render(<SubscriptionList />);
+    await waitFor(() => expect(screen.getByText("10001")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByRole("combobox", { name: /minimum aqi for 10001/i }), {
+      target: { value: "151" },
+    });
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /minimum aqi threshold updated/i,
+    );
   });
 
   it("opens confirmation modal on toggle click and confirms", async () => {

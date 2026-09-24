@@ -180,6 +180,10 @@ describe("SubscriptionForm", () => {
 
     const select = screen.getByRole("combobox", { name: /minimum aqi/i });
     expect(select).toHaveValue("");
+    expect(select).toHaveClass("app-alert-select");
+    expect(screen.getByText(/choose the lowest aqi category/i)).toHaveClass(
+      "app-alert-helper",
+    );
     expect(screen.getByRole("option", { name: /moderate \(51\+\)/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /unhealthy for sensitive groups \(101\+\)/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /unhealthy \(151\+\)/i })).toBeInTheDocument();
@@ -211,6 +215,19 @@ describe("SubscriptionForm", () => {
         101,
       );
     });
+  });
+
+  it("keeps alert controls and feedback theme-aware and accessible", async () => {
+    renderWithTheme(<SubscriptionForm zipCode="12345" />);
+
+    expect(screen.getByRole("checkbox")).toHaveClass("app-alert-checkbox");
+    const emailInput = screen.getByRole("textbox", { name: /email address/i });
+    fireEvent.change(emailInput, { target: { value: "bademail" } });
+    fireEvent.submit(emailInput.closest("form")!);
+
+    const error = await screen.findByRole("alert");
+    expect(error).toHaveClass("app-alert-error");
+    expect(error).toHaveAttribute("aria-live", "polite");
   });
 
   it("shows validation error for a past start date", async () => {
