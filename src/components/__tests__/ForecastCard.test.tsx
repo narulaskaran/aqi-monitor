@@ -58,7 +58,7 @@ describe("ForecastCard", () => {
       ],
     });
 
-    renderWithTheme(<ForecastCard zipCode="94102" />);
+    const { container } = renderWithTheme(<ForecastCard zipCode="94102" />);
 
     fireEvent.click(screen.getByRole("button", { name: /get forecast/i }));
 
@@ -68,6 +68,12 @@ describe("ForecastCard", () => {
       expect(screen.getByText(/AQI 78/)).toBeInTheDocument();
       expect(screen.getByText(/Moderate/)).toBeInTheDocument();
     });
+
+    expect(
+      [...container.querySelectorAll(".forecast-row")].map((row) =>
+        row.getAttribute("data-aqi-category"),
+      ),
+    ).toEqual(["Good", "Moderate"]);
 
     // Disclaimer text should be present
     expect(screen.getByText(/projections only/i)).toBeInTheDocument();

@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { getAirQualityForecast } from "../lib/api";
-import { getAQIColor } from "../lib/utils";
+import { getAQICategory } from "../types/air-quality";
 import { DailyForecast } from "../types/forecast";
 import { maxForecastUtcDate } from "../lib/forecastWindow";
 
@@ -146,16 +146,17 @@ export function ForecastCard({ zipCode }: ForecastCardProps) {
             {forecasts.map((day) => (
               <div
                 key={day.date}
-                className={`flex items-center justify-between rounded-md px-3 py-2 ${getAQIColor(day.maxAqi)}`}
+                className="forecast-row flex items-center justify-between rounded-md px-3 py-2"
+                data-aqi-category={getAQICategory(day.category, day.maxAqi).name}
               >
-                <span className="text-sm font-medium text-gray-800">
+                <span className="text-sm font-medium">
                   {formatDate(day.date)}
                 </span>
                 <div className="text-right">
-                  <span className="text-sm font-bold text-gray-800">
+                  <span className="text-sm font-bold">
                     AQI {day.maxAqi}
                   </span>
-                  <span className="ml-2 text-xs text-gray-700">
+                  <span className="ml-2 text-xs forecast-row-category">
                     {day.category}
                   </span>
                 </div>

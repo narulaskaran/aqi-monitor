@@ -9,13 +9,6 @@ interface HistoryChartProps {
   days?: number;
 }
 
-/**
- * Returns an AQI band color (hex) for a given AQI value.
- * Matches the EPA AQI color scale.
- */
-function aqiColorHex(aqi: number): string {
-  return getAQICategory("", aqi).color;
-}
 
 /**
  * Formats an ISO timestamp to a short date label like "Mon 6/20".
@@ -40,9 +33,9 @@ function formatUtcTime(iso: string): string {
   });
 }
 
-const CHART_WIDTH = 320;
-const CHART_HEIGHT = 104;
-const PADDING = { top: 8, bottom: 24, left: 34, right: 10 };
+const CHART_WIDTH = 480;
+const CHART_HEIGHT = 148;
+const PADDING = { top: 10, bottom: 32, left: 42, right: 16 };
 const PLOT_W = CHART_WIDTH - PADDING.left - PADDING.right;
 const PLOT_H = CHART_HEIGHT - PADDING.top - PADDING.bottom;
 // Product requirement: the chart needs six distinct covered days, whatever the requested window.
@@ -121,7 +114,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   const areaD = `${pathD} L${last.x.toFixed(1)},${PADDING.top + PLOT_H} L${first.x.toFixed(1)},${PADDING.top + PLOT_H} Z`;
 
   // Gradient stops: color the fill by the last data point's AQI band
-  const fillColor = aqiColorHex(aqiValues[aqiValues.length - 1]);
+  const fillCategory = getAQICategory("", aqiValues[aqiValues.length - 1]).name;
   const yTicks = [...new Set([axisMin, Math.round((axisMin + axisMax) / 2), axisMax])];
   const accessibleSeries = points
     .map((point) => `${formatShortDate(point.timestamp)} ${formatUtcTime(point.timestamp)} UTC: AQI ${point.aqi}`)
@@ -142,9 +135,16 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
           >
             <desc>Historical AQI snapshots: {accessibleSeries}.</desc>
             <defs>
-              <linearGradient id={`aqi-fill-${zipCode}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={fillColor} stopOpacity="0.35" />
-                <stop offset="100%" stopColor={fillColor} stopOpacity="0.05" />
+              <linearGradient
+                id={`aqi-fill-${zipCode}`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+                data-aqi-category={fillCategory}
+              >
+                <stop className="aqi-chart-fill-stop" offset="0%" stopOpacity="0.35" />
+                <stop className="aqi-chart-fill-stop" offset="100%" stopOpacity="0.05" />
               </linearGradient>
             </defs>
             <g aria-hidden="true">
@@ -172,7 +172,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
             <path
               d={pathD}
               fill="none"
-              stroke="var(--aqi-trend-line)"
+              stroke="var(--aqi-chart-line)"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -184,8 +184,8 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
                 cx={p.x}
                 cy={p.y}
                 r="2.5"
-                fill={aqiColorHex(p.aqi)}
-                stroke="var(--aqi-trend-point-outline)"
+                className="aqi-chart-point"
+                data-aqi-category={getAQICategory(p.category, p.aqi).name}
                 strokeWidth="1"
               >
                 <title>{`${p.category}: AQI ${p.aqi} (${formatShortDate(p.timestamp)})`}</title>
@@ -200,7 +200,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
                 y={CHART_HEIGHT - 3}
                 textAnchor="middle"
                 className="aqi-chart-label"
-                fontSize="10"
+                fontSize="11"
               >
                 {datedHistory[idx] ? formatShortDate(datedHistory[idx].timestamp) : ""}
               </text>

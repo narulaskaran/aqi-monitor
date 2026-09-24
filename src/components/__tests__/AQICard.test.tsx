@@ -29,12 +29,17 @@ describe("AQICard", () => {
 
   it("color-codes the category and shows the health recommendation", () => {
     const moderate = AQI_CATEGORIES.Moderate;
-    renderWithTheme(
+    const { container } = renderWithTheme(
       <AQICard index={75} category="Moderate" dominantPollutant="pm25" />,
     );
 
     const band = screen.getByTestId("aqi-category-band");
-    expect(band).toHaveStyle({ "--aqi-category-color": moderate.color });
+    expect(band).toHaveAttribute("data-aqi-category", "Moderate");
+    expect(
+      [...container.querySelectorAll(".aqi-scale > span:not(.aqi-scale-marker)")].map(
+        (segment) => segment.getAttribute("data-aqi-category"),
+      ),
+    ).toHaveLength(6);
     expect(screen.getByText(/what this means/i)).toBeInTheDocument();
     expect(screen.getByText(moderate.advice)).toBeInTheDocument();
   });
@@ -49,9 +54,10 @@ describe("AQICard", () => {
       />,
     );
 
-    expect(screen.getByTestId("aqi-category-band")).toHaveStyle({
-      "--aqi-category-color": unhealthy.color,
-    });
+    expect(screen.getByTestId("aqi-category-band")).toHaveAttribute(
+      "data-aqi-category",
+      "Unhealthy",
+    );
     expect(screen.getByText(unhealthy.advice)).toBeInTheDocument();
   });
 

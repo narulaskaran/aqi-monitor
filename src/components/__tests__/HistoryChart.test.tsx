@@ -56,6 +56,12 @@ describe("HistoryChart", () => {
     expect(container.querySelector("svg desc")).toHaveTextContent("AQI 62");
     expect(container.querySelector("svg desc")).toHaveTextContent("Historical AQI snapshots");
     expect(container.querySelector("svg desc")).toHaveTextContent("1:00 PM UTC: AQI 45");
+    expect(container.querySelectorAll(".aqi-chart-point")).toHaveLength(7);
+    expect(container.querySelector(".aqi-chart-point")).toHaveAttribute(
+      "data-aqi-category",
+      "Good",
+    );
+    expect(container.querySelector(".aqi-chart-fill-stop")).toBeInTheDocument();
   });
 
   it("renders no chart or placeholder when fewer than six distinct days exist", async () => {

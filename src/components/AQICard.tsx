@@ -1,6 +1,5 @@
 import { AQI_SCALE, getAQICategory } from "../types/air-quality";
 import { HistoryChart } from "./HistoryChart";
-import type { CSSProperties } from "react";
 
 interface AQICardProps {
   index: number;
@@ -63,7 +62,7 @@ export function AQICard({
 
       <div
         className="aqi-reading-summary"
-        style={{ "--aqi-category-color": categoryInfo.color } as CSSProperties}
+        data-aqi-category={categoryInfo.name}
       >
         <div>
           <p className="aqi-number-label">Current air quality index</p>
@@ -75,6 +74,7 @@ export function AQICard({
         <p
           data-testid="aqi-category-band"
           className="aqi-category"
+          data-aqi-category={categoryInfo.name}
         >
           {categoryInfo.name}
         </p>
@@ -82,8 +82,8 @@ export function AQICard({
 
       {hasReading && (
         <div className="aqi-scale" aria-hidden="true">
-          {AQI_SCALE.map(({ name, color }) => (
-            <span key={name} style={{ backgroundColor: color }} />
+          {AQI_SCALE.map(({ name }) => (
+            <span key={name} data-aqi-category={name} />
           ))}
           <span
             className="aqi-scale-marker"

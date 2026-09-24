@@ -40,8 +40,36 @@
   --input: rgba(15, 27, 51, 0.14);
   --ring: #2952cc;
   --radius: 0.75rem;
-  --aqi-trend-line: #246246;
-  --aqi-trend-point-outline: #0f1b33;
+  --aqi-chart-line: #246246;
+  --aqi-chart-gridline: rgba(82, 96, 122, 0.35);
+  --aqi-chart-label: #52607a;
+  --aqi-chart-point-outline: #0f1b33;
+
+  /* EPA category meaning, expressed as readable Cloud Glass surfaces. */
+  --aqi-good-surface: #dcfce7;
+  --aqi-good-text: #14532d;
+  --aqi-good-chart: #16a34a;
+  --aqi-moderate-surface: #fef3c7;
+  --aqi-moderate-text: #713f12;
+  --aqi-moderate-chart: #ca8a04;
+  --aqi-sensitive-surface: #ffedd5;
+  --aqi-sensitive-text: #9a3412;
+  --aqi-sensitive-chart: #ea580c;
+  --aqi-unhealthy-surface: #fee2e2;
+  --aqi-unhealthy-text: #991b1b;
+  --aqi-unhealthy-chart: #dc2626;
+  --aqi-very-unhealthy-surface: #f3e8ff;
+  --aqi-very-unhealthy-text: #6b21a8;
+  --aqi-very-unhealthy-chart: #9333ea;
+  --aqi-hazardous-surface: #f5e0e7;
+  --aqi-hazardous-text: #701a3a;
+  --aqi-hazardous-chart: #9f1239;
+  --aqi-unknown-surface: #eef1f4;
+  --aqi-unknown-text: #475569;
+  --aqi-unknown-chart: #64748b;
+  --aqi-category-surface: var(--aqi-unknown-surface);
+  --aqi-category-text: var(--aqi-unknown-text);
+  --aqi-category-chart: var(--aqi-unknown-chart);
 
   display: flex;
   flex-direction: column;
@@ -72,9 +100,75 @@
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.16);
   --ring: #8aa6ff;
-  --aqi-trend-line: #72d9a7;
-  --aqi-trend-point-outline: #e6ecf7;
+  --aqi-chart-line: #72d9a7;
+  --aqi-chart-gridline: rgba(152, 166, 194, 0.38);
+  --aqi-chart-label: #c1cbe0;
+  --aqi-chart-point-outline: #e6ecf7;
+
+  --aqi-good-surface: #123d2a;
+  --aqi-good-text: #bbf7d0;
+  --aqi-good-chart: #4ade80;
+  --aqi-moderate-surface: #493b10;
+  --aqi-moderate-text: #fef08a;
+  --aqi-moderate-chart: #facc15;
+  --aqi-sensitive-surface: #4b2813;
+  --aqi-sensitive-text: #fed7aa;
+  --aqi-sensitive-chart: #fb923c;
+  --aqi-unhealthy-surface: #4b1d1d;
+  --aqi-unhealthy-text: #fecaca;
+  --aqi-unhealthy-chart: #f87171;
+  --aqi-very-unhealthy-surface: #382044;
+  --aqi-very-unhealthy-text: #e9d5ff;
+  --aqi-very-unhealthy-chart: #c084fc;
+  --aqi-hazardous-surface: #421426;
+  --aqi-hazardous-text: #fbcfe8;
+  --aqi-hazardous-chart: #fb7185;
+  --aqi-unknown-surface: #273244;
+  --aqi-unknown-text: #cbd5e1;
+  --aqi-unknown-chart: #94a3b8;
   --dialog-backdrop: rgba(3, 8, 20, 0.62);
+}
+
+.app [data-aqi-category="Good"] {
+  --aqi-category-surface: var(--aqi-good-surface);
+  --aqi-category-text: var(--aqi-good-text);
+  --aqi-category-chart: var(--aqi-good-chart);
+}
+
+.app [data-aqi-category="Moderate"] {
+  --aqi-category-surface: var(--aqi-moderate-surface);
+  --aqi-category-text: var(--aqi-moderate-text);
+  --aqi-category-chart: var(--aqi-moderate-chart);
+}
+
+.app [data-aqi-category="Unhealthy for Sensitive Groups"] {
+  --aqi-category-surface: var(--aqi-sensitive-surface);
+  --aqi-category-text: var(--aqi-sensitive-text);
+  --aqi-category-chart: var(--aqi-sensitive-chart);
+}
+
+.app [data-aqi-category="Unhealthy"] {
+  --aqi-category-surface: var(--aqi-unhealthy-surface);
+  --aqi-category-text: var(--aqi-unhealthy-text);
+  --aqi-category-chart: var(--aqi-unhealthy-chart);
+}
+
+.app [data-aqi-category="Very Unhealthy"] {
+  --aqi-category-surface: var(--aqi-very-unhealthy-surface);
+  --aqi-category-text: var(--aqi-very-unhealthy-text);
+  --aqi-category-chart: var(--aqi-very-unhealthy-chart);
+}
+
+.app [data-aqi-category="Hazardous"] {
+  --aqi-category-surface: var(--aqi-hazardous-surface);
+  --aqi-category-text: var(--aqi-hazardous-text);
+  --aqi-category-chart: var(--aqi-hazardous-chart);
+}
+
+.app [data-aqi-category="Unknown"] {
+  --aqi-category-surface: var(--aqi-unknown-surface);
+  --aqi-category-text: var(--aqi-unknown-text);
+  --aqi-category-chart: var(--aqi-unknown-chart);
 }
 
 .app-header,
@@ -319,10 +413,10 @@
   justify-content: space-between;
   gap: 16px;
   margin-top: 14px;
-  border: 1px solid color-mix(in srgb, var(--aqi-category-color) 30%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--aqi-category-chart) 42%, var(--border));
   border-radius: 16px;
   padding: 16px;
-  background: color-mix(in srgb, var(--aqi-category-color) 10%, var(--card));
+  background: var(--aqi-category-surface);
 }
 
 .aqi-number {
@@ -350,11 +444,11 @@
 }
 
 .aqi-category {
-  border: 1px solid color-mix(in srgb, var(--aqi-category-color) 40%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--aqi-category-chart) 55%, var(--border));
   border-radius: 999px;
   padding: 7px 12px;
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--aqi-category-color) 18%, var(--card));
+  color: var(--aqi-category-text);
+  background: var(--aqi-category-surface);
   font-size: 13px;
   font-weight: 600;
   text-align: center;
@@ -371,6 +465,7 @@
 
 .aqi-scale > span:not(.aqi-scale-marker) {
   border-radius: 2px;
+  background: var(--aqi-category-chart);
   opacity: 0.85;
 }
 
@@ -484,31 +579,50 @@
 
 .aqi-history-svg {
   display: block;
-  max-width: 320px;
+  width: 100%;
+  max-width: 100%;
   overflow: visible;
 }
 
 .aqi-chart-gridline {
-  stroke: var(--muted-foreground);
-  opacity: 0.38;
+  stroke: var(--aqi-chart-gridline);
   stroke-width: 1;
   stroke-dasharray: 2 3;
 }
 
 .aqi-chart-label {
-  fill: var(--muted-foreground);
+  fill: var(--aqi-chart-label);
   font-family: inherit;
-  font-size: 9px;
+  font-size: 11px;
+}
+
+.aqi-chart-fill-stop {
+  stop-color: var(--aqi-category-chart);
+}
+
+.aqi-chart-point {
+  fill: var(--aqi-category-chart);
+  stroke: var(--aqi-chart-point-outline);
 }
 
 .aqi-chart-caption {
   margin-top: 4px !important;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 12px;
   text-align: right;
 }
 
 /* Alerts, forecast, subscriptions */
+
+.forecast-row {
+  border: 1px solid color-mix(in srgb, var(--aqi-category-chart) 35%, var(--border));
+  color: var(--aqi-category-text);
+  background: var(--aqi-category-surface);
+}
+
+.forecast-row-category {
+  color: var(--aqi-category-text);
+}
 
 .app-details {
   display: grid;
