@@ -31,6 +31,15 @@ function formatShortDate(iso: string): string {
   });
 }
 
+/** Formats a snapshot time in UTC so same-day readings remain distinguishable. */
+function formatUtcTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+}
+
 const CHART_WIDTH = 320;
 const CHART_HEIGHT = 104;
 const PADDING = { top: 8, bottom: 24, left: 34, right: 10 };
@@ -112,7 +121,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   const fillColor = aqiColorHex(aqiValues[aqiValues.length - 1]);
   const yTicks = [...new Set([axisMin, Math.round((axisMin + axisMax) / 2), axisMax])];
   const accessibleSeries = points
-    .map((point) => `${formatShortDate(point.timestamp)}: AQI ${point.aqi}`)
+    .map((point) => `${formatShortDate(point.timestamp)} ${formatUtcTime(point.timestamp)} UTC: AQI ${point.aqi}`)
     .join("; ");
 
   return (
@@ -128,7 +137,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
             role="img"
             aria-label={`Air Quality Index trend chart; values ranged from ${minAqi} to ${maxAqi}`}
           >
-            <desc>Daily readings: {accessibleSeries}.</desc>
+            <desc>Historical AQI snapshots: {accessibleSeries}.</desc>
             <defs>
               <linearGradient id={`aqi-fill-${zipCode}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={fillColor} stopOpacity="0.35" />

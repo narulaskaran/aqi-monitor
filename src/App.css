@@ -318,14 +318,6 @@
   background: color-mix(in srgb, var(--aqi-category-color) 10%, var(--card));
 }
 
-.aqi-reading-value {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 8px;
-}
-
 .aqi-number {
   font-size: 64px;
   font-weight: 600;

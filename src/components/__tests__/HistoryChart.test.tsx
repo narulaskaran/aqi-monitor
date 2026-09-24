@@ -38,7 +38,10 @@ describe("HistoryChart", () => {
     getAirQualityHistory.mockResolvedValue({
       success: true,
       zipCode: "94102",
-      history,
+      history: [
+        ...history,
+        { ...history[0], timestamp: "2026-06-20T13:00:00.000Z", aqi: 45 },
+      ],
     });
 
     const { container } = renderWithTheme(<HistoryChart zipCode="94102" />);
@@ -51,6 +54,8 @@ describe("HistoryChart", () => {
     expect(screen.getByText(/last 7 days aqi trend/i)).toBeInTheDocument();
     expect(container.querySelector("svg desc")).toHaveTextContent("AQI 42");
     expect(container.querySelector("svg desc")).toHaveTextContent("AQI 62");
+    expect(container.querySelector("svg desc")).toHaveTextContent("Historical AQI snapshots");
+    expect(container.querySelector("svg desc")).toHaveTextContent("1:00 PM UTC: AQI 45");
   });
 
   it("renders no chart or placeholder when fewer than six distinct days exist", async () => {
