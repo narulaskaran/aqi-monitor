@@ -1,5 +1,6 @@
 import { AQI_SCALE, getAQICategory } from "../types/air-quality";
 import { HistoryChart } from "./HistoryChart";
+import type { CSSProperties } from "react";
 
 interface AQICardProps {
   index: number;
@@ -51,28 +52,29 @@ export function AQICard({
 
   return (
     <article className="aqi-reading">
+      <p className="aqi-reading-heading">
+        Air quality near {zipCode || "your location"}
+      </p>
       <p className="aqi-reading-meta">
-        Current conditions{zipCode ? ` · ${zipCode}` : ""}
         {formattedRecordedAt && (
-          <>
-            {" · "}
-            <span>As of {formattedRecordedAt}</span>
-          </>
+          <span>As of {formattedRecordedAt}</span>
         )}
       </p>
 
-      <div className="aqi-reading-value">
-        <p className="aqi-number">
-          {hasReading ? index : "—"}
-          <span className="aqi-number-label"> US AQI</span>
-        </p>
+      <div
+        className="aqi-reading-summary"
+        style={{ "--aqi-category-color": categoryInfo.color } as CSSProperties}
+      >
+        <div>
+          <p className="aqi-number-label">Current air quality index</p>
+          <p className="aqi-number">
+            {hasReading ? index : "—"}
+            <span className="aqi-unit-label"> US AQI</span>
+          </p>
+        </div>
         <p
           data-testid="aqi-category-band"
           className="aqi-category"
-          style={{
-            backgroundColor: categoryInfo.color,
-            color: categoryInfo.textColor,
-          }}
         >
           {categoryInfo.name}
         </p>
@@ -90,7 +92,10 @@ export function AQICard({
         </div>
       )}
 
-      <p className="aqi-advice">{categoryInfo.advice}</p>
+      <div className="aqi-health-guidance">
+        <p className="aqi-health-heading">What this means</p>
+        <p className="aqi-advice">{categoryInfo.advice}</p>
+      </div>
 
       <dl className="aqi-facts">
         <dt>Main pollutant</dt>

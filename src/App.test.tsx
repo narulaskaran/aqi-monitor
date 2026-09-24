@@ -82,7 +82,7 @@ describe("App accessibility", () => {
     fireEvent.change(zipInput, { target: { value: "12345" } });
     fireEvent.click(submit);
     await waitFor(() => {
-      expect(liveRegion).toHaveTextContent(/current conditions · 12345/i);
+      expect(liveRegion).toHaveTextContent(/air quality near 12345/i);
     });
 
     let resolveSecond: (value: unknown) => void = () => undefined;
@@ -98,11 +98,11 @@ describe("App accessibility", () => {
       expect(liveRegion).toHaveTextContent(/loading air quality for 54321/i);
     });
     expect(liveRegion).not.toHaveTextContent(/42 US AQI/i);
-    expect(liveRegion).not.toHaveTextContent(/current conditions/i);
+    expect(liveRegion).not.toHaveTextContent(/air quality near 54321/i);
 
     resolveSecond({ index: 120, category: "", dominantPollutant: "o3" });
     await waitFor(() => {
-      expect(liveRegion).toHaveTextContent(/current conditions · 54321/i);
+      expect(liveRegion).toHaveTextContent(/air quality near 54321/i);
     });
     expect(liveRegion).toHaveTextContent(/120 US AQI/i);
   });
@@ -143,7 +143,7 @@ describe("App accessibility", () => {
     fireEvent.change(zipInput, { target: { value: "54321" } });
     fireEvent.click(submit);
     expect(await screen.findByText(/service unavailable/i)).toBeInTheDocument();
-    expect(liveRegion).toHaveTextContent(/current conditions · 12345/i);
+    expect(liveRegion).toHaveTextContent(/air quality near 12345/i);
     expect(liveRegion).toHaveTextContent(/42 US AQI/i);
   });
 

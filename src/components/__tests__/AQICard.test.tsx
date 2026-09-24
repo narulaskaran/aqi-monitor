@@ -1,6 +1,11 @@
+import { vi } from "vitest";
 import { renderWithTheme, screen } from "../../lib/test-utils";
 import { AQICard } from "../AQICard";
 import { AQI_CATEGORIES } from "../../types/air-quality";
+
+vi.mock("../../lib/api", () => ({
+  getAirQualityHistory: vi.fn(() => new Promise(() => {})),
+}));
 
 describe("AQICard", () => {
   it("renders without crashing", () => {
@@ -9,14 +14,17 @@ describe("AQICard", () => {
     );
   });
 
-  it("renders AQI, category, and pollutant", () => {
-    renderWithTheme(
-      <AQICard index={42} category="Good" dominantPollutant="O3" />,
+  it("renders the location, AQI, category, and pollutant", () => {
+    const { container } = renderWithTheme(
+      <AQICard index={42} category="Good" dominantPollutant="O3" zipCode="10023" />,
     );
+    expect(screen.getByText(/air quality near 10023/i)).toBeInTheDocument();
+    expect(screen.getByText(/current air quality index/i)).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByTestId("aqi-category-band")).toHaveTextContent("Good");
     expect(screen.getByText(/main pollutant/i)).toBeInTheDocument();
     expect(screen.getByText("O3")).toBeInTheDocument();
+    expect(container.querySelector(".aqi-history:empty")).toBeInTheDocument();
   });
 
   it("color-codes the category and shows the health recommendation", () => {
@@ -26,10 +34,8 @@ describe("AQICard", () => {
     );
 
     const band = screen.getByTestId("aqi-category-band");
-    expect(band).toHaveStyle({
-      backgroundColor: moderate.color,
-      color: moderate.textColor,
-    });
+    expect(band).toHaveStyle({ "--aqi-category-color": moderate.color });
+    expect(screen.getByText(/what this means/i)).toBeInTheDocument();
     expect(screen.getByText(moderate.advice)).toBeInTheDocument();
   });
 
@@ -44,8 +50,7 @@ describe("AQICard", () => {
     );
 
     expect(screen.getByTestId("aqi-category-band")).toHaveStyle({
-      backgroundColor: unhealthy.color,
-      color: unhealthy.textColor,
+      "--aqi-category-color": unhealthy.color,
     });
     expect(screen.getByText(unhealthy.advice)).toBeInTheDocument();
   });
