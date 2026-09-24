@@ -22,7 +22,6 @@ describe("getAQICategory", () => {
         const result = getAQICategory("", index);
         expect(result.name).toBe(expected.name);
         expect(result.color).toBe(expected.color);
-        expect(result.textColor).toBe(expected.textColor);
         expect(result.advice).toBe(expected.advice);
         expect(result.advice.length).toBeGreaterThan(0);
       }

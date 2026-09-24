@@ -98,6 +98,7 @@ describe("HistoryChart", () => {
         rejectHistory = reject;
       }),
     );
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
     const { container } = renderWithTheme(<HistoryChart zipCode="94102" />);
     await waitFor(() => expect(getAirQualityHistory).toHaveBeenCalled());
     expect(container.textContent).toBe("");
@@ -106,5 +107,7 @@ describe("HistoryChart", () => {
     });
     expect(container.textContent).toBe("");
     expect(container.querySelector("svg")).toBeNull();
+    expect(errorLog).toHaveBeenCalledWith("HistoryChart: failed to load history:", expect.any(Error));
+    errorLog.mockRestore();
   });
 });

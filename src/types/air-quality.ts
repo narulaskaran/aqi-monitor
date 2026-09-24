@@ -21,7 +21,6 @@ export interface AQICategory {
   range: [number, number];
   description: string;
   color: string;
-  textColor: string;
   advice: string;
 }
 
@@ -32,7 +31,6 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     range: [0, 50],
     description: 'Air quality is considered satisfactory, and air pollution poses little or no risk.',
     color: '#00E400',
-    textColor: '#000000',
     advice: 'It\'s a great day to be active outside!'
   },
   'Moderate': {
@@ -40,7 +38,6 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     range: [51, 100],
     description: 'Air quality is acceptable; however, some pollutants may be a moderate health concern for a small number of people.',
     color: '#FFFF00',
-    textColor: '#000000',
     advice: 'Unusually sensitive people should consider reducing prolonged outdoor exertion.'
   },
   'Unhealthy for Sensitive Groups': {
@@ -48,7 +45,6 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     range: [101, 150],
     description: 'Members of sensitive groups may experience health effects. The general public is not likely to be affected.',
     color: '#FF7E00',
-    textColor: '#000000',
     advice: 'Active children and adults, and people with respiratory disease, such as asthma, should limit prolonged outdoor exertion.'
   },
   'Unhealthy': {
@@ -56,7 +52,6 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     range: [151, 200],
     description: 'Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.',
     color: '#FF0000',
-    textColor: '#FFFFFF',
     advice: 'Active children and adults, and people with respiratory disease, such as asthma, should avoid prolonged outdoor exertion; everyone else should limit prolonged outdoor exertion.'
   },
   'Very Unhealthy': {
@@ -64,7 +59,6 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     range: [201, 300],
     description: 'Health warnings of emergency conditions. The entire population is more likely to be affected.',
     color: '#8F3F97',
-    textColor: '#FFFFFF',
     advice: 'Active children and adults, and people with respiratory disease, such as asthma, should avoid all outdoor exertion; everyone else should limit outdoor exertion.'
   },
   'Hazardous': {
@@ -72,7 +66,6 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     range: [301, 500],
     description: 'Health alert: everyone may experience more serious health effects.',
     color: '#7E0023',
-    textColor: '#FFFFFF',
     advice: 'Everyone should avoid all outdoor exertion.'
   },
   'Unknown': {
@@ -80,7 +73,6 @@ export const AQI_CATEGORIES: Record<string, AQICategory> = {
     range: [-1, -1],
     description: 'Air quality information is unavailable at this time.',
     color: '#CCCCCC',
-    textColor: '#000000',
     advice: 'Unable to determine air quality. Please try again later.'
   }
 };

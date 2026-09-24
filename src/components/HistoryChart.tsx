@@ -45,6 +45,8 @@ const CHART_HEIGHT = 104;
 const PADDING = { top: 8, bottom: 24, left: 34, right: 10 };
 const PLOT_W = CHART_WIDTH - PADDING.left - PADDING.right;
 const PLOT_H = CHART_HEIGHT - PADDING.top - PADDING.bottom;
+// Product requirement: the chart needs six distinct covered days, whatever the requested window.
+const MIN_COVERED_DAYS = 6;
 
 export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   const [history, setHistory] = useState<HistoryPoint[] | null>(null);
@@ -68,6 +70,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
       })
       .catch((err) => {
         if (!cancelled) {
+          console.error("HistoryChart: failed to load history:", err);
           setError(err instanceof Error ? err.message : "Failed to load history");
           setIsLoading(false);
         }
@@ -89,7 +92,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
   const coveredDays = new Set(
     datedHistory.map((point) => new Date(point.timestamp).toISOString().slice(0, 10)),
   );
-  if (coveredDays.size < 6 || datedHistory.length < 2) return null;
+  if (coveredDays.size < MIN_COVERED_DAYS || datedHistory.length < 2) return null;
 
   const aqiValues = datedHistory.map((h) => h.aqi);
   const minAqi = Math.min(...aqiValues);
@@ -189,6 +192,7 @@ export function HistoryChart({ zipCode, days = 7 }: HistoryChartProps) {
               </circle>
             ))}
             {/* X-axis labels — show first, middle, last (deduplicated for small datasets) */}
+            {/* Keep edge labels inside the plot; offsets approximate half-width in the current chart font. */}
             {[...new Set([0, Math.floor(points.length / 2), points.length - 1])].map((idx) => (
               <text
                 key={idx}
