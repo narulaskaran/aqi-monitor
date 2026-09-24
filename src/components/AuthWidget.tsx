@@ -7,6 +7,8 @@ import {
 } from "./ui/input-otp";
 import { Modal } from "./ui/modal";
 import { useAuth } from "../lib/auth";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 export default function AuthWidget() {
   const { isSignedIn, email: authEmail, isValidating, signIn, signOut } = useAuth();
@@ -91,43 +93,49 @@ export default function AuthWidget() {
             Sign in
           </button>
           {showModal && (
-            <Modal onClose={() => setShowModal(false)}>
+            <Modal
+              ariaLabelledBy="signin-dialog-title"
+              autoFocusKey={step}
+              onClose={() => setShowModal(false)}
+            >
               {step === "email" && (
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     handleSendCode();
                   }}
-                  className="space-y-4"
+                  className="app-modal-form"
                 >
-                  <h3 className="text-lg font-semibold">Sign In</h3>
-                  <div className="space-y-1">
+                  <h3 id="signin-dialog-title" className="app-modal-title">Sign in</h3>
+                  <p className="app-modal-description">We’ll email you a six-digit sign-in code.</p>
+                  <div className="app-modal-field">
                     <label
                       htmlFor="signin-email"
-                      className="block text-sm font-medium"
                     >
                       Email address
                     </label>
-                    <input
+                    <Input
                       id="signin-email"
                       type="email"
-                      className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700"
+                      className="app-modal-input"
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={isLoading}
+                      autoComplete="email"
+                      data-dialog-autofocus
                     />
                   </div>
-                  <button
+                  <Button
                     type="submit"
-                    className="w-full bg-blue-600 text-white rounded py-2 hover:bg-blue-700 focus:outline-none"
+                    className="app-modal-action w-full"
                     disabled={isLoading}
                   >
-                    {isLoading ? "Sending..." : "Send Code"}
-                  </button>
+                    {isLoading ? "Sending…" : "Send code"}
+                  </Button>
                   {error && (
-                    <div className="text-red-500 text-sm">{error}</div>
+                    <p className="app-modal-error" role="alert">{error}</p>
                   )}
                 </form>
               )}
@@ -137,11 +145,12 @@ export default function AuthWidget() {
                     e.preventDefault();
                     handleVerifyCode();
                   }}
-                  className="space-y-4"
+                  className="app-modal-form"
                 >
-                  <h3 id="signin-otp-heading" className="text-lg font-semibold">
-                    Enter Verification Code
+                  <h3 id="signin-dialog-title" className="app-modal-title">
+                    Enter verification code
                   </h3>
+                  <p className="app-modal-description">We sent a six-digit code to {email}. Check your inbox.</p>
                   <div className="flex justify-center">
                     <InputOTP
                       maxLength={OTP_LENGTH}
@@ -150,7 +159,8 @@ export default function AuthWidget() {
                         setOtp(value);
                       }}
                       onComplete={() => verifyButtonRef.current?.click()}
-                      aria-labelledby="signin-otp-heading"
+                      aria-labelledby="signin-dialog-title"
+                      data-dialog-autofocus
                     >
                       <InputOTPGroup>
                         <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
@@ -162,16 +172,16 @@ export default function AuthWidget() {
                       </InputOTPGroup>
                     </InputOTP>
                   </div>
-                  <button
+                  <Button
                     type="submit"
-                    className="w-full bg-blue-600 text-white rounded py-2"
+                    className="app-modal-action w-full"
                     disabled={isLoading || otp.length !== OTP_LENGTH}
                     ref={verifyButtonRef}
                   >
-                    {isLoading ? "Verifying..." : "Verify Code"}
-                  </button>
+                    {isLoading ? "Verifying…" : "Verify code"}
+                  </Button>
                   {error && (
-                    <div className="text-red-500 text-sm">{error}</div>
+                    <p className="app-modal-error" role="alert">{error}</p>
                   )}
                 </form>
               )}

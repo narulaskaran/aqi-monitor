@@ -181,8 +181,8 @@ export function SubscriptionList() {
       {/* Confirmation modal (outside the Card so a card backdrop-filter can't
           become the containing block for the modal's fixed overlay) */}
       {pendingToggle && pendingSub && (
-        <Modal>
-          <h3 className="text-lg font-semibold mb-3">Confirm</h3>
+        <Modal ariaLabelledBy="subscription-confirm-title" onClose={handleCancel}>
+          <h3 id="subscription-confirm-title" className="text-lg font-semibold mb-3">Confirm</h3>
           <p className="text-sm mb-5">
             {pendingSub.active
               ? `Deactivate subscription for ZIP code ${pendingSub.zipCode}?`

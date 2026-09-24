@@ -18,6 +18,11 @@
   --surface: rgba(255, 255, 255, 0.66);
   --surface-border: rgba(255, 255, 255, 0.9);
   --surface-shadow: 0 1px 2px rgba(15, 30, 60, 0.04), 0 12px 32px -12px rgba(30, 60, 120, 0.18);
+  --dialog-surface: rgba(255, 255, 255, 0.9);
+  --control-radius: 0.75rem;
+  --control-height: 3rem;
+  --dialog-radius: 1.25rem;
+  --dialog-backdrop: rgba(15, 27, 51, 0.38);
 
   --background: transparent;
   --foreground: #0f1b33;
@@ -55,6 +60,7 @@
   --surface: rgba(24, 36, 64, 0.6);
   --surface-border: rgba(255, 255, 255, 0.08);
   --surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 12px 32px -12px rgba(0, 0, 0, 0.5);
+  --dialog-surface: rgba(24, 36, 64, 0.94);
 
   --foreground: #e6ecf7;
   --primary: #8aa6ff;
@@ -68,6 +74,7 @@
   --ring: #8aa6ff;
   --aqi-trend-line: #72d9a7;
   --aqi-trend-point-outline: #e6ecf7;
+  --dialog-backdrop: rgba(3, 8, 20, 0.62);
 }
 
 .app-header,
@@ -161,8 +168,8 @@
 
 .zip-form input,
 .zip-form button {
-  height: 48px;
-  border-radius: var(--radius);
+  height: var(--control-height);
+  border-radius: var(--control-radius);
   font-size: 15px;
 }
 
@@ -564,6 +571,127 @@
 
 .app-footer a:hover {
   opacity: 1;
+}
+
+/* Accessible dialog and auth controls share the app's Cloud Glass tokens. */
+.app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: var(--dialog-backdrop);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.app-modal-panel {
+  position: relative;
+  width: min(100%, 400px);
+  padding: 28px;
+  color: var(--foreground);
+  background: var(--dialog-surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--dialog-radius);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.app-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0;
+  color: var(--muted-foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.app-modal-close:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+
+.app-modal-close:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.app-modal-title {
+  margin: 0;
+  padding-right: 42px;
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.app-modal-description {
+  margin: -4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.app-modal-form {
+  display: grid;
+  gap: 16px;
+}
+
+.app-modal-field {
+  display: grid;
+  gap: 7px;
+}
+
+.app-modal-field label {
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.app-modal-input {
+  height: var(--control-height);
+  border-radius: var(--control-radius);
+  background: var(--card);
+  border-color: var(--input);
+  color: var(--foreground);
+}
+
+.app-modal-action {
+  height: var(--control-height);
+  border-radius: var(--control-radius);
+  box-shadow: none;
+}
+
+.app-modal-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.875rem;
+}
+
+.dark .app-modal-error {
+  color: #ff8f85;
+}
+
+@media (max-width: 400px) {
+  .app-modal-panel {
+    padding: 24px 20px;
+  }
+
+  .app-modal-close {
+    top: 10px;
+    right: 10px;
+  }
 }
 
 @media (max-width: 900px) {

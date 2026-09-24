@@ -87,6 +87,26 @@ describe("AuthWidget", () => {
     });
   });
 
+  it("moves focus to the OTP input when the code stage opens", async () => {
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+    renderWithTheme(<AuthWidget />);
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    const emailInput = screen.getByPlaceholderText(/email/i);
+    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /send code/i }));
+
+    const otpInput = await screen.findByTestId("otp-input");
+    const dialog = screen.getByRole("dialog", { name: /enter verification code/i });
+    await waitFor(() => {
+      expect(dialog).toContainElement(otpInput);
+      expect(otpInput).toHaveFocus();
+    });
+  });
+
   it("shows error if code verify fails", async () => {
     // Mock successful email send first
     (global.fetch as any)
