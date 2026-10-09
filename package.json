@@ -38,7 +38,7 @@
     "tailwind-merge": "^3.7.0",
     "ws": "^8.21.3",
     "zipcodes-us": "^1.2.0",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
